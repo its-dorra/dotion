@@ -1,0 +1,24 @@
+{
+  "name": "@notion-clone/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@notion-clone/db": "workspace:*",
+    "@notion-clone/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@notion-clone/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

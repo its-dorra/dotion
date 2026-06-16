@@ -1,0 +1,3 @@
+{
+  "extends": "@notion-clone/config/tsconfig.base.json"
+}
