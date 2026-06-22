@@ -13,6 +13,7 @@
   "dependencies": {
     "@notion-clone/db": "workspace:*",
     "@notion-clone/env": "workspace:*",
+    "@notion-clone/redis": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:"
