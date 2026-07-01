@@ -11,6 +11,7 @@
   },
   "scripts": {},
   "dependencies": {
+    "@better-auth/redis-storage": "^1.6.22",
     "@notion-clone/db": "workspace:*",
     "@notion-clone/env": "workspace:*",
     "@notion-clone/redis": "workspace:*",

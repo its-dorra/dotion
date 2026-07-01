@@ -7,6 +7,9 @@
     },
     "./*": {
       "default": "./src/*.ts"
+    },
+    "./repositories/*": {
+      "default": "./src/repositories/*.ts"
     }
   },
   "scripts": {
@@ -20,7 +23,8 @@
     "@notion-clone/env": "workspace:*",
     "dotenv": "catalog:",
     "drizzle-orm": "^0.45.1",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "better-result": "catalog:"
   },
   "devDependencies": {
     "@notion-clone/config": "workspace:*",

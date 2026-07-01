@@ -16,6 +16,7 @@
       "react": "^19.2.6",
       "react-dom": "^19.2.6",
       "@types/react": "^19.2.15",
+      "better-result": "^2.9.2",
       "@types/react-dom": "^19.2.3"
     }
   },
@@ -43,6 +44,7 @@
   "devDependencies": {
     "@notion-clone/config": "workspace:*",
     "@types/bun": "catalog:",
+    "babel-plugin-react-compiler": "^1.0.0",
     "turbo": "^2.9.16",
     "typescript": "catalog:"
   },

@@ -1,0 +1,14 @@
+{
+  "name": "@notion-clone/services",
+  "type": "module",
+  "exports": {},
+  "scripts": {},
+  "dependencies": {
+    "@notion-clone/db": "workspace:*",
+    "better-auth": "catalog:"
+  },
+  "devDependencies": {
+    "@notion-clone/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

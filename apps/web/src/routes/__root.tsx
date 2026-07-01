@@ -1,12 +1,25 @@
-import { Toaster } from "@notion-clone/ui/components/sonner";
-import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import {
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRouteWithContext,
+} from "@tanstack/react-router";
+import { TanStackDevtools } from "@tanstack/react-devtools";
+import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
-import Header from "../components/header";
+import appCss from "../styles.css?url";
+import { QueryClient } from "@tanstack/react-query";
+import { getAuthClient } from "@/lib/auth-client";
+import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/common/theme-provider";
+import { getLocale } from "@/paraglide/runtime";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
-import appCss from "../index.css?url";
-
-export interface RouterAppContext {}
+export interface RouterAppContext {
+  queryClient: QueryClient;
+  authClient: ReturnType<typeof getAuthClient>;
+}
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({
@@ -35,17 +48,29 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootDocument() {
   return (
-    <html lang="en" className="dark">
+    <html lang={getLocale()} suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
-        <div className="grid h-svh grid-rows-[auto_1fr]">
-          <Header />
-          <Outlet />
-        </div>
+        <ThemeProvider defaultTheme="light" storageKey="theme">
+          <TooltipProvider>
+            <Outlet />
+          </TooltipProvider>
+        </ThemeProvider>
         <Toaster richColors />
-        <TanStackRouterDevtools position="bottom-left" />
+        <TanStackDevtools
+          plugins={[
+            {
+              name: "TanStack Query",
+              render: <ReactQueryDevtoolsPanel />,
+            },
+            {
+              name: "TanStack Router",
+              render: <TanStackRouterDevtoolsPanel />,
+            },
+          ]}
+        />
         <Scripts />
       </body>
     </html>

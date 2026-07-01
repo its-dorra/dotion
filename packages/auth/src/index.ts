@@ -3,7 +3,6 @@ import * as schema from "@notion-clone/db/schema/auth";
 import { env } from "@notion-clone/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { redisInstance } from "@notion-clone/redis";
 import { redisSecondaryStorage } from "./adapters/redis-secondary-storage";
 
 export function createAuth() {
@@ -15,6 +14,11 @@ export function createAuth() {
       schema,
       usePlural: true,
     }),
+
+    rateLimit: {
+      enabled: true,
+      storage: "secondary-storage",
+    },
 
     secondaryStorage: redisSecondaryStorage,
 
@@ -31,7 +35,12 @@ export function createAuth() {
         httpOnly: true,
       },
     },
-    plugins: [],
+    socialProviders: {
+      github: {
+        clientId: env.GITHUB_CLIENT_ID,
+        clientSecret: env.GITHUB_CLIENT_SECRET,
+      },
+    },
   });
 }
 
