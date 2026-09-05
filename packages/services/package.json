@@ -1,0 +1,28 @@
+{
+  "name": "@dotion/services",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "imports": {
+    "#/*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.2",
+    "@blocknote/xl-ai": "^0.54.0",
+    "@dotion/auth": "workspace:*",
+    "@dotion/db": "workspace:*",
+    "@dotion/shared": "workspace:*",
+    "ai": "^6.0.5",
+    "better-result": "^3.0.1",
+    "zod": "catalog:",
+    "yjs": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "@types/node": "^26.2.0"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dotion-frontend",
+  "main": "./src/server.ts",
+  "compatibility_date": "2026-08-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "services": [
+    {
+      "binding": "BACKEND",
+      "service": "dotion-backend",
+    },
+  ],
+  "observability": {
+    "enabled": false,
+    "logs": {
+      "enabled": true,
+    },
+  },
+  "upload_source_maps": true,
+}

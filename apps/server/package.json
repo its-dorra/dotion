@@ -1,0 +1,53 @@
+{
+  "name": "@dotion/server",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#/*": "./src/*.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.121",
+    "@blocknote/xl-ai": "^0.54.0",
+    "@dotion/auth": "workspace:*",
+    "@dotion/db": "workspace:*",
+    "@dotion/services": "workspace:*",
+    "@dotion/shared": "workspace:*",
+    "@hono/zod-openapi": "^1.6.0",
+    "@scalar/hono-api-reference": "^0.11.14",
+    "@sentry/cloudflare": "^10.71.0",
+    "ai": "^6.0.5",
+    "better-auth": "^1.6.27",
+    "better-result": "^3.0.1",
+    "drizzle-orm": "^1.0.0-rc.4",
+    "hono": "catalog:",
+    "lib0": "catalog:",
+    "stoker": "^2.0.1",
+    "y-protocols": "catalog:",
+    "yjs": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.44.0",
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.21.0",
+    "drizzle-kit": "^1.0.0-rc.4",
+    "tsdown": "^0.22.14",
+    "typescript": "catalog:",
+    "wrangler": "^4.110.0"
+  }
+}

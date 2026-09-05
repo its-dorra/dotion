@@ -1,0 +1,23 @@
+import { AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import * as m from '@/paraglide/messages'
+
+interface NotificationsErrorProps {
+  message: string
+  onRetry: () => void
+}
+
+export function NotificationsError({
+  message,
+  onRetry,
+}: NotificationsErrorProps) {
+  return (
+    <div className="flex flex-col items-center gap-2 p-6 text-center">
+      <AlertTriangle className="h-6 w-6 text-destructive" />
+      <p className="text-sm text-muted-foreground">{message}</p>
+      <Button variant="outline" size="sm" onClick={onRetry}>
+        {m.notifications_error_retry()}
+      </Button>
+    </div>
+  )
+}

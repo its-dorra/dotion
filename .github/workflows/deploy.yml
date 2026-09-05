@@ -1,0 +1,139 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  migrate:
+    name: Drizzle Migrations
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        working-directory: .
+
+      - name: Apply DB migrations
+        run: bun run db:push
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  deploy-server:
+    name: Deploy Server
+    runs-on: ubuntu-latest
+    needs: migrate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+          
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Deploy Server Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/server
+          command: deploy
+          secrets: |
+            BETTER_AUTH_SECRET
+            GITHUB_CLIENT_ID
+            GITHUB_CLIENT_SECRET
+            GOOGLE_CLIENT_ID
+            GOOGLE_CLIENT_SECRET
+            GEMINI_API_KEY
+            SENTRY_DSN
+            BETTER_AUTH_URL
+            CORS_ORIGIN
+            DATABASE_URL
+            NODE_ENV
+        env:
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          GITHUB_CLIENT_ID: ${{ secrets.GB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.GB_CLIENT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_SERVER_DSN }}
+          BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CORS_ORIGIN: ${{ vars.CORS_ORIGIN }}
+          NODE_ENV: production
+
+  deploy-web:
+    name: Deploy Web
+    runs-on: ubuntu-latest
+    needs: deploy-server
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+          
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build web app
+        run: bun run build
+        working-directory: apps/web
+        env:
+          NODE_ENV: production
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_WEB_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_WEB_PROJECT }}
+
+      - name: Deploy Web Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/web
+          command: deploy
+          secrets: |
+            SENTRY_ORG
+            SENTRY_AUTH_TOKEN
+            UNSPLASH_ACCESS_KEY
+            SENTRY_PROJECT
+            NODE_ENV
+        env:
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_WEB_AUTH_TOKEN }}
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_WEB_PROJECT }}
+          NODE_ENV: production

@@ -1,0 +1,21 @@
+{
+  "name": "@dotion/shared",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "./*": {
+      "types": "./src/*.ts",
+      "import": "./src/*.ts"
+    },
+    "./*/*": {
+      "types": "./src/*/*.ts",
+      "import": "./src/*/*.ts"
+    }
+  },
+  "dependencies": {
+    "drizzle-orm": "^1.0.0-rc.4",
+    "zod": "catalog:",
+    "better-result": "^3.0.1",
+    "@dotion/db": "workspace:*"
+  }
+}

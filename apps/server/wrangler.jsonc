@@ -1,0 +1,95 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "dotion-backend",
+  "main": "./src/index.ts",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "minify": false,
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "DOTION_WORKSPACE_DO",
+        "class_name": "WorkspacesDO",
+      },
+      {
+        "name": "DOTION_PAGES_DO",
+        "class_name": "PagesDO",
+      },
+      {
+        "name": "DOTION_USERS_DO",
+        "class_name": "UsersDO",
+      },
+      {
+        "name": "DOTION_USER_CREDITS_DO",
+        "class_name": "UserCreditsDO",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["WorkspaceDO"],
+    },
+    {
+      "tag": "v2",
+      "renamed_classes": [
+        {
+          "from": "WorkspaceDO",
+          "to": "WorkspacesDO",
+        },
+      ],
+      "new_sqlite_classes": ["PagesDO"],
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["UsersDO"],
+    },
+    {
+      "tag": "v4",
+      "new_sqlite_classes": ["UserCreditsDO"],
+    },
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "a231a35d6141414ca2b72d0d9456288d",
+    },
+  ],
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": false,
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1,
+    },
+  },
+  "r2_buckets": [
+    {
+      "bucket_name": "dotion-bucket",
+      "binding": "R2",
+    },
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "PAGE_INDEXING_QUEUE",
+        "queue": "dotion-page-indexing",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "dotion-page-indexing",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+      },
+    ],
+  },
+}
