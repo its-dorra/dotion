@@ -3,6 +3,7 @@ import { Sparkles, User, Copy, Check } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { CodeBlock } from './code-block'
 import { Sources } from './sources'
+import * as m from '@/paraglide/messages'
 import type { AssistantCitation } from '@dotion/shared/assistant/types'
 import { cn } from '@/lib/utils'
 
@@ -275,7 +276,7 @@ export function Message({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-1">
           <span className="font-semibold text-xs text-foreground">
-            Dotion AI
+            {m.ai_message_dotion_ai()}
           </span>
           <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             {tokensUsed !== undefined && tokensUsed > 0 && (
@@ -287,7 +288,7 @@ export function Message({
               type="button"
               onClick={handleCopy}
               className="p-1 rounded-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              title="Copy answer"
+              title={m.ai_message_copy()}
             >
               {hasCopied ? (
                 <Check className="size-3 text-emerald-500" />

@@ -1,22 +1,17 @@
-import { InvitationCard } from "./invitation-card";
-import { InfiniteScroll } from "@/components/ui/infinite-scroll";
-import type { WorkspaceInvitation } from "../types";
+import { InvitationCard } from './invitation-card'
+import { InfiniteScroll } from '@/components/ui/infinite-scroll'
+import * as m from '@/paraglide/messages'
+import type { WorkspaceInvitation } from '../types'
 
 interface InvitationsListPresenterProps {
-  invitations: WorkspaceInvitation[];
-  onAccept: (invitationId: string) => void;
-  onDecline: (invitationId: string) => void;
-  respondingInvitationId?: string;
-  hasNextPage?: boolean;
-  fetchNextPage?: () => void;
-  isFetchingNextPage?: boolean;
+  invitations: WorkspaceInvitation[]
+  hasNextPage?: boolean
+  fetchNextPage?: () => void
+  isFetchingNextPage?: boolean
 }
 
 export function InvitationsListPresenter({
   invitations,
-  onAccept,
-  onDecline,
-  respondingInvitationId,
   hasNextPage,
   fetchNextPage,
   isFetchingNextPage,
@@ -24,22 +19,16 @@ export function InvitationsListPresenter({
   return (
     <div className="space-y-2">
       {invitations.map((invitation) => (
-        <InvitationCard
-          key={invitation.id}
-          invitation={invitation}
-          onAccept={onAccept}
-          onDecline={onDecline}
-          isResponding={respondingInvitationId === invitation.id}
-        />
+        <InvitationCard key={invitation.id} invitation={invitation} />
       ))}
 
       <InfiniteScroll
         hasNextPage={hasNextPage}
         fetchNextPage={fetchNextPage}
         isFetchingNextPage={isFetchingNextPage}
-        loadingText="Loading more invitations…"
-        loadMoreText="Load more invitations"
+        loadingText={m.workspace_invitations_loading_more()}
+        loadMoreText={m.workspace_invitations_load_more()}
       />
     </div>
-  );
+  )
 }

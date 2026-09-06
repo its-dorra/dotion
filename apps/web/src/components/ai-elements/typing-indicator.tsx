@@ -1,5 +1,6 @@
 import { Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import * as m from '@/paraglide/messages'
 
 interface TypingIndicatorProps {
   className?: string
@@ -8,7 +9,7 @@ interface TypingIndicatorProps {
 
 export function TypingIndicator({
   className,
-  statusText = 'Dotion AI is thinking...',
+  statusText,
 }: TypingIndicatorProps) {
   return (
     <div
@@ -18,7 +19,9 @@ export function TypingIndicator({
       )}
     >
       <Sparkles className="size-3.5 text-primary animate-pulse" />
-      <span className="font-medium text-foreground/80">{statusText}</span>
+      <span className="font-medium text-foreground/80">
+        {statusText ?? m.ai_typing_status()}
+      </span>
       <div className="flex items-center gap-1 pl-1">
         <span className="size-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.3s]" />
         <span className="size-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.15s]" />

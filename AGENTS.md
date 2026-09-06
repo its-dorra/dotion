@@ -98,50 +98,16 @@ the open socket; all other tabs receive messages through a `BroadcastChannel`.
 - Return type is always `Promise<Result<T, DatabaseError | NotFoundError | UniqueConstraintViolationError>>`.
 - Catch all Drizzle errors, log them with `console.error`, and return `Result.err(new DatabaseError(...))`. Never throw from a repository.
 
-- **Hierarchical Queries & Recursive CTEs (`WITH RECURSIVE`)**:
-  - Never load full-table or full-workspace datasets into Cloudflare Worker memory to compute child/descendant/ancestor trees in JavaScript with in-memory BFS/DFS.
-  - Use Drizzle ORM's native CTE query builder (`this.db.$with` / `this.db.with`) with `.unionAll(...)` to execute native PostgreSQL recursive CTEs directly in the database.
-  - For self-referencing CTE expressions in TypeScript, declare `var <cteName>: any = this.db.$with('<cteName>').as(...)` to satisfy TypeScript self-referential initialization checks while maintaining full type safety on the resulting query.
-- **Batch Operations**:
-  - Write methods that act on multiple entities (e.g., deleting or trashing a subtree) must accept array of IDs (`ids: EntityId[]`) and use Drizzle's `inArray(table.id, ids)` in a single SQL operation.
-
 ```ts
-// ✅ correct repository pattern (single domain, recursive CTE with Drizzle builder)
-async getDescendantPageIds(
-  workspaceId: WorkspaceId,
-  pageId: PageId,
-): Promise<Result<PageId[], DatabaseError>> {
+// ✅ correct repository pattern (single domain, no cross-table joins)
+async createFoo(tx: AppDB, input: CreateFooInput): Promise<Result<Foo, DatabaseError>> {
   try {
-    var pageTree: any = this.db.$with("page_tree").as(
-      this.db
-        .select({ id: pages.id })
-        .from(pages)
-        .where(
-          and(
-            eq(pages.parentId, pageId),
-            eq(pages.workspaceId, workspaceId),
-          ),
-        )
-        .unionAll(
-          this.db
-            .select({ id: pages.id })
-            .from(pages)
-            .innerJoin(pageTree, eq(pages.parentId, pageTree.id))
-            .where(eq(pages.workspaceId, workspaceId)),
-        ),
-    );
-
-    const rows = await this.db
-      .with(pageTree)
-      .select({ id: pageTree.id })
-      .from(pageTree);
-
-    return Result.ok(rows.map((r) => r.id as PageId));
+    const [row] = await tx.insert(foos).values(input).returning();
+    if (!row) return Result.err(new DatabaseError({ message: 'Failed to create foo' }));
+    return Result.ok(row);
   } catch (error) {
-    console.error("PagesRepository.getDescendantPageIds error:", error);
-    return Result.err(
-      new DatabaseError({ message: "Failed to get descendant page IDs" }),
-    );
+    console.error('FooRepository.createFoo error:', error);
+    return Result.err(new DatabaseError({ message: 'Failed to create foo' }));
   }
 }
 ```
@@ -166,7 +132,7 @@ async getDescendantPageIds(
   - **Independent Side-Effects**: Always execute multiple independent post-mutation side-effects (WebSocket broadcasts, KV cache invalidations, Queue enqueues, notifications) concurrently via `await Promise.all([ ... ])` — and **always strictly await them**.
 - **Subtree Deletions, Cascading Restores & Storage Asset Purging**:
   - When permanently deleting a hierarchical resource (such as a page with nested subpages):
-    1. Retrieve the entire subtree of IDs via the repository's recursive CTE (`allPageIds = [pageId, ...descendants]`).
+    1. Retrieve the entire subtree of IDs via the repository (`allPageIds = [pageId, ...descendants]`).
     2. Execute a single batch delete in the database (`this.pagesRepository.deletePermanently(this.dbClient, allPageIds)`).
     3. Concurrently broadcast real-time events and enqueue Cloudflare Queue asset cleanup jobs for **every page in the deleted branch** (`workspaces/:workspaceId/pages/:pageId/`) via `Promise.all` so all attachments and uploaded assets in Cloudflare R2 are eradicated without leaving orphaned zombie files.
   - When restoring a parent page, cascade restore to all trashed descendant subpages while re-parenting to workspace root (`null`) if the original parent page is missing or in trash.
@@ -429,16 +395,22 @@ export function useCreateFoo() {
   );
 }
 
-// ✅ calling mutations pattern: always use mutateAsync
+// ✅ calling mutations pattern: use mutateAsync directly without try/catch unless necessary
 async function handleCreate(input: CreateFooInput) {
-  try {
-    const created = await createFoo.mutateAsync(input);
-    // post-mutation actions (e.g. close modal, navigate)
-  } catch (error) {
-    // error handled by hook's onError or caller
-  }
+  const created = await createFoo.mutateAsync(input);
+  // post-mutation actions (e.g. close modal, navigate)
 }
 ```
+
+#### Hook Scoping & Anti-Prop-Drilling Rules
+
+- **Call hooks as down the component tree as possible where needed**:
+  - Mutation hooks (`useMutation`, custom hooks like `useCreate*`, `useDelete*`, `useUpdate*`), action handlers, and component-local mutation state MUST be called directly in the leaf/child component where the user action originates (e.g. inside `CommentComposer`, `CommentCard`, `PageTreeItem`, `InviteMemberForm`, `InvitationCard`, `DeletePermanentlyDialog`).
+  - Container components (`*-container.tsx`) are strictly responsible for data query fetching (`useQuery`), loading states, and error handling. **Never instantiate mutation hooks in containers just to pass action callbacks (`onSubmit`, `onDelete`, `onResolve`, `onAccept`, etc.) or loading flags (`isSubmitting`, `isDeleting`) down as props**.
+- **Avoid prop drilling**:
+  - Do NOT drill action callbacks or mutation handlers through intermediate layers (e.g., `Container` → `Presenter` → `List` → `Item`).
+  - Child and leaf components should receive domain entity identifiers (e.g. `{ workspaceId, pageId, commentId }`) and trigger mutations directly using their own hook instances.
+  - Modals, Dialogs, and Drawers (`*Modal`, `*Dialog`, `*Drawer`) should own their own mutation calls and submission state internally rather than receiving `onSubmit`, `isSubmitting`, or `errorMessage` drilled from parent containers.
 
 ---
 

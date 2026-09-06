@@ -9,7 +9,7 @@ import { Share2 } from 'lucide-react'
 import { InviteToPageForm } from './invite-to-page-form'
 import { PublicSharing } from './public-sharing'
 import { PagePermissionRow } from './page-permission-row'
-import type { Page, PageMemberPermission, PagePermissionRole } from '../types'
+import type { Page, PageMemberPermission } from '../types'
 import * as m from '@/paraglide/messages'
 
 interface ShareDropdownPresenterProps {
@@ -17,12 +17,6 @@ interface ShareDropdownPresenterProps {
   permissions: PageMemberPermission[]
   permissionsSlot?: React.ReactNode
   canManage: boolean
-  onInvite: (email: string, role: PagePermissionRole) => void
-  isInviting: boolean
-  inviteErrorMessage?: string
-  onChangeRole: (userId: string, role: PagePermissionRole) => void
-  onTogglePublic: (isPublic: boolean) => void
-  isUpdatingPublic: boolean
 }
 
 export function ShareDropdownPresenter({
@@ -30,12 +24,6 @@ export function ShareDropdownPresenter({
   permissions,
   permissionsSlot,
   canManage,
-  onInvite,
-  isInviting,
-  inviteErrorMessage,
-  onChangeRole,
-  onTogglePublic,
-  isUpdatingPublic,
 }: ShareDropdownPresenterProps) {
   const publicUrl = (page as any).publicLinkSlug
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/share/${(page as any).publicLinkSlug}`
@@ -52,20 +40,15 @@ export function ShareDropdownPresenter({
       <DropdownMenuContent align="end" className="w-80 p-3">
         {canManage ? (
           <>
-            <InviteToPageForm
-              onInvite={onInvite}
-              isSubmitting={isInviting}
-              errorMessage={inviteErrorMessage}
-            />
+            <InviteToPageForm workspaceId={page.workspaceId} pageId={page.id} />
             <DropdownMenuSeparator />
           </>
         ) : null}
 
         <PublicSharing
+          pageId={page.id}
           isPublic={(page as any).isPublic ?? false}
           publicUrl={publicUrl}
-          onTogglePublic={onTogglePublic}
-          isUpdating={isUpdatingPublic}
         />
 
         <DropdownMenuSeparator />
@@ -78,9 +61,10 @@ export function ShareDropdownPresenter({
             {permissions.map((permission) => (
               <PagePermissionRow
                 key={permission.userId}
+                workspaceId={page.workspaceId}
+                pageId={page.id}
                 permission={permission}
                 canManage={canManage}
-                onChangeRole={onChangeRole}
               />
             ))}
           </div>

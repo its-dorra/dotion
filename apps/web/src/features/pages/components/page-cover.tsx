@@ -24,7 +24,7 @@ export function PageCover({
     <div className="group/cover relative h-48 w-full overflow-hidden sm:h-64 select-none bg-muted">
       <img
         src={cover}
-        alt="Page Cover"
+        alt={m.page_cover_alt()}
         className="h-full w-full object-cover transition-opacity duration-300"
       />
       {!readOnly ? (

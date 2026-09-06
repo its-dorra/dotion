@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -21,7 +20,10 @@ export function GeneralSettings({ workspaceId }: GeneralSettingsProps) {
   )
   const { data: managePerm } = useQuery(
     canQueryOptions({
-      resource: { type: 'workspace', id: { workspaceId: workspaceId as WorkspaceId } },
+      resource: {
+        type: 'workspace',
+        id: { workspaceId: workspaceId as WorkspaceId },
+      },
       action: 'manageSettings',
     }),
   )
@@ -35,15 +37,10 @@ export function GeneralSettings({ workspaceId }: GeneralSettingsProps) {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     if (!hasChanges) return
-    try {
-      await updateWorkspace.mutateAsync({
-        workspaceId: workspaceId as WorkspaceId,
-        name: name.trim(),
-      })
-      toast.success(m.toast_workspace_updated())
-    } catch (error: any) {
-      toast.error(error?.message ?? m.toast_workspace_update_failed())
-    }
+    await updateWorkspace.mutateAsync({
+      workspaceId: workspaceId as WorkspaceId,
+      name: name.trim(),
+    })
   }
 
   return (
@@ -51,7 +48,9 @@ export function GeneralSettings({ workspaceId }: GeneralSettingsProps) {
       <div className="flex items-center gap-4">
         <WorkspaceIcon icon={workspace.icon} name={workspace.name} size="lg" />
         <div className="flex-1 space-y-2">
-          <Label htmlFor="workspace-name-setting">Workspace name</Label>
+          <Label htmlFor="workspace-name-setting">
+            {m.workspace_settings_title()}
+          </Label>
           <Input
             id="workspace-name-setting"
             value={name}
@@ -70,13 +69,9 @@ export function GeneralSettings({ workspaceId }: GeneralSettingsProps) {
           type="submit"
           disabled={!hasChanges || updateWorkspace.isPending}
         >
-          {updateWorkspace.isPending ? 'Saving…' : 'Save changes'}
+          {m.auth_save_changes()}
         </Button>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Only the workspace owner can change these settings.
-        </p>
-      )}
+      ) : null}
     </form>
   )
 }

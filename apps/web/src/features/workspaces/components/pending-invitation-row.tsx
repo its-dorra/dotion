@@ -26,14 +26,10 @@ export function PendingInvitationRow({
   const initials = displayName.slice(0, 2).toUpperCase()
 
   async function handleCancel() {
-    try {
-      await cancelInvitation.mutateAsync({
-        workspaceId: invitation.workspaceId,
-        invitationId: invitation.id,
-      })
-    } catch {
-      // handled by mutation hook
-    }
+    await cancelInvitation.mutateAsync({
+      workspaceId: invitation.workspaceId,
+      invitationId: invitation.id,
+    })
   }
 
   return (

@@ -3,6 +3,8 @@ import { resultMutationOptions } from '@/integrations/tanstack-query/better-resu
 import { commentsApi } from '../api'
 import type { ResolveCommentInput } from '../types'
 import { commentsKeys } from '../query-options'
+import { toast } from 'sonner'
+import * as m from '@/paraglide/messages'
 
 export type ResolveCommentVariables = ResolveCommentInput
 
@@ -18,6 +20,10 @@ export function useResolveComment() {
         queryClient.invalidateQueries({
           queryKey: commentsKeys.list(vars.workspaceId, vars.pageId),
         })
+        toast.success(m.toast_comment_resolved())
+      },
+      onError: (error) => {
+        toast.error(error?.message ?? m.toast_comment_resolve_failed())
       },
     }),
   )

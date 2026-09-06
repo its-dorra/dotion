@@ -31,30 +31,22 @@ export function PageAccessRequestContent({
 
   async function handleGrant() {
     if (!notification.metadata.requestId) return
-    try {
-      await approveAccess.mutateAsync({
-        workspaceId: notification.metadata.workspaceId,
-        pageId: notification.metadata.pageId,
-        requestId: notification.metadata.requestId,
-      })
-      await markAsRead.mutateAsync(notification.id)
-    } catch {
-      // handled by mutation hook
-    }
+    await approveAccess.mutateAsync({
+      workspaceId: notification.metadata.workspaceId,
+      pageId: notification.metadata.pageId,
+      requestId: notification.metadata.requestId,
+    })
+    await markAsRead.mutateAsync(notification.id)
   }
 
   async function handleReject() {
     if (!notification.metadata.requestId) return
-    try {
-      await rejectAccess.mutateAsync({
-        workspaceId: notification.metadata.workspaceId,
-        pageId: notification.metadata.pageId,
-        requestId: notification.metadata.requestId,
-      })
-      await markAsRead.mutateAsync(notification.id)
-    } catch {
-      // handled by mutation hook
-    }
+    await rejectAccess.mutateAsync({
+      workspaceId: notification.metadata.workspaceId,
+      pageId: notification.metadata.pageId,
+      requestId: notification.metadata.requestId,
+    })
+    await markAsRead.mutateAsync(notification.id)
   }
 
   const requestedRole = (notification.metadata as any).requestedRole ?? 'editor'

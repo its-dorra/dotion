@@ -8,27 +8,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useInviteToPage } from '../hooks/use-invite-to-page'
 import type { PagePermissionRole } from '../types'
+import type { WorkspaceId } from '@dotion/shared/workspaces/types'
+import type { PageId } from '@dotion/shared/pages/types'
 import * as m from '@/paraglide/messages'
 
 interface InviteToPageFormProps {
-  onInvite: (email: string, role: PagePermissionRole) => void
-  isSubmitting: boolean
-  errorMessage?: string
+  workspaceId: WorkspaceId
+  pageId: PageId
 }
 
 export function InviteToPageForm({
-  onInvite,
-  isSubmitting,
-  errorMessage,
+  workspaceId,
+  pageId,
 }: InviteToPageFormProps) {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<PagePermissionRole>('editor')
+  const inviteToPage = useInviteToPage()
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (!email.trim()) return
-    onInvite(email.trim(), role)
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) return
+
+    await inviteToPage.mutateAsync({
+      workspaceId,
+      pageId,
+      email: trimmedEmail,
+      role,
+    })
     setEmail('')
   }
 
@@ -56,11 +65,17 @@ export function InviteToPageForm({
           </SelectContent>
         </Select>
       </div>
-      {errorMessage ? (
-        <p className="text-xs text-destructive">{errorMessage}</p>
+      {inviteToPage.error?.message ? (
+        <p className="text-xs text-destructive">{inviteToPage.error.message}</p>
       ) : null}
-      <Button type="submit" size="sm" disabled={isSubmitting || !email.trim()}>
-        {isSubmitting ? m.page_share_inviting() : m.page_share_invite()}
+      <Button
+        type="submit"
+        size="sm"
+        disabled={inviteToPage.isPending || !email.trim()}
+      >
+        {inviteToPage.isPending
+          ? m.page_share_inviting()
+          : m.page_share_invite()}
       </Button>
     </form>
   )

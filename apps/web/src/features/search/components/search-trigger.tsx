@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import * as m from '@/paraglide/messages'
 
 interface SearchTriggerProps {
   onClick: () => void
@@ -18,7 +19,7 @@ export function SearchTrigger({ onClick, className }: SearchTriggerProps) {
     >
       <div className="flex items-center gap-2 min-w-0">
         <Search className="size-3.5 shrink-0 opacity-70 group-hover:opacity-100" />
-        <span className="truncate">Search workspace...</span>
+        <span className="truncate">{m.search_trigger_placeholder()}</span>
       </div>
       <kbd className="pointer-events-none hidden h-4.5 select-none items-center gap-0.5 rounded-xs border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-90 sm:flex">
         <span className="text-xs">⌘</span>K

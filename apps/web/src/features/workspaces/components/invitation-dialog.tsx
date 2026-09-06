@@ -8,6 +8,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { WorkspaceIcon } from './workspace-icon'
+import { useAcceptInvitation } from '../hooks/use-accept-invitation'
+import { useDeclineInvitation } from '../hooks/use-decline-invitation'
 import type { WorkspaceInvitation } from '../types'
 import * as m from '@/paraglide/messages'
 
@@ -15,19 +17,28 @@ interface InvitationDialogProps {
   invitation: WorkspaceInvitation
   open: boolean
   onOpenChange: (open: boolean) => void
-  onAccept: (invitationId: string) => void
-  onDecline: (invitationId: string) => void
-  isResponding: boolean
 }
 
 export function InvitationDialog({
   invitation,
   open,
   onOpenChange,
-  onAccept,
-  onDecline,
-  isResponding,
 }: InvitationDialogProps) {
+  const acceptInvitation = useAcceptInvitation()
+  const declineInvitation = useDeclineInvitation()
+
+  const isResponding = acceptInvitation.isPending || declineInvitation.isPending
+
+  async function handleAccept() {
+    await acceptInvitation.mutateAsync({ invitationId: invitation.id })
+    onOpenChange(false)
+  }
+
+  async function handleDecline() {
+    await declineInvitation.mutateAsync({ invitationId: invitation.id })
+    onOpenChange(false)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
@@ -54,14 +65,11 @@ export function InvitationDialog({
           <Button
             variant="outline"
             disabled={isResponding}
-            onClick={() => onDecline(invitation.id)}
+            onClick={handleDecline}
           >
             {m.invitation_decline()}
           </Button>
-          <Button
-            disabled={isResponding}
-            onClick={() => onAccept(invitation.id)}
-          >
+          <Button disabled={isResponding} onClick={handleAccept}>
             {m.invitation_accept_invitation()}
           </Button>
         </DialogFooter>

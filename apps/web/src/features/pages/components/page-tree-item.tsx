@@ -16,6 +16,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Can } from '@/features/authorization/components/can'
+import { useCreatePage } from '../hooks/use-create-page'
+import { useMoveToTrash } from '../hooks/use-move-to-trash'
 import type { PageTreeNodeWithChildren } from '../lib/build-page-tree'
 import type { PageId } from '@dotion/shared/pages/types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
@@ -26,8 +28,6 @@ interface PageTreeItemProps {
   workspaceId: string
   activePageId?: string
   depth: number
-  onCreateChild: (parentId: PageId) => void
-  onMoveToTrash: (pageId: PageId) => void
 }
 
 export function PageTreeItem({
@@ -35,12 +35,29 @@ export function PageTreeItem({
   workspaceId,
   activePageId,
   depth,
-  onCreateChild,
-  onMoveToTrash,
 }: PageTreeItemProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const createPage = useCreatePage()
+  const moveToTrash = useMoveToTrash()
+
   const isActive = node.id === activePageId
   const showChildren = isExpanded && node.children.length > 0
+
+  function handleCreateChild(parentId: PageId) {
+    createPage.mutateAsync({
+      workspaceId: workspaceId as WorkspaceId,
+      parentId,
+      title: '',
+    })
+    setIsExpanded(true)
+  }
+
+  function handleMoveToTrash(pageId: PageId) {
+    moveToTrash.mutateAsync({
+      pageId,
+      workspaceId: workspaceId as WorkspaceId,
+    })
+  }
 
   return (
     <div>
@@ -91,9 +108,10 @@ export function PageTreeItem({
               variant="ghost"
               size="icon"
               className="h-5 w-5"
+              disabled={createPage.isPending}
               onClick={(event) => {
                 event.preventDefault()
-                onCreateChild(node.id)
+                handleCreateChild(node.id)
               }}
               aria-label={m.page_tree_add_page()}
             >
@@ -118,7 +136,7 @@ export function PageTreeItem({
               <DropdownMenuContent align="start">
                 <DropdownMenuItem
                   className="text-destructive"
-                  onSelect={() => onMoveToTrash(node.id)}
+                  onSelect={() => handleMoveToTrash(node.id)}
                 >
                   <Trash2 className="h-4 w-4" />
                   {m.page_move_to_trash()}
@@ -138,8 +156,6 @@ export function PageTreeItem({
               workspaceId={workspaceId}
               activePageId={activePageId}
               depth={depth + 1}
-              onCreateChild={onCreateChild}
-              onMoveToTrash={onMoveToTrash}
             />
           ))}
         </div>

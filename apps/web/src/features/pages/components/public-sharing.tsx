@@ -1,22 +1,30 @@
 import { useState } from 'react'
 import { Globe, Link as LinkIcon, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useSetPagePublic } from '../hooks/use-set-page-public'
+import type { PageId } from '@dotion/shared/pages/types'
 import * as m from '@/paraglide/messages'
 
 interface PublicSharingProps {
+  pageId: PageId
   isPublic: boolean
   publicUrl?: string
-  onTogglePublic: (isPublic: boolean) => void
-  isUpdating: boolean
 }
 
 export function PublicSharing({
+  pageId,
   isPublic,
   publicUrl,
-  onTogglePublic,
-  isUpdating,
 }: PublicSharingProps) {
   const [copied, setCopied] = useState(false)
+  const setPagePublic = useSetPagePublic()
+
+  async function handleTogglePublic() {
+    await setPagePublic.mutateAsync({
+      pageId,
+      isPublic: !isPublic,
+    })
+  }
 
   async function handleCopy() {
     if (!publicUrl) return
@@ -36,8 +44,8 @@ export function PublicSharing({
           variant={isPublic ? 'default' : 'outline'}
           size="sm"
           className="h-7"
-          disabled={isUpdating}
-          onClick={() => onTogglePublic(!isPublic)}
+          disabled={setPagePublic.isPending}
+          onClick={handleTogglePublic}
         >
           {isPublic ? m.page_share_public() : m.page_tree_private()}
         </Button>

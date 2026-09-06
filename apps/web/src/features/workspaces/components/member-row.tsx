@@ -28,14 +28,10 @@ export function MemberRow({
   const removeMember = useRemoveMember()
 
   async function handleRemove() {
-    try {
-      await removeMember.mutateAsync({
-        workspaceId: workspaceId as WorkspaceId,
-        memberId: (member.userId ?? member.id) as UserId,
-      })
-    } catch {
-      // handled by mutation hook
-    }
+    await removeMember.mutateAsync({
+      workspaceId: workspaceId as WorkspaceId,
+      memberId: (member.userId ?? member.id) as UserId,
+    })
   }
 
   return (

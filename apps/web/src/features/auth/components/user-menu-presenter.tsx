@@ -11,14 +11,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { usePwaInstall } from '@/hooks/use-pwa-install'
 import { PwaInstallDialog } from '@/components/pwa/pwa-install-dialog'
+import { useSignOut } from '../hooks/use-sign-out'
 import * as m from '@/paraglide/messages'
 import type { User } from '../types'
 
 interface UserMenuPresenterProps {
   user: User
   currentWorkspaceId?: string
-  onLogout: () => void
-  isLogingOut?: boolean
 }
 
 function getInitials(name: string) {
@@ -33,9 +32,8 @@ function getInitials(name: string) {
 export function UserMenuPresenter({
   user,
   currentWorkspaceId,
-  onLogout,
-  isLogingOut,
 }: UserMenuPresenterProps) {
+  const signOutMutation = useSignOut()
   const {
     canInstall,
     isInstalled,
@@ -54,7 +52,7 @@ export function UserMenuPresenter({
           <button
             type="button"
             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            disabled={isLogingOut}
+            disabled={signOutMutation.isPending}
           >
             <Avatar>
               {user.image && <AvatarImage src={user.image} alt={user.name} />}
@@ -76,7 +74,7 @@ export function UserMenuPresenter({
           <DropdownMenuItem asChild>
             <Link to="/app/profile" className="gap-2">
               <UserIcon className="h-4 w-4" />
-              Profile
+              {m.auth_profile()}
             </Link>
           </DropdownMenuItem>
           {currentWorkspaceId ? (
@@ -87,7 +85,7 @@ export function UserMenuPresenter({
                 className="gap-2"
               >
                 <Building2 className="h-4 w-4" />
-                Workspace settings
+                {m.workspace_settings_title()}
               </Link>
             </DropdownMenuItem>
           ) : null}
@@ -102,11 +100,11 @@ export function UserMenuPresenter({
           ) : null}
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onSelect={onLogout}
+            onSelect={() => signOutMutation.mutateAsync()}
             className="gap-2 text-destructive"
           >
             <LogOut className="h-4 w-4" />
-            Log out
+            {m.auth_sign_out()}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

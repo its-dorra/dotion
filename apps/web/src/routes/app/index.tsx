@@ -1,5 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { workspacesListQueryOptions } from '@/features/workspaces/query-options'
+import { AppRedirectError } from '@/features/workspaces/components/app-redirect-error'
+import { AppRedirectNotFound } from '@/features/workspaces/components/app-redirect-not-found'
 
 export const Route = createFileRoute('/app/')({
   beforeLoad: async ({ context: { queryClient } }) => {
@@ -15,4 +17,6 @@ export const Route = createFileRoute('/app/')({
     }
     throw redirect({ to: '/app/workspaces' })
   },
+  errorComponent: AppRedirectError,
+  notFoundComponent: AppRedirectNotFound,
 })

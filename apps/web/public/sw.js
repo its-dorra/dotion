@@ -1,5 +1,5 @@
 // Dotion Custom Progressive Web App Service Worker
-const CACHE_VERSION = 'v1'
+const CACHE_VERSION = 'v1.0.1'
 const STATIC_CACHE = `dotion-static-${CACHE_VERSION}`
 const FONTS_CACHE = `dotion-fonts-${CACHE_VERSION}`
 const IMAGES_CACHE = `dotion-images-${CACHE_VERSION}`
@@ -61,11 +61,23 @@ self.addEventListener('message', (event) => {
   }
 })
 
-// --- Helper: Check if request is an API / WebSocket call ---
-function isApiOrWsRequest(url, request) {
+// --- Helper: Check if request should be bypassed / ignored ---
+function shouldIgnoreRequest(url, request) {
   if (url.pathname.startsWith('/api')) return true
   if (url.pathname.includes('/ws')) return true
   if (request.headers.get('upgrade') === 'websocket') return true
+  // Vite dev server virtual and internal endpoints
+  if (
+    url.pathname.startsWith('/@') ||
+    url.pathname.includes('/@vite/') ||
+    url.pathname.includes('/@id/') ||
+    url.pathname.includes('/@fs/')
+  ) {
+    return true
+  }
+  if (url.pathname.includes('/node_modules/.vite/')) return true
+  if (url.searchParams.has('v')) return true
+  if (url.pathname === '/__vite_ping') return true
   return false
 }
 
@@ -135,8 +147,8 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return
   if (!url.protocol.startsWith('http')) return
 
-  // Never intercept API and WebSocket requests
-  if (isApiOrWsRequest(url, request)) return
+  // Never intercept API, WebSocket, or Vite dev internal requests
+  if (shouldIgnoreRequest(url, request)) return
 
   // 1. Navigation requests (HTML pages) -> Network First with cached fallback
   if (request.mode === 'navigate') {

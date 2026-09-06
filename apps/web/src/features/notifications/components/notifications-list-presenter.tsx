@@ -4,8 +4,6 @@ import { NotificationRow } from './notification-row'
 import { InfiniteScroll } from '@/components/ui/infinite-scroll'
 import { useMarkAllAsRead } from '../hooks/use-mark-all-as-read'
 import { InvitationResponseModal } from '@/features/workspaces/components/invitation-response-modal'
-import { useAcceptInvitation } from '@/features/workspaces/hooks/use-accept-invitation'
-import { useDeclineInvitation } from '@/features/workspaces/hooks/use-decline-invitation'
 import type { WorkspaceInvitation } from '@/features/workspaces/types'
 import type { Notification, WorkspaceInvitationNotification } from '../types'
 import * as m from '@/paraglide/messages'
@@ -27,35 +25,10 @@ export function NotificationsListPresenter({
     useState<WorkspaceInvitationNotification | null>(null)
 
   const markAllAsRead = useMarkAllAsRead()
-  const acceptInvitation = useAcceptInvitation()
-  const declineInvitation = useDeclineInvitation()
-
   const hasUnread = notifications.some((n) => !n.isRead)
 
-  async function handleAccept(invitationId: string) {
-    try {
-      await acceptInvitation.mutateAsync({ invitationId })
-      setActiveNotification(null)
-    } catch {
-      // handled by mutation hook
-    }
-  }
-
-  async function handleDecline(invitationId: string) {
-    try {
-      await declineInvitation.mutateAsync({ invitationId })
-      setActiveNotification(null)
-    } catch {
-      // handled by mutation hook
-    }
-  }
-
   async function handleMarkAllAsRead() {
-    try {
-      await markAllAsRead.mutateAsync(undefined)
-    } catch {
-      // handled by mutation hook
-    }
+    await markAllAsRead.mutateAsync(undefined)
   }
 
   const activeInvitation: WorkspaceInvitation | null = activeNotification
@@ -121,11 +94,6 @@ export function NotificationsListPresenter({
           onOpenChange={(open) => {
             if (!open) setActiveNotification(null)
           }}
-          onAccept={handleAccept}
-          onDecline={handleDecline}
-          isResponding={
-            acceptInvitation.isPending || declineInvitation.isPending
-          }
         />
       ) : null}
     </div>

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent } from 'react'
 import {
   Drawer,
   DrawerContent,
@@ -6,51 +6,55 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/drawer'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useCreateWorkspace } from '../hooks/use-create-workspace'
+import * as m from '@/paraglide/messages'
 
 interface CreateWorkspaceDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (name: string) => void;
-  isSubmitting: boolean;
-  errorMessage?: string;
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 export function CreateWorkspaceDrawer({
   open,
   onOpenChange,
-  onSubmit,
-  isSubmitting,
-  errorMessage,
 }: CreateWorkspaceDrawerProps) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState('')
+  const createWorkspace = useCreateWorkspace()
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    onSubmit(name);
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    const trimmed = name.trim()
+    if (!trimmed) return
+
+    await createWorkspace.mutateAsync({ name: trimmed, icon: null })
+    setName('')
+    onOpenChange(false)
   }
 
   return (
     <Drawer
       open={open}
       onOpenChange={(next) => {
-        if (!next) setName("");
-        onOpenChange(next);
+        if (!next) setName('')
+        onOpenChange(next)
       }}
     >
       <DrawerContent>
         <form onSubmit={handleSubmit}>
           <DrawerHeader>
-            <DrawerTitle>Create a workspace</DrawerTitle>
+            <DrawerTitle>{m.workspace_create()}</DrawerTitle>
             <DrawerDescription>
-              A workspace organizes pages for you and your team.
+              {m.workspace_selection_empty_desc()}
             </DrawerDescription>
           </DrawerHeader>
           <div className="space-y-2 px-4">
-            <Label htmlFor="workspace-name-mobile">Workspace name</Label>
+            <Label htmlFor="workspace-name-mobile">
+              {m.workspace_settings_title()}
+            </Label>
             <Input
               id="workspace-name-mobile"
               autoFocus
@@ -58,24 +62,29 @@ export function CreateWorkspaceDrawer({
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
-            {errorMessage ? (
-              <p className="text-sm text-destructive">{errorMessage}</p>
+            {createWorkspace.error?.message ? (
+              <p className="text-sm text-destructive">
+                {createWorkspace.error.message}
+              </p>
             ) : null}
           </div>
           <DrawerFooter>
-            <Button type="submit" disabled={isSubmitting || !name.trim()}>
-              {isSubmitting ? "Creating…" : "Create workspace"}
+            <Button
+              type="submit"
+              disabled={createWorkspace.isPending || !name.trim()}
+            >
+              {m.workspace_create()}
             </Button>
             <Button
               type="button"
               variant="ghost"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {m.common_cancel()}
             </Button>
           </DrawerFooter>
         </form>
       </DrawerContent>
     </Drawer>
-  );
+  )
 }

@@ -72,35 +72,27 @@ export function InviteMemberForm({
   async function handleSubmit(event?: FormEvent) {
     event?.preventDefault()
     if (selectedUser) {
-      try {
-        await inviteMember.mutateAsync({
-          workspaceId: workspaceId as WorkspaceId,
-          userId: selectedUser.id as any,
-          email: selectedUser.email,
-        })
-        setSelectedUser(null)
-        setSearchTerm('')
-        setIsOpen(false)
-        onSuccess?.()
-      } catch {
-        // handled by mutation hook
-      }
+      await inviteMember.mutateAsync({
+        workspaceId: workspaceId as WorkspaceId,
+        userId: selectedUser.id as any,
+        email: selectedUser.email,
+      })
+      setSelectedUser(null)
+      setSearchTerm('')
+      setIsOpen(false)
+      onSuccess?.()
       return
     }
 
     const trimmed = searchTerm.trim()
     if (!trimmed) return
-    try {
-      await inviteMember.mutateAsync({
-        workspaceId: workspaceId as WorkspaceId,
-        email: trimmed,
-      })
-      setSearchTerm('')
-      setIsOpen(false)
-      onSuccess?.()
-    } catch {
-      // handled by mutation hook
-    }
+    await inviteMember.mutateAsync({
+      workspaceId: workspaceId as WorkspaceId,
+      email: trimmed,
+    })
+    setSearchTerm('')
+    setIsOpen(false)
+    onSuccess?.()
   }
 
   function handleSelectUser(user: UserSearchResult) {

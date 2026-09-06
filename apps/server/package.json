@@ -21,17 +21,17 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.121",
+    "@ai-sdk/google": "^4.0.64",
     "@blocknote/xl-ai": "^0.54.0",
     "@dotion/auth": "workspace:*",
     "@dotion/db": "workspace:*",
     "@dotion/services": "workspace:*",
     "@dotion/shared": "workspace:*",
-    "@hono/zod-openapi": "^1.6.0",
-    "@scalar/hono-api-reference": "^0.11.14",
-    "@sentry/cloudflare": "^10.71.0",
-    "ai": "^6.0.5",
-    "better-auth": "^1.6.27",
+    "@hono/zod-openapi": "^1.6.3",
+    "@scalar/hono-api-reference": "^0.11.16",
+    "@sentry/cloudflare": "^10.73.0",
+    "ai": "^6.0.277",
+    "better-auth": "^1.7.3",
     "better-result": "^3.0.1",
     "drizzle-orm": "^1.0.0-rc.4",
     "hono": "catalog:",
@@ -42,12 +42,12 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.44.0",
-    "@types/node": "^26.2.0",
-    "@types/pg": "^8.21.0",
+    "@cloudflare/vite-plugin": "^1.54.4",
+    "@types/node": "^26.4.1",
+    "@types/pg": "^8.23.1",
     "drizzle-kit": "^1.0.0-rc.4",
-    "tsdown": "^0.22.14",
+    "tsdown": "^0.23.0",
     "typescript": "catalog:",
-    "wrangler": "^4.110.0"
+    "wrangler": "^4.129.0"
   }
 }

@@ -1,14 +1,26 @@
 import { Suspense } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Profile } from '@/features/auth/components/profile'
 import { ProfileLoading } from '@/features/auth/components/profile-loading'
 import { authQueryOptions } from '@/features/auth/query-options'
+import { ProfileError } from '@/features/auth/components/profile-error'
+import { ProfileNotFound } from '@/features/auth/components/profile-not-found'
+import { AuthenticationError, NotFoundError } from '@/lib/errors'
 
 export const Route = createFileRoute('/app/profile/')({
   loader: async ({ context: { queryClient, authClient } }) => {
-    await queryClient.ensureQueryData(authQueryOptions(authClient))
+    try {
+      await queryClient.ensureQueryData(authQueryOptions(authClient))
+    } catch (error) {
+      if (AuthenticationError.is(error) || NotFoundError.is(error)) {
+        throw notFound()
+      }
+      throw error
+    }
   },
   component: ProfilePage,
+  errorComponent: ProfileError,
+  notFoundComponent: ProfileNotFound,
 })
 
 function ProfilePage() {

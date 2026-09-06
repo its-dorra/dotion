@@ -17,7 +17,7 @@
     "@dotion/shared": "workspace:*",
     "@neondatabase/serverless": "^1.1.0",
     "better-result": "^3.0.1",
-    "drizzle-orm": "^1.0.0-rc.4"
+    "drizzle-orm": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241230.0",

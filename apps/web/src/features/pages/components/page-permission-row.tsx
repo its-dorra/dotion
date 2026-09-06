@@ -6,7 +6,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { MemberAvatar } from '@/features/workspaces/components/member-avatar'
+import { useUpdatePagePermission } from '../hooks/use-update-page-permission'
 import type { PageMemberPermission, PagePermissionRole } from '../types'
+import type { WorkspaceId } from '@dotion/shared/workspaces/types'
+import type { PageId } from '@dotion/shared/pages/types'
 import * as m from '@/paraglide/messages'
 
 function getTranslatedRole(role: string) {
@@ -25,16 +28,29 @@ function getTranslatedRole(role: string) {
 }
 
 interface PagePermissionRowProps {
+  workspaceId: WorkspaceId
+  pageId: PageId
   permission: PageMemberPermission
   canManage: boolean
-  onChangeRole: (userId: string, role: PagePermissionRole) => void
 }
 
 export function PagePermissionRow({
+  workspaceId,
+  pageId,
   permission,
   canManage,
-  onChangeRole,
 }: PagePermissionRowProps) {
+  const updatePermission = useUpdatePagePermission()
+
+  async function handleChangeRole(role: PagePermissionRole) {
+    await updatePermission.mutateAsync({
+      workspaceId,
+      pageId,
+      userId: permission.userId,
+      role,
+    })
+  }
+
   return (
     <div className="flex items-center gap-2.5 py-1.5">
       <MemberAvatar
@@ -51,8 +67,9 @@ export function PagePermissionRow({
       {canManage ? (
         <Select
           value={permission.role}
+          disabled={updatePermission.isPending}
           onValueChange={(value) =>
-            onChangeRole(permission.userId, value as PagePermissionRole)
+            handleChangeRole(value as PagePermissionRole)
           }
         >
           <SelectTrigger className="h-7 w-28 text-xs">

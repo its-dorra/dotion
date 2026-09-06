@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Check, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import * as m from '@/paraglide/messages'
 
 interface CodeBlockProps {
   language?: string
@@ -37,19 +38,19 @@ export function CodeBlock({ language, value, className }: CodeBlockProps) {
           type="button"
           onClick={handleCopy}
           className="flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
-          title="Copy code"
+          title={m.ai_code_copy()}
         >
           {hasCopied ? (
             <>
               <Check className="size-3 text-emerald-400" />
               <span className="text-[10px] text-emerald-400 font-medium">
-                Copied
+                {m.ai_code_copied()}
               </span>
             </>
           ) : (
             <>
               <Copy className="size-3" />
-              <span className="text-[10px]">Copy</span>
+              <span className="text-[10px]">{m.ai_code_copy()}</span>
             </>
           )}
         </button>

@@ -1,18 +1,16 @@
 import { CommentCard } from './comment-card'
 import { CommentComposer } from './comment-composer'
 import { InfiniteScroll } from '@/components/ui/infinite-scroll'
-import type { Comment, CommentId } from '../types'
+import type { Comment } from '../types'
+import type { WorkspaceId } from '@/features/workspaces/types'
+import type { PageId } from '@dotion/shared/pages/types'
 import * as m from '@/paraglide/messages'
 
 interface CommentsPanelPresenterProps {
   comments: Comment[]
   canComment: boolean
-  onResolve: (commentId: CommentId) => void
-  onReply: (parentId: CommentId, body: string) => void
-  onAddComment: (body: string) => void
-  onDelete: (commentId: CommentId) => void
-  isSubmitting: boolean
-  isSubmittingReply?: boolean
+  workspaceId: WorkspaceId
+  pageId: PageId
   hasNextPage?: boolean
   fetchNextPage?: () => void
   isFetchingNextPage?: boolean
@@ -21,12 +19,8 @@ interface CommentsPanelPresenterProps {
 export function CommentsPanelPresenter({
   comments,
   canComment,
-  onResolve,
-  onReply,
-  onAddComment,
-  onDelete,
-  isSubmitting,
-  isSubmittingReply,
+  workspaceId,
+  pageId,
   hasNextPage,
   fetchNextPage,
   isFetchingNextPage,
@@ -46,10 +40,8 @@ export function CommentsPanelPresenter({
             key={comment.id}
             comment={comment}
             canComment={canComment}
-            onResolve={onResolve}
-            onReply={onReply}
-            onDelete={onDelete}
-            isSubmittingReply={isSubmittingReply}
+            workspaceId={workspaceId}
+            pageId={pageId}
           />
         ))}
 
@@ -64,9 +56,9 @@ export function CommentsPanelPresenter({
       {canComment ? (
         <div className="shrink-0 border-t p-4">
           <CommentComposer
+            workspaceId={workspaceId}
+            pageId={pageId}
             placeholder={m.comments_placeholder()}
-            onSubmit={onAddComment}
-            isSubmitting={isSubmitting}
           />
         </div>
       ) : null}

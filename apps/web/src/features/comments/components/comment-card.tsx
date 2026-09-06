@@ -4,30 +4,34 @@ import { Button } from '@/components/ui/button'
 import { Can } from '@/features/authorization/components/can'
 import { CommentRow } from './comment-row'
 import { CommentComposer } from './comment-composer'
-import type { Comment, CommentId } from '../types'
+import { useResolveComment } from '../hooks/use-resolve-comment'
+import * as m from '@/paraglide/messages'
+import type { Comment } from '../types'
+import type { WorkspaceId } from '@/features/workspaces/types'
+import type { PageId } from '@dotion/shared/pages/types'
 
 interface CommentCardProps {
   comment: Comment
   canComment: boolean
-  onResolve: (commentId: CommentId) => void
-  onReply: (parentId: CommentId, body: string) => void
-  onDelete: (commentId: CommentId) => void
-  isSubmittingReply?: boolean
+  workspaceId: WorkspaceId
+  pageId: PageId
 }
 
 export function CommentCard({
   comment,
   canComment,
-  onResolve,
-  onReply,
-  onDelete,
-  isSubmittingReply = false,
+  workspaceId,
+  pageId,
 }: CommentCardProps) {
   const [showReplyComposer, setShowReplyComposer] = useState(false)
+  const resolveComment = useResolveComment()
 
-  function handleReplySubmit(body: string) {
-    onReply(comment.id, body)
-    setShowReplyComposer(false)
+  async function handleResolve() {
+    await resolveComment.mutateAsync({
+      workspaceId,
+      pageId,
+      commentId: comment.id,
+    })
   }
 
   const hasReplies = comment.replies && comment.replies.length > 0
@@ -35,7 +39,7 @@ export function CommentCard({
   return (
     <div className="space-y-3 rounded-lg border bg-card p-3 shadow-xs">
       {/* Root comment */}
-      <CommentRow comment={comment} onDelete={onDelete} />
+      <CommentRow comment={comment} workspaceId={workspaceId} pageId={pageId} />
 
       {/* Action bar */}
       <div className="flex items-center gap-2 pt-1">
@@ -48,16 +52,17 @@ export function CommentCard({
               variant="ghost"
               size="xs"
               className="h-6 gap-1 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => onResolve(comment.id)}
+              disabled={resolveComment.isPending}
+              onClick={handleResolve}
             >
               <Check className="h-3 w-3" />
-              Resolve
+              {m.comments_resolve()}
             </Button>
           </Can>
         ) : (
           <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
             <Check className="h-3 w-3 text-green-500" />
-            Resolved
+            {m.comments_resolved()}
           </span>
         )}
 
@@ -69,7 +74,7 @@ export function CommentCard({
             onClick={() => setShowReplyComposer((prev) => !prev)}
           >
             <MessageSquareReply className="h-3 w-3" />
-            Reply
+            {m.comments_reply()}
           </Button>
         )}
       </div>
@@ -78,7 +83,12 @@ export function CommentCard({
       {hasReplies && (
         <div className="mt-2 space-y-2.5 border-l-2 border-muted pl-3">
           {comment.replies.map((reply) => (
-            <CommentRow key={reply.id} comment={reply} onDelete={onDelete} />
+            <CommentRow
+              key={reply.id}
+              comment={reply}
+              workspaceId={workspaceId}
+              pageId={pageId}
+            />
           ))}
         </div>
       )}
@@ -87,9 +97,12 @@ export function CommentCard({
       {showReplyComposer && canComment && !comment.isResolved && (
         <div className="mt-2 border-t pt-2">
           <CommentComposer
-            placeholder="Reply to this comment…"
-            onSubmit={handleReplySubmit}
-            isSubmitting={isSubmittingReply}
+            workspaceId={workspaceId}
+            pageId={pageId}
+            parentId={comment.id}
+            placeholder={m.comments_placeholder()}
+            onSuccess={() => setShowReplyComposer(false)}
+            autoFocus
           />
         </div>
       )}

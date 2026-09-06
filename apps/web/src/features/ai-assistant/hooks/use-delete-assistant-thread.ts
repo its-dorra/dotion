@@ -3,6 +3,7 @@ import { resultMutationOptions } from '@/integrations/tanstack-query/better-resu
 import { aiAssistantApi } from '../api'
 import { assistantKeys } from '../query-options'
 import { toast } from 'sonner'
+import * as m from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import type { AssistantThreadId } from '@dotion/shared/ids'
 
@@ -20,7 +21,7 @@ export function useDeleteAssistantThread(workspaceId: WorkspaceId) {
       },
       onError: (error) => {
         console.error('Error deleting assistant thread:', error)
-        toast.error('Failed to delete conversation.')
+        toast.error(error?.message ?? m.error_assistant_threads_failed())
       },
     }),
   )

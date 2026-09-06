@@ -1,6 +1,7 @@
 import { Users } from 'lucide-react'
 import { WorkspaceIcon } from './workspace-icon'
 import type { Workspace } from '../types'
+import * as m from '@/paraglide/messages'
 
 interface WorkspaceCardProps {
   workspace: Workspace
@@ -19,8 +20,9 @@ export function WorkspaceCard({ workspace, onSelect }: WorkspaceCardProps) {
         <p className="truncate font-medium">{workspace.name}</p>
         <p className="flex items-center gap-1 text-sm text-muted-foreground">
           <Users className="h-3.5 w-3.5" />
-          {workspace.membersCount}{' '}
-          {workspace.membersCount === 1 ? 'member' : 'members'}
+          {workspace.membersCount === 1
+            ? m.members_count_one({ count: workspace.membersCount })
+            : m.members_count_other({ count: workspace.membersCount })}
         </p>
       </div>
     </button>

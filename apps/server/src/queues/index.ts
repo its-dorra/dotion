@@ -8,6 +8,7 @@ export async function processQueueBatch(
   batch: MessageBatch<unknown>,
   env: Env,
 ): Promise<void> {
+  console.dir({ batch }, { depth: null });
   switch (batch.queue) {
     case "dotion-page-cleanup":
       return processPageCleanupBatch(batch, env);

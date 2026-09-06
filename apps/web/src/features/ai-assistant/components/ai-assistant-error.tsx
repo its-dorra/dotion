@@ -1,9 +1,9 @@
-import { AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface AiAssistantErrorProps {
-  message: string;
-  onRetry: () => void;
+  message: string
+  onRetry: () => void
 }
 
 export function AiAssistantError({ message, onRetry }: AiAssistantErrorProps) {
@@ -15,5 +15,5 @@ export function AiAssistantError({ message, onRetry }: AiAssistantErrorProps) {
         Try again
       </Button>
     </div>
-  );
+  )
 }

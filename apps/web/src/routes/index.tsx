@@ -6,9 +6,13 @@ import { ChevronRight, Smile } from 'lucide-react'
 import * as m from '@/paraglide/messages'
 import { useSession } from '@/features/auth/hooks/use-session'
 import { useAuthPopover } from '@/features/auth/hooks/use-auth-popover'
+import { LandingError } from '@/features/auth/components/landing-error'
+import { LandingNotFound } from '@/features/auth/components/landing-not-found'
 
 export const Route = createFileRoute('/')({
   component: HomeComponent,
+  errorComponent: LandingError,
+  notFoundComponent: LandingNotFound,
 })
 
 function HomeComponent() {

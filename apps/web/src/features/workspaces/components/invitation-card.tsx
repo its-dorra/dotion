@@ -1,21 +1,28 @@
 import { WorkspaceIcon } from './workspace-icon'
 import { Button } from '@/components/ui/button'
+import { useAcceptInvitation } from '../hooks/use-accept-invitation'
+import { useDeclineInvitation } from '../hooks/use-decline-invitation'
 import type { WorkspaceInvitation } from '../types'
 import * as m from '@/paraglide/messages'
 
 interface InvitationCardProps {
   invitation: WorkspaceInvitation
-  onAccept: (invitationId: string) => void
-  onDecline: (invitationId: string) => void
-  isResponding: boolean
 }
 
-export function InvitationCard({
-  invitation,
-  onAccept,
-  onDecline,
-  isResponding,
-}: InvitationCardProps) {
+export function InvitationCard({ invitation }: InvitationCardProps) {
+  const acceptInvitation = useAcceptInvitation()
+  const declineInvitation = useDeclineInvitation()
+
+  const isResponding = acceptInvitation.isPending || declineInvitation.isPending
+
+  async function handleAccept() {
+    await acceptInvitation.mutateAsync({ invitationId: invitation.id })
+  }
+
+  async function handleDecline() {
+    await declineInvitation.mutateAsync({ invitationId: invitation.id })
+  }
+
   return (
     <div className="flex items-center gap-3 rounded-md border p-3">
       <WorkspaceIcon
@@ -37,15 +44,11 @@ export function InvitationCard({
           size="sm"
           variant="outline"
           disabled={isResponding}
-          onClick={() => onDecline(invitation.id)}
+          onClick={handleDecline}
         >
           {m.invitation_decline()}
         </Button>
-        <Button
-          size="sm"
-          disabled={isResponding}
-          onClick={() => onAccept(invitation.id)}
-        >
+        <Button size="sm" disabled={isResponding} onClick={handleAccept}>
           {m.invitation_accept()}
         </Button>
       </div>

@@ -51,11 +51,7 @@ export function NotificationRow({
 
   async function handleMarkRead() {
     if (!notification.isRead) {
-      try {
-        await markAsRead.mutateAsync(notification.id)
-      } catch {
-        // handled by mutation hook
-      }
+      await markAsRead.mutateAsync(notification.id)
     }
   }
 

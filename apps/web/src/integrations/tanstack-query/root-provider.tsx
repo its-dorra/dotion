@@ -26,7 +26,7 @@ export function getQueryClient() {
   return queryClient
 }
 
-export function Provider({
+export function TanstackQueryProvider({
   children,
   queryClient,
 }: {

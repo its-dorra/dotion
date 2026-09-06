@@ -9,17 +9,19 @@ import {
 } from '@/components/ui/empty'
 import { CommentComposer } from './comment-composer'
 import * as m from '@/paraglide/messages'
+import type { WorkspaceId } from '@/features/workspaces/types'
+import type { PageId } from '@dotion/shared/pages/types'
 
 interface CommentsEmptyProps {
   canComment: boolean
-  onStartDiscussion: (body: string) => void
-  isSubmitting: boolean
+  workspaceId: WorkspaceId
+  pageId: PageId
 }
 
 export function CommentsEmpty({
   canComment,
-  onStartDiscussion,
-  isSubmitting,
+  workspaceId,
+  pageId,
 }: CommentsEmptyProps) {
   return (
     <Empty className="border-0 p-6">
@@ -37,8 +39,8 @@ export function CommentsEmpty({
       {canComment && (
         <EmptyContent className="w-full max-w-none">
           <CommentComposer
-            onSubmit={onStartDiscussion}
-            isSubmitting={isSubmitting}
+            workspaceId={workspaceId}
+            pageId={pageId}
             placeholder={m.comments_placeholder()}
           />
         </EmptyContent>

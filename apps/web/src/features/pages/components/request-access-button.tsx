@@ -66,15 +66,11 @@ export function RequestAccessButton({
   }
 
   async function handleRequest(role: 'editor' | 'commenter') {
-    try {
-      await requestAccess.mutateAsync({
-        workspaceId,
-        pageId,
-        requestedRole: role,
-      })
-    } catch {
-      // Error handled by hook
-    }
+    await requestAccess.mutateAsync({
+      workspaceId,
+      pageId,
+      requestedRole: role,
+    })
   }
 
   if (currentRole === 'commenter') {

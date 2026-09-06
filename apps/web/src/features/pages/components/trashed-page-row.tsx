@@ -1,21 +1,32 @@
 import { FileText, RotateCcw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Can } from '@/features/authorization/components/can'
+import { useRestoreFromTrash } from '../hooks/use-restore-from-trash'
 import type { TrashedPage } from '../types'
-import * as m from '@/paraglide/messages'
 import type { PageId } from '@dotion/shared/pages/types'
+import type { WorkspaceId } from '@dotion/shared/workspaces/types'
+import * as m from '@/paraglide/messages'
 
 interface TrashedPageRowProps {
   page: TrashedPage
-  onRestore: (pageId: string) => void
+  workspaceId: string
   onDeletePermanently: (pageId: string) => void
 }
 
 export function TrashedPageRow({
   page,
-  onRestore,
+  workspaceId,
   onDeletePermanently,
 }: TrashedPageRowProps) {
+  const restoreFromTrash = useRestoreFromTrash()
+
+  async function handleRestore() {
+    await restoreFromTrash.mutateAsync({
+      pageId: page.id as PageId,
+      workspaceId: workspaceId as WorkspaceId,
+    })
+  }
+
   return (
     <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-accent">
       {page.icon ? (
@@ -39,7 +50,8 @@ export function TrashedPageRow({
           variant="ghost"
           size="icon"
           className="h-7 w-7"
-          onClick={() => onRestore(page.id)}
+          disabled={restoreFromTrash.isPending}
+          onClick={handleRestore}
           aria-label={m.trash_restore()}
           title={m.trash_restore()}
         >

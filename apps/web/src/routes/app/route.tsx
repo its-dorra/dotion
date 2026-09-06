@@ -6,6 +6,8 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { workspacesListQueryOptions } from '@/features/workspaces/query-options'
 import { notificationsInfiniteQueryOptions } from '@/features/notifications/query-options'
 import { DocumentBackgroundLayer } from '@/features/pages/components/document-background-layer'
+import { AppLayoutError } from '@/features/auth/components/app-layout-error'
+import { AppLayoutNotFound } from '@/features/auth/components/app-layout-not-found'
 
 export const Route = createFileRoute('/app')({
   beforeLoad: async ({ context: { authClient, queryClient } }) => {
@@ -23,6 +25,8 @@ export const Route = createFileRoute('/app')({
     void queryClient.prefetchInfiniteQuery(notificationsInfiniteQueryOptions())
   },
   component: AppLayout,
+  errorComponent: AppLayoutError,
+  notFoundComponent: AppLayoutNotFound,
 })
 
 function AppLayout() {

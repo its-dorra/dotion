@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { searchQueryOptions } from '../query-options'
+import * as m from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import type { SearchResultItem } from '../types'
 import { cn } from '@/lib/utils'
@@ -101,6 +102,7 @@ export function SearchDialog({
           setTimeout(() => {
             const el = document.getElementById(item.headingBlockId!)
             if (el) {
+              console.log('Scrolling to element:', el)
               el.scrollIntoView({ behavior: 'smooth', block: 'center' })
             }
           }, 300)
@@ -157,20 +159,20 @@ export function SearchDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        showCloseButton={false}
         className="max-w-2xl gap-0 p-0 overflow-hidden border shadow-2xl sm:rounded-xl"
         onKeyDown={handleKeyDown}
       >
         <DialogHeader className="sr-only">
-          <DialogTitle>Search Workspace</DialogTitle>
+          <DialogTitle>{m.search_dialog_title()}</DialogTitle>
         </DialogHeader>
 
-        {/* Search Header Input */}
-        <div className="flex items-center border-b px-3.5 py-2.5 gap-2.5 bg-background">
-          <Search className="size-4.5 text-muted-foreground shrink-0" />
+        <div className="flex items-center border-b px-3.5 py-2.5 gap-2 bg-background">
+          <Search className="size-4 text-muted-foreground shrink-0" />
           <Input
             ref={inputRef}
             type="text"
-            placeholder="Search documents, sections, and notes... (e.g. roadmap, database schema)"
+            placeholder={m.search_dialog_placeholder()}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="border-0 shadow-none focus-visible:ring-0 text-sm h-8 px-0 placeholder:text-muted-foreground/70"
@@ -181,12 +183,19 @@ export function SearchDialog({
           {searchQuery && (
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
-              className="p-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted"
+              onClick={() => {
+                setSearchQuery('')
+                inputRef.current?.focus()
+              }}
+              className="p-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted shrink-0 transition-colors"
+              title="Clear search"
             >
               <X className="size-3.5" />
             </button>
           )}
+          <kbd className="hidden sm:inline-flex items-center rounded-xs border bg-muted/60 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground select-none shrink-0">
+            Esc
+          </kbd>
         </div>
 
         {/* Results Area */}
@@ -195,24 +204,21 @@ export function SearchDialog({
             <div className="py-10 text-center text-xs text-muted-foreground">
               <Search className="size-8 mx-auto mb-2 opacity-30" />
               <p className="font-medium text-foreground/80">
-                Hybrid Workspace Search
+                {m.search_dialog_empty_title()}
               </p>
-              <p className="mt-1">
-                Type keywords to perform semantic and keyword retrieval across
-                all pages.
-              </p>
+              <p className="mt-1">{m.search_dialog_empty_desc()}</p>
             </div>
           ) : isPending && items.length === 0 ? (
             <div className="py-12 text-center text-xs text-muted-foreground">
               <Loader2 className="size-6 mx-auto mb-2 animate-spin text-primary" />
-              Searching workspace knowledge base...
+              {m.search_dialog_searching()}
             </div>
           ) : items.length === 0 ? (
             <div className="py-10 text-center text-xs text-muted-foreground">
-              <p className="font-medium text-foreground/80">No results found</p>
-              <p className="mt-1">
-                Try searching for different keywords or checking for typos.
+              <p className="font-medium text-foreground/80">
+                {m.search_dialog_no_results()}
               </p>
+              <p className="mt-1">{m.search_dialog_no_results_desc()}</p>
             </div>
           ) : (
             <div className="space-y-1">
@@ -284,19 +290,19 @@ export function SearchDialog({
               <kbd className="rounded-xs border bg-background px-1 py-0.5 text-[10px] font-mono shadow-2xs">
                 ↓
               </kbd>
-              <span>Navigate</span>
+              <span>{m.search_dialog_navigate()}</span>
             </span>
             <span className="flex items-center gap-1">
               <kbd className="rounded-xs border bg-background px-1.5 py-0.5 text-[10px] font-mono shadow-2xs">
                 ↵
               </kbd>
-              <span>Open</span>
+              <span>{m.search_dialog_open()}</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="rounded-xs border bg-background px-1 py-0.5 text-[10px] font-mono shadow-2xs">
+              <kbd className="rounded-xs border bg-background px-1.5 py-0.5 text-[10px] font-mono shadow-2xs">
                 Esc
               </kbd>
-              <span>Close</span>
+              <span>{m.search_dialog_close()}</span>
             </span>
           </div>
           <span className="font-medium text-[10px]">

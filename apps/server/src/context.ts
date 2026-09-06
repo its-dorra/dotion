@@ -53,6 +53,19 @@ export const createAppContext = (env: Env) => {
       delete(key) {
         return env.KV.delete(key);
       },
+      async getAndDelete(key) {
+        const val = await env.KV.get(key);
+        if (val !== null) {
+          await env.KV.delete(key);
+        }
+        return val;
+      },
+      async increment(key, amount = 1) {
+        const current = await env.KV.get(key);
+        const next = (current ? parseInt(current, 10) || 0 : 0) + amount;
+        await env.KV.put(key, String(next));
+        return next;
+      },
     },
     {
       BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET,

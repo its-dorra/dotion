@@ -71,6 +71,10 @@ export class PageDocument {
     return this.dirty;
   }
 
+  markDirty(): void {
+    this.dirty = true;
+  }
+
   /**
    * Only marks the document clean if the revision that was persisted is still
    * the current revision.

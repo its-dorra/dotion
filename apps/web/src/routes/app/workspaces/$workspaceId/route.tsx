@@ -6,6 +6,8 @@ import { SearchDialog } from '@/features/search/components/search-dialog'
 import { AiAssistantContainer } from '@/features/ai-assistant/components/ai-assistant-container'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import { pageTreeQueryOptions } from '@/features/pages/query-options'
+import { WorkspaceLayoutError } from '@/features/workspaces/components/workspace-layout-error'
+import { WorkspaceNotFound } from '@/features/workspaces/components/workspace-not-found'
 
 export const Route = createFileRoute('/app/workspaces/$workspaceId')({
   loader: async ({ context: { queryClient }, params }) => {
@@ -14,6 +16,8 @@ export const Route = createFileRoute('/app/workspaces/$workspaceId')({
     )
   },
   component: RouteComponent,
+  errorComponent: WorkspaceLayoutError,
+  notFoundComponent: WorkspaceNotFound,
 })
 
 function RouteComponent() {

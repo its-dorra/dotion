@@ -20,6 +20,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { CoverUnsplashTab } from './cover-unsplash-tab'
 import { CoverGalleryTab } from './cover-gallery-tab'
 import { CoverLinkTab } from './cover-link-tab'
+import * as m from '@/paraglide/messages'
 
 interface CoverPickerDialogProps {
   cover?: string | null
@@ -58,21 +59,21 @@ export function CoverPicker({
             className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm cursor-pointer"
           >
             <Search className="h-3.5 w-3.5 mr-1.5" />
-            Unsplash
+            {m.page_cover_tab_unsplash()}
           </TabsTrigger>
           <TabsTrigger
             value="gallery"
             className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm cursor-pointer"
           >
             <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-            Gallery
+            {m.page_cover_tab_gallery()}
           </TabsTrigger>
           <TabsTrigger
             value="link"
             className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm cursor-pointer"
           >
             <LinkIcon className="h-3.5 w-3.5 mr-1.5" />
-            Link
+            {m.page_cover_tab_link()}
           </TabsTrigger>
         </TabsList>
       </div>
@@ -111,7 +112,7 @@ export function CoverPicker({
           <SheetHeader className="px-4 pt-4 pb-3 border-b shrink-0">
             <div className="flex items-center justify-between">
               <SheetTitle className="text-base font-semibold">
-                Cover Image
+                {m.page_cover_title()}
               </SheetTitle>
               {cover ? (
                 <Button
@@ -121,7 +122,7 @@ export function CoverPicker({
                   onClick={() => handleSelect(null)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  Remove cover
+                  {m.page_cover_remove()}
                 </Button>
               ) : null}
             </div>
@@ -139,7 +140,7 @@ export function CoverPicker({
         <DialogHeader className="px-6 pt-5 pb-3 border-b">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-base font-semibold">
-              Cover Image
+              {m.page_cover_title()}
             </DialogTitle>
             {cover ? (
               <Button
@@ -149,7 +150,7 @@ export function CoverPicker({
                 onClick={() => handleSelect(null)}
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Remove cover
+                {m.page_cover_remove()}
               </Button>
             ) : null}
           </div>

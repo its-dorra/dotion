@@ -57,7 +57,7 @@ export function PageIconPicker({
       >
         <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Icons & Emojis
+            {m.page_icon_emoji_title()}
           </span>
           <div className="flex items-center gap-1">
             {icon ? (
@@ -88,7 +88,7 @@ export function PageIconPicker({
           >
             <EmojiPicker.Header className="p-2 pb-1">
               <EmojiPicker.Input
-                placeholder="Search emoji..."
+                placeholder={m.page_icon_emoji_search()}
                 autoFocus
                 className="h-8 text-sm bg-muted/40"
               />

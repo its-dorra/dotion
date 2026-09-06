@@ -90,11 +90,12 @@ export class PagesDO extends DurableObject<Env> {
       services.pages,
       this.pageId,
       this.env,
+      this.workspaceId,
     );
 
     const document = new PageDocument();
 
-    const initialState = await persistence.loadInitialState();
+    const initialState = await persistence.loadInitialState(document);
 
     if (initialState) {
       document.load(initialState);
@@ -405,6 +406,18 @@ export class PagesDO extends DurableObject<Env> {
   }
 
   async alarm(): Promise<void> {
+    if (!this.document || !this.persistence) {
+      const storedPageId = await this.ctx.storage.get<PageId>(STORAGE_PAGE_ID);
+      const storedWorkspaceId =
+        await this.ctx.storage.get<WorkspaceId>(STORAGE_WORKSPACE_ID);
+      if (storedPageId) {
+        await this.initialize(
+          storedPageId,
+          storedWorkspaceId ?? ("" as WorkspaceId),
+        );
+      }
+    }
+
     if (this.persistence) {
       await this.persistence.persist(this.document);
     }

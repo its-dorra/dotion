@@ -3,6 +3,8 @@ import { resultMutationOptions } from '@/integrations/tanstack-query/better-resu
 import { pagesApi } from '../api'
 import { pagesKeys } from '../query-options'
 import { authorizationKeys } from '@/features/authorization/query-options'
+import { toast } from 'sonner'
+import * as m from '@/paraglide/messages'
 import type { InviteToPageInput } from '../types'
 
 export function useInviteToPage() {
@@ -24,6 +26,10 @@ export function useInviteToPage() {
         queryClient.invalidateQueries({
           queryKey: authorizationKeys.all,
         })
+        toast.success(m.toast_page_invite_success({ email: variables.email }))
+      },
+      onError: (error) => {
+        toast.error(error?.message ?? m.toast_page_invite_failed())
       },
     }),
   )

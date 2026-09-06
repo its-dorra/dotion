@@ -2,6 +2,7 @@ import { useAppForm } from '@/integrations/tanstack-form/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import * as m from '@/paraglide/messages'
 
 interface CoverLinkTabProps {
   onSelect: (url: string) => void
@@ -34,12 +35,12 @@ export function CoverLinkTab({ onSelect }: CoverLinkTabProps) {
           name="url"
           validators={{
             onChange: ({ value }) => {
-              if (!value.trim()) return 'Image URL is required'
+              if (!value.trim()) return m.page_cover_link_required()
               try {
                 new URL(value.trim())
                 return undefined
               } catch {
-                return 'Please enter a valid URL'
+                return m.page_cover_link_invalid()
               }
             },
           }}
@@ -50,13 +51,13 @@ export function CoverLinkTab({ onSelect }: CoverLinkTabProps) {
                 htmlFor={field.name}
                 className="text-xs font-medium text-muted-foreground"
               >
-                Paste an image link from the web
+                {m.page_cover_link_label()}
               </Label>
               <div className="flex gap-2">
                 <Input
                   id={field.name}
                   name={field.name}
-                  placeholder="https://images.unsplash.com/..."
+                  placeholder={m.page_cover_link_placeholder()}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -68,7 +69,7 @@ export function CoverLinkTab({ onSelect }: CoverLinkTabProps) {
                   size="sm"
                   disabled={!field.state.value.trim()}
                 >
-                  Submit
+                  {m.page_cover_link_submit()}
                 </Button>
               </div>
               {field.state.meta.errors.length > 0 &&
@@ -81,8 +82,7 @@ export function CoverLinkTab({ onSelect }: CoverLinkTabProps) {
           )}
         </form.Field>
         <p className="text-xs text-muted-foreground">
-          Works with any direct image URL (JPEG, PNG, WebP, GIF) or Unsplash
-          link.
+          {m.page_cover_link_hint()}
         </p>
       </form>
     </div>

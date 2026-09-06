@@ -1,17 +1,12 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { pagePermissionsInfiniteQueryOptions } from '../query-options'
 import { canQueryOptions } from '@/features/authorization/query-options'
-import { useInviteToPage } from '../hooks/use-invite-to-page'
-import { useUpdatePagePermission } from '../hooks/use-update-page-permission'
-import { useSetPagePublic } from '../hooks/use-set-page-public'
 import { ShareDropdownPresenter } from './share-dropdown-presenter'
 import { SharePermissionsLoading } from './share-permissions-loading'
 import { SharePermissionsError } from './share-permissions-error'
 import { PagePermissionRow } from './page-permission-row'
 import { InfiniteScroll } from '@/components/ui/infinite-scroll'
-import * as m from '@/paraglide/messages'
-import type { Page, PagePermissionRole } from '../types'
+import type { Page } from '../types'
 
 interface ShareDropdownContainerProps {
   page: Page
@@ -27,52 +22,8 @@ export function ShareDropdownContainer({ page }: ShareDropdownContainerProps) {
       action: 'managePermissions',
     }),
   )
-  const inviteToPage = useInviteToPage()
-  const updatePermission = useUpdatePagePermission()
-  const setPagePublic = useSetPagePublic()
 
   const canManage = managePerm?.allowed ?? false
-
-  async function handleInvite(email: string, role: PagePermissionRole) {
-    try {
-      await inviteToPage.mutateAsync({
-        workspaceId: page.workspaceId,
-        pageId: page.id,
-        email,
-        role,
-      })
-      toast.success(m.toast_page_invite_success({ email }))
-    } catch (error: any) {
-      toast.error(error?.message ?? m.toast_page_invite_failed())
-    }
-  }
-
-  async function handleChangeRole(userId: string, role: PagePermissionRole) {
-    try {
-      await updatePermission.mutateAsync({
-        workspaceId: page.workspaceId,
-        pageId: page.id,
-        userId: userId as any,
-        role,
-      })
-      toast.success(m.toast_permission_updated())
-    } catch (error: any) {
-      toast.error(error?.message ?? m.toast_permission_update_failed())
-    }
-  }
-
-  async function handleTogglePublic(isPublic: boolean) {
-    try {
-      await setPagePublic.mutateAsync({
-        pageId: page.id,
-        isPublic,
-      })
-      toast(isPublic ? m.toast_page_public() : m.toast_page_private())
-    } catch (error: any) {
-      toast.error(error?.message ?? m.toast_page_public_access_update_failed())
-    }
-  }
-
   const permissions = query.data?.pages.flatMap((p) => p.payload) ?? []
 
   const permissionsSlot = query.isPending ? (
@@ -92,9 +43,10 @@ export function ShareDropdownContainer({ page }: ShareDropdownContainerProps) {
         {permissions.map((permission) => (
           <PagePermissionRow
             key={permission.userId}
+            workspaceId={page.workspaceId}
+            pageId={page.id}
             permission={permission}
             canManage={canManage}
-            onChangeRole={handleChangeRole}
           />
         ))}
       </InfiniteScroll>
@@ -107,12 +59,6 @@ export function ShareDropdownContainer({ page }: ShareDropdownContainerProps) {
       permissions={permissions}
       permissionsSlot={permissionsSlot}
       canManage={canManage}
-      onInvite={handleInvite}
-      isInviting={inviteToPage.isPending}
-      inviteErrorMessage={inviteToPage.error?.message}
-      onChangeRole={handleChangeRole}
-      onTogglePublic={handleTogglePublic}
-      isUpdatingPublic={setPagePublic.isPending}
     />
   )
 }

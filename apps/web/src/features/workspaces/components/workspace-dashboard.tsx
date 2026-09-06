@@ -41,14 +41,10 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
   const greetingText = getGreeting(userName)
 
   async function handleCreatePage() {
-    try {
-      await createPage.mutateAsync({
-        workspaceId,
-        title: m.page_untitled(),
-      })
-    } catch {
-      // Error handled by mutation hook
-    }
+    await createPage.mutateAsync({
+      workspaceId,
+      title: m.page_untitled(),
+    })
   }
 
   return (
@@ -102,11 +98,7 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
             </Link>
           </Button>
 
-          <Can
-            resource="page"
-            action="create"
-            scope={{ workspaceId }}
-          >
+          <Can resource="page" action="create" scope={{ workspaceId }}>
             <Button
               size="sm"
               onClick={handleCreatePage}
@@ -127,11 +119,7 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
             {m.workspace_pages_heading()}
           </h2>
           {pageTree.length > 0 && (
-            <Can
-              resource="page"
-              action="create"
-              scope={{ workspaceId }}
-            >
+            <Can resource="page" action="create" scope={{ workspaceId }}>
               <Button
                 variant="ghost"
                 size="sm"
@@ -157,11 +145,7 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
               {m.page_tree_empty_desc()}
             </p>
-            <Can
-              resource="page"
-              action="create"
-              scope={{ workspaceId }}
-            >
+            <Can resource="page" action="create" scope={{ workspaceId }}>
               <Button
                 size="sm"
                 onClick={handleCreatePage}

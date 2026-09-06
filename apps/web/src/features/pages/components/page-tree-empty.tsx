@@ -8,13 +8,21 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
+import { useCreatePage } from '../hooks/use-create-page'
+import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import * as m from '@/paraglide/messages'
 
 interface PageTreeEmptyProps {
-  onCreateFirstPage: () => void
+  workspaceId: WorkspaceId
 }
 
-export function PageTreeEmpty({ onCreateFirstPage }: PageTreeEmptyProps) {
+export function PageTreeEmpty({ workspaceId }: PageTreeEmptyProps) {
+  const createPage = useCreatePage()
+
+  function handleCreateFirstPage() {
+    createPage.mutateAsync({ workspaceId, parentId: undefined, title: '' })
+  }
+
   return (
     <Empty className="border-0 p-4">
       <EmptyHeader className="gap-1.5">
@@ -33,7 +41,8 @@ export function PageTreeEmpty({ onCreateFirstPage }: PageTreeEmptyProps) {
           variant="outline"
           size="sm"
           className="h-7 gap-1.5 px-2 text-xs"
-          onClick={onCreateFirstPage}
+          disabled={createPage.isPending}
+          onClick={handleCreateFirstPage}
         >
           <Plus className="size-3.5" />
           {m.page_tree_create_first()}

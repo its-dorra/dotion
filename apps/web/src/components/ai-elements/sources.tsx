@@ -1,6 +1,7 @@
 import { FileText, Hash, ExternalLink } from 'lucide-react'
 import type { AssistantCitation } from '@dotion/shared/assistant/types'
 import { cn } from '@/lib/utils'
+import * as m from '@/paraglide/messages'
 
 interface SourcesProps {
   citations: AssistantCitation[]
@@ -19,7 +20,7 @@ export function Sources({
     <div className={cn('mt-3 flex flex-col gap-1.5', className)}>
       <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
         <FileText className="size-3 text-primary/80" />
-        <span>Sources ({citations.length})</span>
+        <span>{m.ai_sources_title({ count: citations.length })}</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">

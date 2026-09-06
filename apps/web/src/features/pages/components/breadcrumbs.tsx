@@ -1,11 +1,12 @@
-import { Link } from "@tanstack/react-router";
-import { ChevronRight } from "lucide-react";
-import type { PageBreadcrumb } from "../types";
+import { Link } from '@tanstack/react-router'
+import { ChevronRight } from 'lucide-react'
+import * as m from '@/paraglide/messages'
+import type { PageBreadcrumb } from '../types'
 
 interface BreadcrumbsProps {
-  workspaceName: string;
-  workspaceId: string;
-  breadcrumbs: PageBreadcrumb[];
+  workspaceName: string
+  workspaceId: string
+  breadcrumbs: PageBreadcrumb[]
 }
 
 export function Breadcrumbs({
@@ -22,14 +23,14 @@ export function Breadcrumbs({
         {workspaceName}
       </span>
       {breadcrumbs.map((crumb, index) => {
-        const isLast = index === breadcrumbs.length - 1;
+        const isLast = index === breadcrumbs.length - 1
         return (
           <span key={crumb.id} className="flex min-w-0 items-center gap-1">
             <ChevronRight className="h-3.5 w-3.5 shrink-0" />
             {isLast ? (
               <span className="truncate font-medium text-foreground">
-                {crumb.icon ? `${crumb.icon} ` : ""}
-                {crumb.title || "Untitled"}
+                {crumb.icon ? `${crumb.icon} ` : ''}
+                {crumb.title || m.page_untitled()}
               </span>
             ) : (
               <Link
@@ -37,13 +38,13 @@ export function Breadcrumbs({
                 params={{ workspaceId, pageId: crumb.id }}
                 className="truncate hover:text-foreground"
               >
-                {crumb.icon ? `${crumb.icon} ` : ""}
-                {crumb.title || "Untitled"}
+                {crumb.icon ? `${crumb.icon} ` : ''}
+                {crumb.title || m.page_untitled()}
               </Link>
             )}
           </span>
-        );
+        )
       })}
     </nav>
-  );
+  )
 }

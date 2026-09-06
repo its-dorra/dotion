@@ -5,33 +5,45 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { useDeletePermanently } from '../hooks/use-delete-permanently'
+import * as m from '@/paraglide/messages'
+import type { PageId } from '@dotion/shared/pages/types'
+import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 
 interface DeletePermanentlyDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  pageTitle: string;
-  onConfirm: () => void;
-  isDeleting: boolean;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  pageId: string | null
+  pageTitle: string
+  workspaceId: string
 }
 
 export function DeletePermanentlyDialog({
   open,
   onOpenChange,
-  pageTitle,
-  onConfirm,
-  isDeleting,
+  pageId,
+  pageTitle: _pageTitle,
+  workspaceId,
 }: DeletePermanentlyDialogProps) {
+  const deletePermanently = useDeletePermanently()
+
+  async function handleConfirm() {
+    if (!pageId) return
+    await deletePermanently.mutateAsync({
+      pageId: pageId as PageId,
+      workspaceId: workspaceId as WorkspaceId,
+    })
+    onOpenChange(false)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Delete "{pageTitle || "Untitled"}" forever?</DialogTitle>
-          <DialogDescription>
-            This can't be undone. The page and its contents will be
-            permanently deleted.
-          </DialogDescription>
+          <DialogTitle>{m.trash_delete_confirm_title()}</DialogTitle>
+          <DialogDescription>{m.trash_delete_confirm_desc()}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-4">
           <Button
@@ -39,18 +51,18 @@ export function DeletePermanentlyDialog({
             variant="ghost"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {m.common_cancel()}
           </Button>
           <Button
             type="button"
             variant="destructive"
-            disabled={isDeleting}
-            onClick={onConfirm}
+            disabled={deletePermanently.isPending || !pageId}
+            onClick={handleConfirm}
           >
-            {isDeleting ? "Deleting…" : "Delete permanently"}
+            {m.trash_delete_permanently()}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

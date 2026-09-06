@@ -2,9 +2,11 @@ import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import * as Sentry from '@sentry/tanstackstart-react'
 import { routeTree } from './routeTree.gen'
-import { Provider } from './integrations/tanstack-query/root-provider'
+import { TanstackQueryProvider } from './integrations/tanstack-query/root-provider'
 import { getRouterContext } from './integrations/router-context'
 import { deLocalizeUrl, localizeUrl } from './paraglide/runtime.js'
+import { RouteErrorFallback } from '@/components/common/route-error'
+import { NotFound } from '@/components/common/not-found'
 
 export const getRouter = () => {
   const routerContext = getRouterContext()
@@ -20,11 +22,12 @@ export const getRouter = () => {
       input: ({ url }) => deLocalizeUrl(url),
       output: ({ url }) => localizeUrl(url),
     },
-    defaultNotFoundComponent: () => <div>Not Found</div>,
+    defaultErrorComponent: RouteErrorFallback,
+    defaultNotFoundComponent: () => <NotFound />,
     Wrap: (props: { children: React.ReactNode }) => (
-      <Provider queryClient={routerContext.queryClient}>
+      <TanstackQueryProvider queryClient={routerContext.queryClient}>
         {props.children}
-      </Provider>
+      </TanstackQueryProvider>
     ),
   })
 
@@ -44,6 +47,7 @@ export const getRouter = () => {
   setupRouterSsrQueryIntegration({
     router,
     queryClient: routerContext.queryClient,
+    wrapQueryClient: false,
   })
 
   return router

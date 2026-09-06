@@ -81,7 +81,7 @@ export function CoverUnsplashTab({ cover, onSelect }: CoverUnsplashTabProps) {
         <div className="relative">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search and choose an image from Unsplash..."
+            placeholder={m.page_cover_unsplash_placeholder()}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             className="pl-9 text-sm bg-background"
@@ -186,11 +186,11 @@ export function CoverUnsplashTab({ cover, onSelect }: CoverUnsplashTabProps) {
               {isFetchingNextPage ? (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading more photos...</span>
+                  <span>{m.page_cover_unsplash_loading()}</span>
                 </div>
               ) : hasNextPage ? (
                 <span className="text-xs text-muted-foreground/50">
-                  Scroll down for more
+                  {m.page_cover_unsplash_scroll_more()}
                 </span>
               ) : null}
             </div>
@@ -199,7 +199,9 @@ export function CoverUnsplashTab({ cover, onSelect }: CoverUnsplashTabProps) {
 
         <div className="mt-4 text-center pb-2">
           <p className="text-[11px] text-muted-foreground">
-            Photos provided by{' '}
+            {m.page_cover_unsplash_attribution({
+              unsplash: 'Unsplash',
+            })}{' '}
             <a
               href="https://unsplash.com?utm_source=dotion&utm_medium=referral"
               target="_blank"

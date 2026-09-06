@@ -1,5 +1,6 @@
 import { Sparkles, ArrowUpRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import * as m from '@/paraglide/messages'
 
 export interface SuggestionItem {
   id: string
@@ -51,7 +52,7 @@ export function Suggestions({
     <div className={cn('flex flex-col gap-2', className)}>
       <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
         <Sparkles className="size-3 text-primary" />
-        <span>Suggested Questions</span>
+        <span>{m.ai_suggestions_title()}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {suggestions.map((item) => (

@@ -5,10 +5,12 @@ import type {
   PageId,
   UpdatePageMetadataInput,
 } from "@dotion/shared/pages/types";
+import type { WorkspaceId } from "@dotion/shared/workspaces/types";
 import type { PageIndexingQueueMessage } from "@dotion/shared/search/types";
 
 const STORAGE_YJS_STATE = "yjs-state";
 const STORAGE_PENDING_METADATA = "pending-metadata";
+const STORAGE_CONTENT_DIRTY = "content-dirty";
 
 /**
  * Persistence timing strategy:
@@ -37,10 +39,16 @@ export class PagePersistence {
     private readonly pagesService: PagesService,
     private readonly pageId: PageId,
     private readonly env?: Env,
+    private readonly workspaceId?: WorkspaceId | null,
   ) {}
 
-  async loadInitialState(): Promise<Uint8Array | null> {
+  async loadInitialState(document?: PageDocument): Promise<Uint8Array | null> {
     const storedState = await this.storage.get<Uint8Array>(STORAGE_YJS_STATE);
+
+    const isDirty = await this.storage.get<boolean>(STORAGE_CONTENT_DIRTY);
+    if (isDirty && document) {
+      document.markDirty();
+    }
 
     if (storedState) {
       return storedState;
@@ -74,6 +82,7 @@ export class PagePersistence {
     try {
       const state = document.encodeState();
       await this.storage.put(STORAGE_YJS_STATE, state);
+      await this.storage.put(STORAGE_CONTENT_DIRTY, true);
     } catch (error) {
       console.error(
         `PagePersistence: failed to write page ${this.pageId} state to DO storage:`,
@@ -149,7 +158,7 @@ export class PagePersistence {
     const now = Date.now();
     let hasError = false;
 
-    // 1. Check & persist metadata if pending and ready
+    // 1. Check & persist metadata if pending and ready (with 100ms tolerance for timer jitter)
     const pendingMetadata = await this.storage.get<UpdatePageMetadataInput>(
       STORAGE_PENDING_METADATA,
     );
@@ -158,7 +167,8 @@ export class PagePersistence {
       pendingMetadata &&
       Object.keys(pendingMetadata).length > 0 &&
       (forceFlushAll ||
-        now >= this.lastMetadataEditTime + METADATA_DEBOUNCE_MS);
+        this.lastMetadataEditTime === 0 ||
+        now + 100 >= this.lastMetadataEditTime + METADATA_DEBOUNCE_MS);
 
     if (isMetadataReady) {
       try {
@@ -222,13 +232,14 @@ export class PagePersistence {
       }
     }
 
-    // 2. Check & persist Yjs content if dirty and ready
+    // 2. Check & persist Yjs content if dirty and ready (with 100ms tolerance for timer jitter)
     const isContentDirty = document && document.isDirty();
     const isContentReady =
       isContentDirty &&
       (forceFlushAll ||
-        now >= this.lastContentEditTime + CONTENT_IDLE_DEBOUNCE_MS ||
-        now >=
+        this.lastContentEditTime === 0 ||
+        now + 100 >= this.lastContentEditTime + CONTENT_IDLE_DEBOUNCE_MS ||
+        now + 100 >=
           this.firstUnpersistedContentEditTime + CONTENT_MAX_CHECKPOINT_MS);
 
     if (isContentReady && document) {
@@ -255,6 +266,7 @@ export class PagePersistence {
           if (persistedLatestRevision) {
             this.firstUnpersistedContentEditTime = 0;
             this.lastContentEditTime = 0;
+            await this.storage.delete(STORAGE_CONTENT_DIRTY);
           }
           console.log(
             `PagePersistence: persisted page ${this.pageId} content at revision ${revision}.`,
@@ -263,16 +275,30 @@ export class PagePersistence {
           // Enqueue asynchronous background indexing job
           if (this.env?.PAGE_INDEXING_QUEUE) {
             try {
-              const pageLookup = await this.pagesService.getPageById(
-                this.pageId,
-              );
-              if (pageLookup.isOk()) {
+              let targetWorkspaceId = this.workspaceId;
+              if (!targetWorkspaceId) {
+                const pageLookup = await this.pagesService.getPageById(
+                  this.pageId,
+                );
+                if (pageLookup.isOk()) {
+                  targetWorkspaceId = pageLookup.value.workspaceId;
+                }
+              }
+
+              if (targetWorkspaceId) {
                 const message: PageIndexingQueueMessage = {
-                  workspaceId: pageLookup.value.workspaceId,
+                  workspaceId: targetWorkspaceId,
                   pageId: this.pageId,
                   version: revision,
                 };
                 await this.env.PAGE_INDEXING_QUEUE.send(message);
+                console.log(
+                  `PagePersistence: successfully enqueued indexing message for page ${this.pageId} (version ${revision}).`,
+                );
+              } else {
+                console.warn(
+                  `PagePersistence: skipping page indexing enqueue, workspaceId not found for page ${this.pageId}.`,
+                );
               }
             } catch (err) {
               console.error(
@@ -316,7 +342,6 @@ export class PagePersistence {
       deadlines.push(now + 5_000);
     }
 
-    // Check pending metadata deadline
     const pendingMetadata = await this.storage.get<UpdatePageMetadataInput>(
       STORAGE_PENDING_METADATA,
     );
@@ -326,7 +351,6 @@ export class PagePersistence {
       deadlines.push(metadataDeadline);
     }
 
-    // Check content checkpoint deadline
     if (document && document.isDirty()) {
       const idleDeadline =
         (this.lastContentEditTime || now) + CONTENT_IDLE_DEBOUNCE_MS;
@@ -338,7 +362,6 @@ export class PagePersistence {
 
     if (deadlines.length > 0) {
       const earliest = Math.min(...deadlines);
-      // setAlarm with a timestamp in the past triggers almost immediately
       await this.storage.setAlarm(Math.max(earliest, now + 50));
     } else {
       await this.storage.deleteAlarm();

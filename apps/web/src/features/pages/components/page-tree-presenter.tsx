@@ -2,8 +2,8 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageTreeItem } from './page-tree-item'
 import { Can } from '@/features/authorization/components/can'
+import { useCreatePage } from '../hooks/use-create-page'
 import type { PageTreeNodeWithChildren } from '../lib/build-page-tree'
-import type { PageId } from '@dotion/shared/pages/types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import { m } from '@/paraglide/messages'
 
@@ -11,19 +11,23 @@ interface PageTreePresenterProps {
   tree: PageTreeNodeWithChildren[]
   workspaceId: string
   activePageId?: string
-  onCreateRootPage: () => void
-  onCreateChild: (parentId: PageId) => void
-  onMoveToTrash: (pageId: PageId) => void
 }
 
 export function PageTreePresenter({
   tree,
   workspaceId,
   activePageId,
-  onCreateRootPage,
-  onCreateChild,
-  onMoveToTrash,
 }: PageTreePresenterProps) {
+  const createPage = useCreatePage()
+
+  function handleCreateRootPage() {
+    createPage.mutateAsync({
+      workspaceId: workspaceId as WorkspaceId,
+      parentId: undefined,
+      title: '',
+    })
+  }
+
   return (
     <div className="space-y-0.5">
       <div className="flex items-center justify-between px-2 py-1">
@@ -39,7 +43,8 @@ export function PageTreePresenter({
             variant="ghost"
             size="icon"
             className="h-5 w-5"
-            onClick={onCreateRootPage}
+            disabled={createPage.isPending}
+            onClick={handleCreateRootPage}
             aria-label={m.page_tree_add_page()}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -53,8 +58,6 @@ export function PageTreePresenter({
           workspaceId={workspaceId}
           activePageId={activePageId}
           depth={0}
-          onCreateChild={onCreateChild}
-          onMoveToTrash={onMoveToTrash}
         />
       ))}
     </div>

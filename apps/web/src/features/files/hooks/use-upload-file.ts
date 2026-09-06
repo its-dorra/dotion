@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { filesApi } from '../api'
 import { toast } from 'sonner'
+import * as m from '@/paraglide/messages'
 import type { WorkspaceId } from '@/features/workspaces/types'
 import type { PageId } from '@/features/pages/types'
 
@@ -17,7 +18,7 @@ export function useUploadFile() {
       mutationFn: (input: UploadFileInput) => filesApi.uploadFile(input),
       onError: (error) => {
         console.error('Error uploading file:', error)
-        toast.error('Failed to upload file.')
+        toast.error(m.toast_file_upload_failed())
       },
     }),
   )
