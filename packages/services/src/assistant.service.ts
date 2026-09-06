@@ -1,6 +1,5 @@
 import { Result } from "better-result";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { streamText, generateText, type ModelMessage } from "ai";
+import type { streamText } from "ai";
 import type {
   AssistantRepository,
   AssistantThreadRecord,
@@ -9,29 +8,12 @@ import type {
 } from "@dotion/db/repositories";
 import type { DBClient } from "@dotion/db";
 import type { SearchService } from "./search.service";
-import type { UserCreditsManager } from "./realtime.types";
+import type { AIService, AIError, QuotaExceededError } from "./ai.service";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
 import type { UserId } from "@dotion/shared/users/types";
 import type { AssistantThreadId } from "@dotion/shared/ids";
 import type { AssistantCitation } from "@dotion/shared/assistant/types";
 import type { DatabaseError, NotFoundError } from "@dotion/db/errors";
-import { AIError, QuotaExceededError } from "./ai.service";
-
-const STRICT_RAG_SYSTEM_PROMPT = `You are Dotion AI, a dedicated and factual workspace assistant. Your sole purpose is to help users understand, find, and synthesize information from their Dotion workspace documents and notes.
-
-STRICT OPERATING RULES:
-1. DOMAIN SCOPE: You ONLY answer questions related to the user's workspace documents, notes, projects, and Dotion content.
-   - If the user asks general, out-of-domain questions (such as solving math puzzles, writing generic code algorithms unrelated to workspace notes, recipes, general world trivia, or open-ended chatting), immediately refuse by responding:
-     "I am Dotion's workspace assistant. I can only assist with questions regarding your workspace documents, notes, and content."
-2. FACTUAL GROUNDING: When answering workspace queries, rely EXCLUSIVELY on facts directly provided in the <workspace_context> below. Do NOT extrapolate, speculate, or fabricate details.
-3. ABSENCE OF INFORMATION: If the provided context does not contain the answer, state clearly:
-   "I cannot find this information in the workspace documents."
-4. CITATIONS: Every factual claim must include a bracketed citation matching the source ID (e.g., [1], [2]).
-   - Format: Place citation tags immediately after the corresponding statement.
-   - Example: "Cloudflare KV stores session cookies [1], whereas vector embeddings are stored in Neon [2]."
-   - Never invent or cite source IDs that are not present in <workspace_context>.
-5. FORMATTING: Use clean Markdown with headers, bullet points, and code blocks where helpful.
-6. LANGUAGE: Respond in the exact language of the user's prompt (English, French, or Arabic).`;
 
 export interface StreamChatInput {
   threadId: AssistantThreadId;
@@ -41,21 +23,12 @@ export interface StreamChatInput {
 }
 
 export class AssistantService {
-  private readonly googleClient: ReturnType<
-    typeof createGoogleGenerativeAI
-  > | null = null;
-
   constructor(
     private readonly assistantRepository: AssistantRepository,
     private readonly searchService: SearchService,
+    private readonly aiService: AIService,
     private readonly dbClient: DBClient,
-    apiKey: string,
-    private readonly creditsManager?: UserCreditsManager,
-  ) {
-    if (apiKey) {
-      this.googleClient = createGoogleGenerativeAI({ apiKey });
-    }
-  }
+  ) {}
 
   async listThreads(
     workspaceId: WorkspaceId,
@@ -80,21 +53,17 @@ export class AssistantService {
     userId: UserId,
     title?: string,
   ): Promise<Result<AssistantThreadRecord, DatabaseError>> {
-    return this.dbClient.transaction(async (tx) => {
-      return this.assistantRepository.createThread(tx, {
-        workspaceId,
-        userId,
-        title,
-      });
+    return this.assistantRepository.createThread(this.dbClient, {
+      workspaceId,
+      userId,
+      title,
     });
   }
 
   async deleteThread(
     threadId: AssistantThreadId,
   ): Promise<Result<void, DatabaseError>> {
-    return this.dbClient.transaction(async (tx) => {
-      return this.assistantRepository.deleteThread(tx, threadId);
-    });
+    return this.assistantRepository.deleteThread(this.dbClient, threadId);
   }
 
   async listMessages(
@@ -112,74 +81,50 @@ export class AssistantService {
       AIError | QuotaExceededError | DatabaseError | NotFoundError
     >
   > {
-    try {
-      if (!this.googleClient) {
-        return Result.err(
-          new AIError({
-            message: "AssistantService: GEMINI_API_KEY is missing",
-          }),
-        );
-      }
-
-      // 1. Quota check
-      if (this.creditsManager) {
-        const quotaCheck = await this.creditsManager.checkTokenQuota(
-          input.userId,
-          { minTokens: 50 },
-        );
-        if (!quotaCheck.allowed) {
-          return Result.err(
-            new QuotaExceededError({
-              message:
-                quotaCheck.message ??
-                "You have exhausted your daily AI token quota.",
-              resetAt: quotaCheck.resetAt,
-            }),
-          );
-        }
-      }
-
-      // 2. Verify thread exists
-      const threadResult = await this.assistantRepository.getThread(
-        input.threadId,
+    return Result.gen(async function* (this: AssistantService) {
+      // 1. Verify thread exists
+      const thread = yield* Result.await(
+        this.assistantRepository.getThread(input.threadId),
       );
-      if (threadResult.isErr()) {
-        return Result.err(threadResult.error);
-      }
-      const thread = threadResult.value;
 
-      // 3. Save incoming user message in PostgreSQL
-      const userMessageResult = await this.dbClient.transaction(async (tx) => {
-        return this.assistantRepository.createMessage(tx, {
+      // 2. Persist incoming user message
+      yield* Result.await(
+        this.assistantRepository.createMessage(this.dbClient, {
           threadId: input.threadId,
           role: "user",
           content: input.content,
-        });
-      });
-
-      if (userMessageResult.isErr()) {
-        return Result.err(userMessageResult.error);
-      }
-
-      // 4. Retrieve recent message history (sliding memory window)
-      const historyResult = await this.assistantRepository.listMessages(
-        input.threadId,
-        { limit: 10 },
+        }),
       );
-      const priorMessages = historyResult.isOk()
-        ? historyResult.value.items
-        : [];
 
-      // 5. Execute Hybrid RAG Search across workspace
-      const searchResult = await this.searchService.hybridSearch({
-        workspaceId: input.workspaceId,
-        query: input.content,
-        limit: 5,
-      });
+      // 3. Fetch prior conversation history (sliding context memory)
+      const priorMessages = yield* Result.await(
+        this.assistantRepository
+          .listMessages(input.threadId, { limit: 10 })
+          .then(
+            Result.match({
+              ok: (list) => Result.ok(list.items),
+              err: () => Result.ok([]),
+            }),
+          ),
+      );
 
-      const retrievedSections = searchResult.isOk() ? searchResult.value : [];
+      // 4. Retrieve relevant workspace knowledge via Hybrid Search
+      const retrievedSections = yield* Result.await(
+        this.searchService
+          .hybridSearch({
+            workspaceId: input.workspaceId,
+            query: input.content,
+            limit: 5,
+          })
+          .then(
+            Result.match({
+              ok: (sections) => Result.ok(sections),
+              err: () => Result.ok([]),
+            }),
+          ),
+      );
 
-      // 6. Build structured Context and Citations map
+      // 5. Build structured Context and Citations map
       const citations: AssistantCitation[] = [];
       let contextBlock = "<workspace_context>\n";
 
@@ -200,95 +145,44 @@ export class AssistantService {
       }
       contextBlock += "</workspace_context>";
 
-      // 7. Construct Model Messages for streamText
-      const model = this.googleClient("gemini-2.5-flash");
-
-      const modelMessages: ModelMessage[] = priorMessages.map((msg) => ({
-        role: msg.role === "assistant" ? "assistant" : "user",
-        content: msg.content,
-      }));
-
-      // Append latest context + user prompt
-      modelMessages.push({
-        role: "user",
-        content: `${contextBlock}\n\nUser Question:\n${input.content}`,
-      });
-
-      // 8. Stream Response
-      const result = streamText({
-        model,
-        system: STRICT_RAG_SYSTEM_PROMPT,
-        messages: modelMessages,
-        onFinish: async ({ text: assistantResponse, usage }) => {
+      // 6. Delegate LLM stream execution to unified AIService
+      return this.aiService.streamRAG({
+        userId: input.userId,
+        history: priorMessages,
+        contextBlock,
+        userPrompt: input.content,
+        onFinish: async (assistantResponse, usage) => {
           try {
-            const promptTokens = usage.inputTokens ?? 0;
-            const completionTokens = usage.outputTokens ?? 0;
-            const totalTokens =
-              usage.totalTokens ?? promptTokens + completionTokens;
-
             // Save assistant message to PostgreSQL
-            await this.dbClient.transaction(async (tx) => {
-              await this.assistantRepository.createMessage(tx, {
-                threadId: input.threadId,
-                role: "assistant",
-                content: assistantResponse,
-                citations: citations.length > 0 ? citations : undefined,
-                tokensUsed: totalTokens,
-              });
-
-              // Auto-generate a title if thread is named "New Chat"
-              if (thread.title === "New Chat" && this.googleClient) {
-                try {
-                  const titleResult = await generateText({
-                    model: this.googleClient("gemini-2.5-flash"),
-                    prompt: `Generate a concise 3-4 word title summarizing this question: "${input.content}". Return ONLY the title text, without quotes.`,
-                  });
-                  const cleanTitle = titleResult.text
-                    .trim()
-                    .replace(/^["']|["']$/g, "");
-                  if (cleanTitle) {
-                    await this.assistantRepository.updateThreadTitle(
-                      tx,
-                      input.threadId,
-                      cleanTitle,
-                    );
-                  }
-                } catch {
-                  // Non-fatal
-                }
-              }
+            await this.assistantRepository.createMessage(this.dbClient, {
+              threadId: input.threadId,
+              role: "assistant",
+              content: assistantResponse,
+              citations: citations.length > 0 ? citations : undefined,
+              tokensUsed: usage.totalTokens,
             });
 
-            // Settle tokens in UserCreditsDO
-            if (this.creditsManager && totalTokens > 0) {
-              await this.creditsManager.settleTokenUsage(input.userId, {
-                tokensUsed: totalTokens,
-                metadata: "RAG Assistant Chat",
-              });
+            // Auto-generate title if thread is named "New Chat"
+            if (thread.title === "New Chat") {
+              const summaryTitle = await this.aiService.generateSummaryTitle(
+                input.content,
+              );
+              if (summaryTitle) {
+                await this.assistantRepository.updateThreadTitle(
+                  this.dbClient,
+                  input.threadId,
+                  summaryTitle,
+                );
+              }
             }
           } catch (error) {
             console.error(
-              "Error in AssistantService onFinish callback:",
+              "AssistantService.streamChat onFinish persistence error:",
               error,
             );
           }
         },
       });
-
-      return Result.ok(result);
-    } catch (error) {
-      console.error("AssistantService.streamChat error:", error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to generate assistant response";
-      const cause = error instanceof Error ? error : undefined;
-      return Result.err(
-        new AIError({
-          message,
-          cause,
-        }),
-      );
-    }
+    }, this);
   }
 }

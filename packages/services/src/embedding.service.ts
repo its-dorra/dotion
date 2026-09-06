@@ -1,5 +1,8 @@
 import { Result, TaggedError } from "better-result";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import {
+  createGoogleGenerativeAI,
+  type GoogleEmbeddingModelOptions,
+} from "@ai-sdk/google";
 import { embed, embedMany } from "ai";
 
 export class EmbeddingError extends TaggedError("EmbeddingError")<{
@@ -8,32 +11,24 @@ export class EmbeddingError extends TaggedError("EmbeddingError")<{
 }> {}
 
 export class EmbeddingService {
-  private readonly googleClient: ReturnType<
-    typeof createGoogleGenerativeAI
-  > | null = null;
+  private readonly googleClient: ReturnType<typeof createGoogleGenerativeAI>;
 
   constructor(apiKey: string) {
-    if (apiKey) {
-      this.googleClient = createGoogleGenerativeAI({ apiKey });
-    }
+    this.googleClient = createGoogleGenerativeAI({ apiKey });
   }
 
   async embedText(text: string): Promise<Result<number[], EmbeddingError>> {
     try {
-      if (!this.googleClient) {
-        return Result.err(
-          new EmbeddingError({
-            message: "EmbeddingService: GEMINI_API_KEY is missing",
-          }),
-        );
-      }
-
-      const model = this.googleClient.textEmbeddingModel(
-        "gemini-embedding-001",
-      );
+      const model = this.googleClient.embedding("gemini-embedding-001");
       const { embedding } = await embed({
         model,
         value: text,
+        providerOptions: {
+          google: {
+            outputDimensionality: 768,
+            taskType: "SEMANTIC_SIMILARITY",
+          } satisfies GoogleEmbeddingModelOptions,
+        },
       });
 
       return Result.ok(embedding);
@@ -59,20 +54,16 @@ export class EmbeddingService {
         return Result.ok([]);
       }
 
-      if (!this.googleClient) {
-        return Result.err(
-          new EmbeddingError({
-            message: "EmbeddingService: GEMINI_API_KEY is missing",
-          }),
-        );
-      }
-
-      const model = this.googleClient.textEmbeddingModel(
-        "gemini-embedding-001",
-      );
+      const model = this.googleClient.embedding("gemini-embedding-001");
       const { embeddings } = await embedMany({
         model,
         values: texts,
+        providerOptions: {
+          google: {
+            outputDimensionality: 768,
+            taskType: "SEMANTIC_SIMILARITY",
+          } satisfies GoogleEmbeddingModelOptions,
+        },
       });
 
       return Result.ok(embeddings);

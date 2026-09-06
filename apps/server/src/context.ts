@@ -125,18 +125,17 @@ function buildServices(
   const storage = new StorageService(env.R2);
 
   // Search & Embedding Services
-  const embedding = new EmbeddingService(env.GEMINI_API_KEY ?? "");
+  const embedding = new EmbeddingService(env.GEMINI_API_KEY);
   const chunking = new ChunkingService();
   const search = new SearchService(repositories.search, embedding, pages, db);
 
-  const ai = new AIService(env.GEMINI_API_KEY ?? "", creditsManager, search);
+  const ai = new AIService(env.GEMINI_API_KEY, creditsManager, search);
 
   const assistant = new AssistantService(
     repositories.assistant,
     search,
+    ai,
     db,
-    env.GEMINI_API_KEY ?? "",
-    creditsManager,
   );
 
   const authorization = new AuthorizationService(

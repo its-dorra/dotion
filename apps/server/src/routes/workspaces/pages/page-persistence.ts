@@ -5,6 +5,7 @@ import type {
   PageId,
   UpdatePageMetadataInput,
 } from "@dotion/shared/pages/types";
+import type { PageIndexingQueueMessage } from "@dotion/shared/search/types";
 
 const STORAGE_YJS_STATE = "yjs-state";
 const STORAGE_PENDING_METADATA = "pending-metadata";
@@ -266,11 +267,12 @@ export class PagePersistence {
                 this.pageId,
               );
               if (pageLookup.isOk()) {
-                await this.env.PAGE_INDEXING_QUEUE.send({
+                const message: PageIndexingQueueMessage = {
                   workspaceId: pageLookup.value.workspaceId,
                   pageId: this.pageId,
                   version: revision,
-                });
+                };
+                await this.env.PAGE_INDEXING_QUEUE.send(message);
               }
             } catch (err) {
               console.error(

@@ -23,6 +23,15 @@ export const searchResponseSchema = z.object({
   items: z.array(searchResultItemSchema),
 });
 
+export const pageIndexingQueueMessageSchema = z.object({
+  workspaceId: workspaceId,
+  pageId: pageId,
+  version: z.number().optional(),
+});
+
 export type SearchRequestQuery = z.infer<typeof searchRequestQuerySchema>;
 export type SearchResultItem = z.infer<typeof searchResultItemSchema>;
 export type SearchResponse = z.infer<typeof searchResponseSchema>;
+export type PageIndexingQueueMessage = z.infer<
+  typeof pageIndexingQueueMessageSchema
+>;

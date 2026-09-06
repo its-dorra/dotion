@@ -63,76 +63,81 @@ export class SearchService {
       return Result.ok([]);
     }
 
-    // 1. Generate query embedding
-    const embedResult = await this.embeddingService.embedText(query);
-    if (embedResult.isErr()) {
-      return Result.err(embedResult.error);
-    }
-    const queryEmbedding = embedResult.value;
+    return Result.gen(async function* (this: SearchService) {
+      // 1. Generate query embedding
+      const queryEmbedding = yield* Result.await(
+        this.embeddingService.embedText(query),
+      );
 
-    // 2. Concurrently execute lexical BM25 and semantic Vector searches
-    const searchResults = await Result.allAsync([
-      this.searchRepository.searchBM25(params.workspaceId, query, limit * 2),
-      this.searchRepository.searchVector(
-        params.workspaceId,
-        queryEmbedding,
-        limit * 2,
-      ),
-    ]);
+      // 2. Concurrently execute lexical BM25 and semantic Vector searches
+      const [bm25Hits, vectorHits] = yield* Result.await(
+        Result.allAsync([
+          this.searchRepository.searchBM25(
+            params.workspaceId,
+            query,
+            limit * 2,
+          ),
+          this.searchRepository.searchVector(
+            params.workspaceId,
+            queryEmbedding,
+            limit * 2,
+          ),
+        ]),
+      );
 
-    if (searchResults.isErr()) {
-      return Result.err(searchResults.error);
-    }
+      // 3. Merge rankings with Reciprocal Rank Fusion
+      const fused = this.reciprocalRankFusion(bm25Hits, vectorHits).slice(
+        0,
+        limit,
+      );
 
-    const [bm25Hits, vectorHits] = searchResults.value;
+      if (fused.length === 0) {
+        return Result.ok([]);
+      }
 
-    // 3. Merge rankings with Reciprocal Rank Fusion
-    const fused = this.reciprocalRankFusion(bm25Hits, vectorHits).slice(
-      0,
-      limit,
-    );
+      // 4. Enrich results with page titles and icons via PagesService
+      const uniquePageIds = Array.from(
+        new Set(fused.map((item) => item.hit.pageId)),
+      );
 
-    if (fused.length === 0) {
-      return Result.ok([]);
-    }
+      const pageLookups = yield* Result.await(
+        Result.allAsync(
+          uniquePageIds.map((pageId) => this.pagesService.getPageById(pageId)),
+        ).then(
+          Result.match({
+            ok: (pages) => Result.ok(pages),
+            err: () => Result.ok([]),
+          }),
+        ),
+      );
 
-    // 4. Enrich results with page titles and icons via PagesService
-    const uniquePageIds = Array.from(
-      new Set(fused.map((item) => item.hit.pageId)),
-    );
+      const pageMap = new Map<PageId, { title: string; icon: string | null }>();
 
-    const pageLookups = await Result.allAsync(
-      uniquePageIds.map((pageId) => this.pagesService.getPageById(pageId)),
-    );
-
-    const pageMap = new Map<PageId, { title: string; icon: string | null }>();
-
-    if (pageLookups.isOk()) {
-      pageLookups.value.forEach((page) => {
+      pageLookups.forEach((page) => {
         pageMap.set(page.id, {
           title: page.title,
           icon: page.icon ?? null,
         });
       });
-    }
 
-    const finalItems: SearchResultItem[] = fused.map(({ hit, score }) => {
-      const pageInfo = pageMap.get(hit.pageId);
-      return {
-        sectionId: hit.sectionId,
-        pageId: hit.pageId,
-        workspaceId: hit.workspaceId,
-        sectionIndex: hit.sectionIndex,
-        sectionTitle: hit.sectionTitle,
-        headingBlockId: hit.headingBlockId,
-        content: hit.content,
-        score: Math.round(score * 10000) / 10000,
-        pageTitle: pageInfo?.title ?? "Untitled",
-        pageIcon: pageInfo?.icon ?? null,
-      };
-    });
+      const finalItems: SearchResultItem[] = fused.map(({ hit, score }) => {
+        const pageInfo = pageMap.get(hit.pageId);
+        return {
+          sectionId: hit.sectionId,
+          pageId: hit.pageId,
+          workspaceId: hit.workspaceId,
+          sectionIndex: hit.sectionIndex,
+          sectionTitle: hit.sectionTitle,
+          headingBlockId: hit.headingBlockId,
+          content: hit.content,
+          score: Math.round(score * 10000) / 10000,
+          pageTitle: pageInfo?.title ?? "Untitled",
+          pageIcon: pageInfo?.icon ?? null,
+        };
+      });
 
-    return Result.ok(finalItems);
+      return Result.ok(finalItems);
+    }, this);
   }
 
   async indexPageSections(

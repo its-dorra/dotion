@@ -121,47 +121,95 @@ async createFoo(tx: AppDB, input: CreateFooInput): Promise<Result<Foo, DatabaseE
   4. Real-time publisher / side-effect port interfaces (e.g. `WorkspaceEventPublisher`, `PermissionCacheInvalidator`)
 - **Service isolation**: Each service only uses its own repository. If a service needs functionality or data from another domain, it must call the other domain's `*Service` — **never** import or call another domain's repository or database tables directly.
 - **All business logic lives in services**: Validation, orchestration, authorization attribute loading, transactions, credit checks, notification creation, and event publishing belong in the service layer.
-- **Independent concurrent operations (`Result.allAsync`)**:
-  - When multiple asynchronous operations return `Result` and do not depend on each other, **you MUST use `Result.allAsync([...])`** (never `Promise.all` or sequential awaits).
-  - Use standard `Promise.all` only for non-Result native promises.
-- **Port / Adapter Pattern for Real-Time & Side Effects**:
-  - Services do **not** depend on Cloudflare Workers bindings, Hono contexts, or `c.env`.
-  - Real-time event broadcasting and side-effects are defined via pure port interfaces in `packages/services/src/realtime.types.ts` (`WorkspaceEventPublisher`, `PageEventPublisher`, `UserEventPublisher`, `UserCreditsManager`, `PermissionCacheInvalidator`).
-  - **All DO RPC / Publisher calls MUST be `await`ed**: Methods return `Promise<void>` and must be awaited to guarantee completion in serverless environments (no floating `void` promises).
-- **Dedicated ABAC Attribute Loaders**:
-  - Domain services expose lean, dedicated methods (`load<Domain>ResourceData`, `load<Domain>ScopeData`) to supply attributes for ABAC policy evaluation.
+- **Result Composition with `Result.gen` & Combinators**:
+  - **Never use repetitive `if (result.isErr()) return Result.err(result.error)` checks**.
+  - Use `Result.gen(async function* () { ... }.bind(this))` with `yield* Result.await(...)` for multi-step synchronous or asynchronous workflows.
+  - **Always bind `this`** to the generator function when accessing service methods or properties (`.bind(this)`).
+  - Use fluent combinators (`Result.andThen`, `Result.andThenAsync`, `Result.map`, `Result.tryRecover`) for short pipelines or attribute loaders.
 - **Transaction boundaries**:
-  - Services own transaction boundaries. Wrap multi-step writes in `this.dbClient.transaction(async (tx) => ...)`.
+  - Services own transaction boundaries. Wrap **multi-step atomic writes** in `this.dbClient.transaction(async (tx) => ...)`.
+  - **Do NOT wrap single-step operations in a transaction**: Single queries/mutations (e.g. creating a thread, deleting a thread, updating a single role, or setting a permission) must pass `this.dbClient` directly to the repository method.
   - Roll back on error using `Result.tapError(() => { tx.rollback() })`.
 
 ```ts
-// ✅ correct service pattern (Result.allAsync, inter-service call, awaited publisher)
+// ✅ correct service pattern (Result.gen, Result.await, Result.allAsync, inter-service call, awaited publisher)
 async inviteMember(
   workspaceId: WorkspaceId,
   inviterId: UserId,
   input: InviteMemberInput,
 ): Promise<Result<WorkspaceInvitationWithDetails, DatabaseError | NotFoundError | UniqueConstraintViolationError>> {
-  const targetUserResult = await this.usersService.getUserByEmail(input.email);
-  if (targetUserResult.isErr()) return Result.err(targetUserResult.error);
+  return Result.gen(async function* () {
+    const targetUser = yield* Result.await(
+      this.usersService.getUserByEmail(input.email),
+    );
 
-  const initialChecks = await Result.allAsync([
-    this.usersService.getUserById(inviterId),
-    this.workspacesRepository.getWorkspaceOnly(workspaceId),
-    this.workspacesRepository.isMember(workspaceId, targetUserResult.value.id),
-  ]);
+    const [inviterUser, workspace, isAlreadyMember] = yield* Result.await(
+      Result.allAsync([
+        this.usersService.getUserById(inviterId),
+        this.workspacesRepository.getWorkspaceOnly(workspaceId),
+        this.workspacesRepository.isMember(workspaceId, targetUser.id),
+      ]),
+    );
 
-  if (initialChecks.isErr()) return Result.err(initialChecks.error);
+    if (isAlreadyMember) {
+      yield* new DatabaseError({ message: "User is already a member of this workspace" });
+    }
 
-  const txResult = await this.dbClient.transaction(async (tx) => {
-    // perform writes using this.workspacesRepository and this.notificationsService.createNotificationTx
-  });
+    const inviterName = inviterUser.name || "A member";
 
-  if (txResult.isOk()) {
-    await this.workspaceEventPublisher?.broadcastInvitationCreated(workspaceId, txResult.value.invitation);
-    return Result.ok(txResult.value.invitation);
-  }
+    const txResult = yield* Result.await(
+      this.dbClient.transaction(async (tx) => {
+        return Result.gen(async function* () {
+          const invitation = yield* Result.await(
+            this.workspacesRepository.createInvitation(tx, {
+              workspaceId,
+              invitedUserId: targetUser.id,
+              invitedByUserId: inviterId,
+              status: "pending",
+            }),
+          );
 
-  return Result.err(txResult.error);
+          const notification = yield* Result.await(
+            this.notificationsService.createNotificationTx(tx, {
+              userId: targetUser.id,
+              metadata: {
+                type: "workspace_invitation",
+                workspaceInvitationId: invitation.id,
+                workspaceId: workspace.id,
+                workspaceName: workspace.name,
+                workspaceIcon: workspace.icon ?? undefined,
+                invitedByUserId: inviterId,
+                invitedByName: inviterName,
+              },
+              isRead: false,
+            }),
+          );
+
+          return Result.ok({
+            invitation: {
+              ...invitation,
+              workspaceName: workspace.name,
+              workspaceIcon: workspace.icon ?? null,
+              invitedByName: inviterName,
+              invitedUserEmail: targetUser.email,
+              invitedUserName: targetUser.name,
+            },
+            notification,
+            targetUserId: targetUser.id,
+          });
+        }.bind(this)).then(
+          Result.tapError(() => {
+            tx.rollback();
+          }),
+        );
+      }),
+    );
+
+    const { invitation, notification, targetUserId } = txResult;
+    await this.userEventPublisher?.broadcastNotification(targetUserId, notification);
+    await this.workspaceEventPublisher?.broadcastInvitationCreated(workspaceId, invitation);
+    return Result.ok(invitation);
+  }.bind(this));
 }
 ```
 

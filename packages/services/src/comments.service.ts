@@ -42,22 +42,13 @@ export class CommentsService {
   ): Promise<
     Result<CommentWithRepliesAndAuthor, DatabaseError | NotFoundError>
   > {
-    const result = await this.dbClient
-      .transaction(async (tx) =>
-        this.commentsRepository
-          .createComment(tx, {
-            pageId: input.pageId,
-            authorId: userId,
-            body: input.body,
-            parentId: input.parentId ?? null,
-          })
-          .then(
-            Result.tapError((e) => {
-              console.error("Result error creating comment:", e);
-              tx.rollback();
-            }),
-          ),
-      )
+    const result = await this.commentsRepository
+      .createComment(this.dbClient, {
+        pageId: input.pageId,
+        authorId: userId,
+        body: input.body,
+        parentId: input.parentId ?? null,
+      })
       .then(
         Result.andThenAsync((comment) => {
           const rootId = (comment.parentId ?? comment.id) as CommentId;
@@ -106,32 +97,37 @@ export class CommentsService {
     commentId: CommentId;
     userId: UserId;
   }): Promise<Result<ResourceData<"comment"> | null, DatabaseError>> {
-    const commentResult =
-      await this.commentsRepository.getCommentById(commentId);
-    if (commentResult.isErr()) {
-      return commentResult.error._tag === "NotFoundError"
-        ? Result.ok(null)
-        : Result.err(commentResult.error);
-    }
+    return Result.gen(async function* (this: CommentsService) {
+      const comment = yield* Result.await(
+        this.commentsRepository
+          .getCommentById(commentId)
+          .then(
+            Result.tryRecover((error: DatabaseError | NotFoundError) =>
+              error._tag === "NotFoundError"
+                ? Result.ok(null)
+                : Result.err(error),
+            ),
+          ),
+      );
+      if (!comment) return Result.ok(null);
 
-    const comment = commentResult.value;
-    const pageDataResult = await this.pagesService.loadPageResourceData({
-      pageId: comment.pageId,
-      userId,
-    });
+      const pageData = yield* Result.await(
+        this.pagesService.loadPageResourceData({
+          pageId: comment.pageId,
+          userId,
+        }),
+      );
+      if (!pageData) return Result.ok(null);
 
-    if (pageDataResult.isErr()) return Result.err(pageDataResult.error);
-    const pageData = pageDataResult.value;
-    if (!pageData) return Result.ok(null);
-
-    return Result.ok({
-      commentId,
-      pageId: comment.pageId,
-      workspaceId: pageData.workspaceId,
-      authorId: comment.authorId,
-      userWorkspaceRole: pageData.userWorkspaceRole,
-      userPageRole: pageData.userPageRole,
-    });
+      return Result.ok({
+        commentId,
+        pageId: comment.pageId,
+        workspaceId: pageData.workspaceId,
+        authorId: comment.authorId,
+        userWorkspaceRole: pageData.userWorkspaceRole,
+        userPageRole: pageData.userPageRole,
+      });
+    }, this);
   }
 
   async loadCommentScopeData({
@@ -150,19 +146,13 @@ export class CommentsService {
       });
     }
 
-    const pageDataResult = await this.pagesService.loadPageResourceData({
-      pageId,
-      userId,
-    });
-
-    if (pageDataResult.isErr()) return Result.err(pageDataResult.error);
-    const pageData = pageDataResult.value;
-
-    return Result.ok({
-      pageId,
-      workspaceId: pageData?.workspaceId ?? ("" as any),
-      userWorkspaceRole: pageData?.userWorkspaceRole ?? null,
-      userPageRole: pageData?.userPageRole ?? null,
-    });
+    return this.pagesService.loadPageResourceData({ pageId, userId }).then(
+      Result.map((pageData) => ({
+        pageId,
+        workspaceId: pageData?.workspaceId ?? ("" as any),
+        userWorkspaceRole: pageData?.userWorkspaceRole ?? null,
+        userPageRole: pageData?.userPageRole ?? null,
+      })),
+    );
   }
 }

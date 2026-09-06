@@ -1,7 +1,7 @@
 import type { UserId } from "@dotion/shared/users/types";
 import type { PaginationQuery } from "@dotion/shared/pagination/types";
 import type { UsersRepository } from "@dotion/db/repositories";
-import type { DatabaseError } from "@dotion/db";
+import { DatabaseError, NotFoundError } from "@dotion/db";
 import { Result } from "better-result";
 import type {
   ResourceInput,
@@ -42,14 +42,14 @@ export class UsersService {
   async loadUserResourceData(
     input: ResourceInput<"user">,
   ): Promise<Result<ResourceData<"user"> | null, DatabaseError>> {
-    const userResult = await this.usersRepository.getUserById(input.userId);
-    if (userResult.isErr()) {
-      return userResult.error._tag === "NotFoundError"
-        ? Result.ok(null)
-        : Result.err(userResult.error);
-    }
-    return Result.ok({
-      targetUserId: userResult.value.id,
+    return this.usersRepository.getUserById(input.userId).then((res) => {
+      if (res.isOk()) {
+        return Result.ok({ targetUserId: res.value.id });
+      }
+      if (NotFoundError.is(res.error)) {
+        return Result.ok(null);
+      }
+      return Result.err(res.error);
     });
   }
 }

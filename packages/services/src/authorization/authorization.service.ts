@@ -112,99 +112,91 @@ export class AuthorizationService {
       }
     }
 
-    let decision: Decision;
-
     const resourceType: ResourceType =
       typeof params.resource === "string"
         ? (params.resource as ResourceType)
         : (params.resource.type as ResourceType);
 
-    if (this.engine.isCollectionAction(resourceType, params.action)) {
-      const scopeInput = "scope" in params ? params.scope : undefined;
-      const scopeResult = await this.loader.loadScopeData(
-        resourceType as R,
-        scopeInput,
-        params.user,
-      );
+    return Result.gen(async function* (this: AuthorizationService) {
+      let decision: Decision;
 
-      if (scopeResult.isErr()) {
-        return Result.err(scopeResult.error);
-      }
-
-      decision = this.engine.evaluate({
-        user: params.user,
-        resource: resourceType as R,
-        action: params.action,
-        scope: scopeResult.value ?? undefined,
-        context,
-      } as AuthorizeEngineParams<R, A>);
-    } else {
-      const resWrapper = (
-        params as {
-          resource:
-            | { type: R; id: ResourceInput<R> }
-            | { type: R; data: ResourceData<R> };
-        }
-      ).resource;
-
-      let resourceData: ResourceData<R> | null = null;
-
-      if ("data" in resWrapper) {
-        resourceData = resWrapper.data;
-      } else {
-        const loadResult = await this.loader.loadResourceData(
-          resWrapper.type,
-          resWrapper.id,
-          params.user,
+      if (this.engine.isCollectionAction(resourceType, params.action)) {
+        const scopeInput = "scope" in params ? params.scope : undefined;
+        const scopeData = yield* Result.await(
+          this.loader.loadScopeData(resourceType as R, scopeInput, params.user),
         );
 
-        if (loadResult.isErr()) {
-          return Result.err(loadResult.error);
-        }
-        resourceData = loadResult.value;
-      }
-
-      if (!resourceData) {
-        decision = deny("Target resource not found for authorization check");
-      } else {
         decision = this.engine.evaluate({
           user: params.user,
-          resource: { type: resWrapper.type, data: resourceData },
+          resource: resourceType as R,
           action: params.action,
+          scope: scopeData ?? undefined,
           context,
         } as AuthorizeEngineParams<R, A>);
+      } else {
+        const resWrapper = (
+          params as {
+            resource:
+              | { type: R; id: ResourceInput<R> }
+              | { type: R; data: ResourceData<R> };
+          }
+        ).resource;
+
+        let resourceData: ResourceData<R> | null = null;
+
+        if ("data" in resWrapper) {
+          resourceData = resWrapper.data;
+        } else {
+          resourceData = yield* Result.await(
+            this.loader.loadResourceData(
+              resWrapper.type,
+              resWrapper.id,
+              params.user,
+            ),
+          );
+        }
+
+        if (!resourceData) {
+          decision = deny("Target resource not found for authorization check");
+        } else {
+          decision = this.engine.evaluate({
+            user: params.user,
+            resource: { type: resWrapper.type, data: resourceData },
+            action: params.action,
+            context,
+          } as AuthorizeEngineParams<R, A>);
+        }
       }
-    }
 
-    if (cacheKey && decision.type === "ALLOW") {
-      await this.cache.set(cacheKey, decision, 60);
-    }
+      if (cacheKey && decision.type === "ALLOW") {
+        await this.cache.set(cacheKey, decision, 60);
+      }
 
-    return Result.ok(decision);
+      return Result.ok(decision);
+    }, this);
   }
 
   async enforce<R extends ResourceType, A extends ResourceAction<R>>(
     params: AuthorizeParams<R, A>,
   ): Promise<Result<true, ForbiddenError>> {
-    const authResult = await this.authorize(params);
-    if (authResult.isErr()) {
-      return Result.err(
-        new ForbiddenError({
-          message: "Authorization failed",
-          reason: "Unable to evaluate authorization policy",
-        }),
-      );
-    }
-
-    const decision = authResult.value;
-    if (decision.type === "ALLOW") {
-      return Result.ok(true);
-    }
-
-    return Result.err(
-      new ForbiddenError({
-        message: decision.reason ?? "Forbidden: Access denied",
-        reason: decision.reason,
+    return this.authorize(params).then(
+      Result.match({
+        ok: (decision) =>
+          decision.type === "ALLOW"
+            ? Result.ok(true as const)
+            : Result.err(
+                new ForbiddenError({
+                  message: decision.reason ?? "Forbidden: Access denied",
+                  reason: decision.reason,
+                }),
+              ),
+        err: () =>
+          Result.err(
+            new ForbiddenError({
+              message: "Authorization failed",
+              reason: "Unable to evaluate authorization policy",
+            }),
+          ),
       }),
     );
   }
