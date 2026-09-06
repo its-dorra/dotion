@@ -25,6 +25,7 @@ import type {
   PermissionCacheInvalidator,
   WorkspaceEventPublisher,
   PageEventPublisher,
+  PageCleanupQueue,
 } from "./realtime.types";
 import type {
   ResourceData,
@@ -41,6 +42,7 @@ export class PagesService {
     private readonly cacheInvalidator?: PermissionCacheInvalidator,
     private readonly workspaceEventPublisher?: WorkspaceEventPublisher,
     _pageEventPublisher?: PageEventPublisher,
+    private readonly pageCleanupQueue?: PageCleanupQueue,
   ) {}
 
   async getPagesTree(
@@ -176,8 +178,14 @@ export class PagesService {
         }),
       );
 
-      const pageResult = await this.pagesRepository.getPageById(pageId);
-      const pageTitle = pageResult.isOk() ? pageResult.value.title : "a page";
+      const [page, user] = yield* Result.await(
+        Result.allAsync([
+          this.pagesRepository.getPageById(pageId),
+          this.usersService.getUserById(targetUserId),
+        ]),
+      );
+
+      const pageTitle = page.title || "a page";
 
       yield* Result.await(
         this.notificationsService.createNotification({
@@ -195,23 +203,21 @@ export class PagesService {
         }),
       );
 
-      await this.cacheInvalidator?.invalidateUserPermissions(
-        targetUserId,
-        "page",
-        pageId,
-      );
-      await this.workspaceEventPublisher?.broadcastPagePermissionUpdated(
-        workspaceId,
-        {
+      await Promise.all([
+        this.cacheInvalidator?.invalidateUserPermissions(
+          targetUserId,
+          "page",
           pageId,
-          userId: targetUserId,
-          role,
-        },
-      );
-
-      const user = yield* Result.await(
-        this.usersService.getUserById(targetUserId),
-      );
+        ),
+        this.workspaceEventPublisher?.broadcastPagePermissionUpdated(
+          workspaceId,
+          {
+            pageId,
+            userId: targetUserId,
+            role,
+          },
+        ),
+      ]);
 
       const pageMemberPermission: PageMemberPermission = {
         id: `${workspaceId}_${targetUserId}`,
@@ -356,19 +362,21 @@ export class PagesService {
         isRead: false,
       });
 
-      await this.cacheInvalidator?.invalidateUserPermissions(
-        requesterId,
-        "page",
-        pageId,
-      );
-      await this.workspaceEventPublisher?.broadcastPagePermissionUpdated(
-        workspaceId,
-        {
+      await Promise.all([
+        this.cacheInvalidator?.invalidateUserPermissions(
+          requesterId,
+          "page",
           pageId,
-          userId: requesterId,
-          role: grantedRole,
-        },
-      );
+        ),
+        this.workspaceEventPublisher?.broadcastPagePermissionUpdated(
+          workspaceId,
+          {
+            pageId,
+            userId: requesterId,
+            role: grantedRole,
+          },
+        ),
+      ]);
 
       return Result.ok(request);
     }, this);
@@ -548,6 +556,116 @@ export class PagesService {
         workspaceId: page.workspaceId,
         userWorkspaceRole: wsScope?.userRole ?? null,
       });
+    }, this);
+  }
+
+  async getTrashedPages(
+    workspaceId: WorkspaceId,
+  ): Promise<Result<Page[], DatabaseError>> {
+    return this.pagesRepository.getTrashedPages(workspaceId);
+  }
+
+  async moveToTrash(
+    _caller: { userId: UserId },
+    workspaceId: WorkspaceId,
+    pageId: PageId,
+  ): Promise<Result<{ success: true }, DatabaseError | NotFoundError>> {
+    return Result.gen(async function* (this: PagesService) {
+      const page = yield* Result.await(
+        this.pagesRepository.getPageWithoutContent(workspaceId, pageId),
+      );
+
+      const descendants = yield* Result.await(
+        this.pagesRepository.getDescendantPageIds(workspaceId, pageId),
+      );
+      const allPageIdsToTrash = [page.id, ...descendants];
+
+      yield* Result.await(
+        this.pagesRepository.moveToTrash(this.dbClient, allPageIdsToTrash),
+      );
+
+      await this.workspaceEventPublisher?.broadcastPageMovedToTrash(
+        workspaceId,
+        pageId,
+      );
+
+      return Result.ok({ success: true as const });
+    }, this);
+  }
+
+  async restoreFromTrash(
+    _caller: { userId: UserId },
+    workspaceId: WorkspaceId,
+    pageId: PageId,
+  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
+    return Result.gen(async function* (this: PagesService) {
+      const [page, descendants] = yield* Result.await(
+        Result.allAsync([
+          this.pagesRepository.getPageWithoutContent(workspaceId, pageId),
+          this.pagesRepository.getDescendantPageIds(workspaceId, pageId),
+        ]),
+      );
+
+      let targetParentId = page.parentId;
+      if (targetParentId) {
+        const parentRes = await this.pagesRepository.getPageWithoutContent(
+          workspaceId,
+          targetParentId,
+        );
+        if (parentRes.isErr() || parentRes.value.inTrash) {
+          targetParentId = null;
+        }
+      }
+
+      const restored = yield* Result.await(
+        this.pagesRepository.restoreFromTrash(
+          this.dbClient,
+          pageId,
+          targetParentId,
+          descendants,
+        ),
+      );
+
+      await this.workspaceEventPublisher?.broadcastPageRestored(
+        workspaceId,
+        restored,
+      );
+
+      return Result.ok(restored);
+    }, this);
+  }
+
+  async deletePermanently(
+    workspaceId: WorkspaceId,
+    pageId: PageId,
+  ): Promise<Result<{ success: true }, DatabaseError | NotFoundError>> {
+    return Result.gen(async function* (this: PagesService) {
+      const descendants = yield* Result.await(
+        this.pagesRepository.getDescendantPageIds(workspaceId, pageId),
+      );
+      const allPageIdsToDelete = [pageId, ...descendants];
+
+      yield* Result.await(
+        this.pagesRepository.deletePermanently(
+          this.dbClient,
+          allPageIdsToDelete,
+        ),
+      );
+
+      await Promise.all([
+        this.workspaceEventPublisher?.broadcastPageDeletedPermanently(
+          workspaceId,
+          pageId,
+        ),
+        ...allPageIdsToDelete.map((pid) =>
+          this.pageCleanupQueue?.enqueuePageAssetCleanup({
+            workspaceId,
+            pageId: pid,
+          }),
+        ),
+      ]);
+
+      return Result.ok({ success: true as const });
     }, this);
   }
 }

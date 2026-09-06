@@ -118,4 +118,40 @@ export class StorageService {
     const storageKey = `workspaces/${workspaceId}/pages/${pageId}/${sanitizedKey}`;
     return this.getFile(storageKey, options);
   }
+
+  async deletePageFiles(
+    workspaceId: WorkspaceId,
+    pageId: PageId,
+  ): Promise<Result<void, StorageError>> {
+    try {
+      const prefix = `workspaces/${workspaceId}/pages/${pageId}/`;
+      let truncated = true;
+      let cursor: string | undefined;
+
+      while (truncated) {
+        const list = await this.r2.list({
+          prefix,
+          cursor,
+        });
+
+        if (list.objects.length > 0) {
+          const keys = list.objects.map((obj) => obj.key);
+          await this.r2.delete(keys);
+        }
+
+        truncated = list.truncated;
+        cursor = list.truncated ? list.cursor : undefined;
+      }
+
+      return Result.ok(undefined);
+    } catch (error: unknown) {
+      console.error("StorageService.deletePageFiles error:", error);
+      return Result.err(
+        new StorageError({
+          message: "Failed to delete page files from storage",
+          cause: error,
+        }),
+      );
+    }
+  }
 }

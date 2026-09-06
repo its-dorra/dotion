@@ -15,6 +15,7 @@ import type {
   PageAccessRequestSchema,
   CreatePageAccessRequestSchema,
   PageAccessRequestStatusResponseSchema,
+  PageCleanupQueueMessageSchema,
 } from "./schema";
 
 export type PageId = z.infer<typeof pageId>;
@@ -42,4 +43,7 @@ export type CreatePageAccessRequestInput = z.infer<
 >;
 export type PageAccessRequestStatusResponse = z.infer<
   typeof PageAccessRequestStatusResponseSchema
+>;
+export type PageCleanupQueueMessage = z.infer<
+  typeof PageCleanupQueueMessageSchema
 >;

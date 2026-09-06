@@ -51,6 +51,7 @@ export const PageInstanceActionsSchema = z.enum([
   "update",
   "delete",
   "restore",
+  "deletePermanently",
   "move",
   "managePermissions",
   "share",

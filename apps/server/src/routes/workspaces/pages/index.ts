@@ -12,7 +12,11 @@ import type { PageId } from "@dotion/shared/pages/types";
 
 const route = createRoute()
   .openapi(routes.listRoute, handlers.listHandler)
+  .openapi(routes.listTrashRoute, handlers.listTrashHandler)
   .openapi(routes.createRoute, handlers.createHandler)
+  .openapi(routes.moveToTrashRoute, handlers.moveToTrashHandler)
+  .openapi(routes.restoreFromTrashRoute, handlers.restoreFromTrashHandler)
+  .openapi(routes.deletePermanentlyRoute, handlers.deletePermanentlyHandler)
   .openapi(routes.getByIdRoute, handlers.getByIdHandler)
   .route("/:pageId/comments", commentsRoute)
   .route("/:pageId/permissions", pagePermissionsRoute)

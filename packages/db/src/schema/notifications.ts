@@ -21,7 +21,7 @@ export const notifications = snakeCase.table(
     updatedAt,
   },
   (t) => [
-    index("notifications_user_id_idx").on(t.userId),
+    index("notifications_user_id_created_at_idx").on(t.userId, t.createdAt),
     index("notifications_user_id_is_read_idx").on(t.userId, t.isRead),
   ],
 );

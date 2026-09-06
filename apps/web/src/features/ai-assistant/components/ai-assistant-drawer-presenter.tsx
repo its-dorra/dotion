@@ -210,6 +210,12 @@ export function AiAssistantDrawerPresenter({
       }
     }
 
+    const isFirstTurn =
+      messages.length === 0 ||
+      !activeThread ||
+      activeThread.title === 'New Chat' ||
+      !activeThread.title
+
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
@@ -226,14 +232,19 @@ export function AiAssistantDrawerPresenter({
           setIsStreaming(false)
           setOptimisticUserMessage(null)
           setStreamingText('')
-          // Refresh message history and thread list (for auto-generated title)
+
           if (workspaceId && currentThreadId) {
+            // Always refresh messages for current thread to pull persisted citations
             queryClient.invalidateQueries({
               queryKey: assistantKeys.messages(workspaceId, currentThreadId),
             })
-            queryClient.invalidateQueries({
-              queryKey: assistantKeys.threads(workspaceId),
-            })
+
+            // Only refresh the threads list on the first turn when a new title is generated
+            if (isFirstTurn) {
+              queryClient.invalidateQueries({
+                queryKey: assistantKeys.threads(workspaceId),
+              })
+            }
           }
         },
       },
@@ -304,7 +315,10 @@ export function AiAssistantDrawerPresenter({
                   className="h-7 text-xs gap-1.5 max-w-[140px] px-2 font-normal"
                 >
                   <MessageSquare className="size-3 text-muted-foreground shrink-0" />
-                  <span className="truncate">
+                  <span
+                    key={activeThread?.title || 'conversations'}
+                    className="truncate animate-in fade-in slide-in-from-top-1 duration-300"
+                  >
                     {activeThread?.title || 'Conversations'}
                   </span>
                   <ChevronDown className="size-3 opacity-50 shrink-0" />

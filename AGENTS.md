@@ -98,16 +98,50 @@ the open socket; all other tabs receive messages through a `BroadcastChannel`.
 - Return type is always `Promise<Result<T, DatabaseError | NotFoundError | UniqueConstraintViolationError>>`.
 - Catch all Drizzle errors, log them with `console.error`, and return `Result.err(new DatabaseError(...))`. Never throw from a repository.
 
+- **Hierarchical Queries & Recursive CTEs (`WITH RECURSIVE`)**:
+  - Never load full-table or full-workspace datasets into Cloudflare Worker memory to compute child/descendant/ancestor trees in JavaScript with in-memory BFS/DFS.
+  - Use Drizzle ORM's native CTE query builder (`this.db.$with` / `this.db.with`) with `.unionAll(...)` to execute native PostgreSQL recursive CTEs directly in the database.
+  - For self-referencing CTE expressions in TypeScript, declare `var <cteName>: any = this.db.$with('<cteName>').as(...)` to satisfy TypeScript self-referential initialization checks while maintaining full type safety on the resulting query.
+- **Batch Operations**:
+  - Write methods that act on multiple entities (e.g., deleting or trashing a subtree) must accept array of IDs (`ids: EntityId[]`) and use Drizzle's `inArray(table.id, ids)` in a single SQL operation.
+
 ```ts
-// ✅ correct repository pattern (single domain, no cross-table joins)
-async createFoo(tx: AppDB, input: CreateFooInput): Promise<Result<Foo, DatabaseError>> {
+// ✅ correct repository pattern (single domain, recursive CTE with Drizzle builder)
+async getDescendantPageIds(
+  workspaceId: WorkspaceId,
+  pageId: PageId,
+): Promise<Result<PageId[], DatabaseError>> {
   try {
-    const [row] = await tx.insert(foos).values(input).returning();
-    if (!row) return Result.err(new DatabaseError({ message: 'Failed to create foo' }));
-    return Result.ok(row);
+    var pageTree: any = this.db.$with("page_tree").as(
+      this.db
+        .select({ id: pages.id })
+        .from(pages)
+        .where(
+          and(
+            eq(pages.parentId, pageId),
+            eq(pages.workspaceId, workspaceId),
+          ),
+        )
+        .unionAll(
+          this.db
+            .select({ id: pages.id })
+            .from(pages)
+            .innerJoin(pageTree, eq(pages.parentId, pageTree.id))
+            .where(eq(pages.workspaceId, workspaceId)),
+        ),
+    );
+
+    const rows = await this.db
+      .with(pageTree)
+      .select({ id: pageTree.id })
+      .from(pageTree);
+
+    return Result.ok(rows.map((r) => r.id as PageId));
   } catch (error) {
-    console.error('FooRepository.createFoo error:', error);
-    return Result.err(new DatabaseError({ message: 'Failed to create foo' }));
+    console.error("PagesRepository.getDescendantPageIds error:", error);
+    return Result.err(
+      new DatabaseError({ message: "Failed to get descendant page IDs" }),
+    );
   }
 }
 ```
@@ -118,27 +152,37 @@ async createFoo(tx: AppDB, input: CreateFooInput): Promise<Result<Foo, DatabaseE
   1. Its own domain `*Repository`
   2. Injected companion `*Service` instances for cross-domain requirements
   3. `DBClient`
-  4. Real-time publisher / side-effect port interfaces (e.g. `WorkspaceEventPublisher`, `PermissionCacheInvalidator`)
+  4. Real-time publisher / side-effect port interfaces (e.g. `WorkspaceEventPublisher`, `PermissionCacheInvalidator`, `PageCleanupQueue`)
 - **Service isolation**: Each service only uses its own repository. If a service needs functionality or data from another domain, it must call the other domain's `*Service` — **never** import or call another domain's repository or database tables directly.
 - **All business logic lives in services**: Validation, orchestration, authorization attribute loading, transactions, credit checks, notification creation, and event publishing belong in the service layer.
 - **Result Composition with `Result.gen` & Combinators**:
   - **Never use repetitive `if (result.isErr()) return Result.err(result.error)` checks**.
-  - Use `Result.gen(async function* () { ... }.bind(this))` with `yield* Result.await(...)` for multi-step synchronous or asynchronous workflows.
-  - **Always bind `this`** to the generator function when accessing service methods or properties (`.bind(this)`).
-  - Use fluent combinators (`Result.andThen`, `Result.andThenAsync`, `Result.map`, `Result.tryRecover`) for short pipelines or attribute loaders.
+  - Use `Result.gen(async function* (this: ServiceClass) { ... }, this)` with `yield* Result.await(...)` for multi-step synchronous or asynchronous workflows.
+  - **Always pass `(this: ServiceClass)` and `this` as the second argument (`thisArg`)**: In TypeScript strict mode, `.bind(this)` loses generator return type inference. Always use the explicit `this` parameter annotation and pass `this` as the second argument: `Result.gen(async function* (this: WorkspacesService) { ... }, this)`.
+  - Use fluent combinators (`Result.andThen`, `Result.andThenAsync`, `Result.map`, `Result.tryRecover`, `Result.tapAsync`) for short pipelines.
+  - For optional/nullable resource fetching in attribute loaders, use `NotFoundError.is(res.error)` to return `Result.ok(null)` instead of letting not-found errors fail authorization.
+- **Parallelizing Independent Asynchronous Operations**:
+  - **Independent Reads**: Never execute independent asynchronous read queries sequentially. Compose them concurrently using `Result.allAsync([promise1, promise2])` (when returning `Result<T, E>`) or `await Promise.all([promise1, promise2])` (for resilient optional reads with fallbacks).
+  - **Independent Side-Effects**: Always execute multiple independent post-mutation side-effects (WebSocket broadcasts, KV cache invalidations, Queue enqueues, notifications) concurrently via `await Promise.all([ ... ])` — and **always strictly await them**.
+- **Subtree Deletions, Cascading Restores & Storage Asset Purging**:
+  - When permanently deleting a hierarchical resource (such as a page with nested subpages):
+    1. Retrieve the entire subtree of IDs via the repository's recursive CTE (`allPageIds = [pageId, ...descendants]`).
+    2. Execute a single batch delete in the database (`this.pagesRepository.deletePermanently(this.dbClient, allPageIds)`).
+    3. Concurrently broadcast real-time events and enqueue Cloudflare Queue asset cleanup jobs for **every page in the deleted branch** (`workspaces/:workspaceId/pages/:pageId/`) via `Promise.all` so all attachments and uploaded assets in Cloudflare R2 are eradicated without leaving orphaned zombie files.
+  - When restoring a parent page, cascade restore to all trashed descendant subpages while re-parenting to workspace root (`null`) if the original parent page is missing or in trash.
 - **Transaction boundaries**:
   - Services own transaction boundaries. Wrap **multi-step atomic writes** in `this.dbClient.transaction(async (tx) => ...)`.
-  - **Do NOT wrap single-step operations in a transaction**: Single queries/mutations (e.g. creating a thread, deleting a thread, updating a single role, or setting a permission) must pass `this.dbClient` directly to the repository method.
+  - **Do NOT wrap single-step operations in a transaction**: Single queries/mutations (e.g. creating a thread, deleting a thread, updating a single role, or setting a permission) must pass `this.dbClient` directly to the repository method (`AppDB = DBClient | DBTransaction`).
   - Roll back on error using `Result.tapError(() => { tx.rollback() })`.
 
 ```ts
-// ✅ correct service pattern (Result.gen, Result.await, Result.allAsync, inter-service call, awaited publisher)
+// ✅ correct service pattern (Result.gen, Result.await, Result.allAsync, inter-service call, Promise.all awaited side-effects)
 async inviteMember(
   workspaceId: WorkspaceId,
   inviterId: UserId,
   input: InviteMemberInput,
 ): Promise<Result<WorkspaceInvitationWithDetails, DatabaseError | NotFoundError | UniqueConstraintViolationError>> {
-  return Result.gen(async function* () {
+  return Result.gen(async function* (this: WorkspacesService) {
     const targetUser = yield* Result.await(
       this.usersService.getUserByEmail(input.email),
     );
@@ -159,7 +203,7 @@ async inviteMember(
 
     const txResult = yield* Result.await(
       this.dbClient.transaction(async (tx) => {
-        return Result.gen(async function* () {
+        return Result.gen(async function* (this: WorkspacesService) {
           const invitation = yield* Result.await(
             this.workspacesRepository.createInvitation(tx, {
               workspaceId,
@@ -197,7 +241,7 @@ async inviteMember(
             notification,
             targetUserId: targetUser.id,
           });
-        }.bind(this)).then(
+        }, this).then(
           Result.tapError(() => {
             tx.rollback();
           }),
@@ -206,10 +250,12 @@ async inviteMember(
     );
 
     const { invitation, notification, targetUserId } = txResult;
-    await this.userEventPublisher?.broadcastNotification(targetUserId, notification);
-    await this.workspaceEventPublisher?.broadcastInvitationCreated(workspaceId, invitation);
+    await Promise.all([
+      this.userEventPublisher?.broadcastNotification(targetUserId, notification),
+      this.workspaceEventPublisher?.broadcastInvitationCreated(workspaceId, invitation),
+    ]);
     return Result.ok(invitation);
-  }.bind(this));
+  }, this);
 }
 ```
 

@@ -48,7 +48,7 @@ export function TrashedPageRow({
       </Can>
       <Can
         resource={{ type: 'page', id: { pageId: page.id as PageId } }}
-        action="delete"
+        action="deletePermanently"
       >
         <Button
           variant="ghost"

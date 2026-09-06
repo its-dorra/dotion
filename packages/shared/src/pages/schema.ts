@@ -106,3 +106,10 @@ export const PageAccessRequestStatusResponseSchema = z.object({
   hasPendingRequest: z.boolean(),
   request: PageAccessRequestSchema.nullable(),
 });
+
+export const PageCleanupQueueMessageSchema = z.object({
+  workspaceId,
+  pageId,
+});
+
+export const pageCleanupQueueMessageSchema = PageCleanupQueueMessageSchema;

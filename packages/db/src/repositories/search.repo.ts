@@ -1,6 +1,6 @@
 import type { AppDB, DBClient } from "../index";
 import { pageSections } from "../schema";
-import { and, desc, eq, sql, cosineDistance } from "drizzle-orm";
+import { desc, eq, sql, cosineDistance } from "drizzle-orm";
 import { Result } from "better-result";
 import { DatabaseError } from "../errors";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
@@ -74,10 +74,12 @@ export class SearchRepository {
     limit: number = 20,
   ): Promise<Result<SearchHit[], DatabaseError>> {
     try {
-      const sanitizedQuery = query.trim().replace(/'/g, "''");
-      if (!sanitizedQuery) return Result.ok([]);
+      const trimmedQuery = query.trim();
+      if (!trimmedQuery) return Result.ok([]);
 
-      // lakebase_text / BM25 ranking query
+      // lakebase_text BM25 ranking query using <@> operator and to_bm25query
+      // <@> computes the negative BM25 score against the 'idx_page_sections_bm25' index.
+      // Ordering ASC returns the most relevant documents first.
       const rows = await this.db
         .select({
           sectionId: pageSections.id,
@@ -88,28 +90,20 @@ export class SearchRepository {
           headingBlockId: pageSections.headingBlockId,
           blockIds: pageSections.blockIds,
           content: pageSections.content,
-          score: sql<number>`
-            ts_rank_cd(
-              to_tsvector('english', ${pageSections.sectionTitle} || ' ' || ${pageSections.content}),
-              plainto_tsquery('english', ${sanitizedQuery})
-            )
-          `,
+          score: sql<number>`-1 * (${pageSections.textVector} <@> to_bm25query(to_tsvector('english', ${trimmedQuery}), 'idx_page_sections_bm25'))`,
         })
         .from(pageSections)
-        .where(
-          and(
-            eq(pageSections.workspaceId, workspaceId),
-            sql`to_tsvector('english', ${pageSections.sectionTitle} || ' ' || ${pageSections.content}) @@ plainto_tsquery('english', ${sanitizedQuery})`,
-          ),
+        .where(eq(pageSections.workspaceId, workspaceId))
+        .orderBy(
+          sql`${pageSections.textVector} <@> to_bm25query(to_tsvector('english', ${trimmedQuery}), 'idx_page_sections_bm25') ASC`,
         )
-        .orderBy((t) => desc(t.score))
         .limit(limit);
 
       return Result.ok(rows as SearchHit[]);
     } catch (error) {
       console.error("SearchRepository.searchBM25 error:", error);
       return Result.err(
-        new DatabaseError({ message: "Failed to execute lexical search" }),
+        new DatabaseError({ message: "Failed to execute BM25 search" }),
       );
     }
   }

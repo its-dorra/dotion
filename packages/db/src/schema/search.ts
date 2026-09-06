@@ -5,13 +5,21 @@ import {
   jsonb,
   vector,
   index,
+  customType,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { pages } from "./pages";
 import { workspaces } from "./workspaces";
 import { createdAt, updatedAt, textId } from "../utils";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
 import type { PageId } from "@dotion/shared/pages/types";
 import type { PageSectionId } from "@dotion/shared/ids";
+
+export const tsvector = customType<{ data: string }>({
+  dataType() {
+    return "tsvector";
+  },
+});
 
 export const pageSections = snakeCase.table(
   "page_sections",
@@ -32,6 +40,9 @@ export const pageSections = snakeCase.table(
     content: text().notNull(),
     contentHash: text().notNull(),
     embedding: vector({ dimensions: 768 }).notNull(),
+    textVector: tsvector("text_vector").generatedAlwaysAs(
+      sql`to_tsvector('english', coalesce(section_title, '') || ' ' || coalesce(content, ''))`,
+    ),
     createdAt,
     updatedAt,
   },
@@ -40,7 +51,13 @@ export const pageSections = snakeCase.table(
       "hnsw",
       t.embedding.op("vector_cosine_ops"),
     ),
+    index("idx_page_sections_bm25")
+      .using("lakebase_bm25", t.textVector)
+      .with({ default_limit: 50, prefilter: true }),
     index("idx_page_sections_workspace_id").on(t.workspaceId),
-    index("idx_page_sections_page_id").on(t.pageId),
+    index("idx_page_sections_page_id_section_index").on(
+      t.pageId,
+      t.sectionIndex,
+    ),
   ],
 );

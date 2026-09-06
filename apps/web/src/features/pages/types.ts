@@ -52,14 +52,17 @@ export interface RenamePageInput {
 }
 
 export interface MoveToTrashInput {
+  workspaceId: WorkspaceId
   pageId: PageId
 }
 
 export interface RestoreFromTrashInput {
+  workspaceId: WorkspaceId
   pageId: PageId
 }
 
 export interface DeletePermanentlyInput {
+  workspaceId: WorkspaceId
   pageId: PageId
 }
 

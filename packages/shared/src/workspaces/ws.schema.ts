@@ -85,4 +85,28 @@ export const WorkspaceWsMessageSchema = z.discriminatedUnion("type", [
       role: AllPageRoleSchema,
     }),
   }),
+  z.object({
+    type: z.literal("page.moved_to_trash"),
+    payload: z.object({
+      workspaceId,
+      pageId,
+    }),
+  }),
+  z.object({
+    type: z.literal("page.restored"),
+    payload: PageSchema.pick({
+      id: true,
+      icon: true,
+      title: true,
+      parentId: true,
+      workspaceId: true,
+    }),
+  }),
+  z.object({
+    type: z.literal("page.deleted_permanently"),
+    payload: z.object({
+      workspaceId,
+      pageId,
+    }),
+  }),
 ]);

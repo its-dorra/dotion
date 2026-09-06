@@ -245,35 +245,53 @@ export class PagesApi {
 
   async moveToTrash(
     input: MoveToTrashInput,
-  ): Promise<Result<true, PageNotFoundError | PageAlreadyInTrashError>> {
-    await delay(400)
+  ): Promise<
+    Result<
+      true,
+      | PageNotFoundError
+      | PageAlreadyInTrashError
+      | InsufficientPagePermissionError
+      | AppError
+      | AuthenticationError
+    >
+  > {
+    const apiClient = getApiClient()
 
-    const page = mockPages[input.pageId]
-    if (!page) {
-      return Result.err(
-        new PageNotFoundError({
-          message: "This page doesn't exist.",
-          pageId: input.pageId,
-        }),
-      )
-    }
-    if (page.inTrash) {
-      return Result.err(
-        new PageAlreadyInTrashError({
-          message: 'This page is already in the trash.',
-          pageId: input.pageId,
-        }),
-      )
-    }
-
-    mockPages = {
-      ...mockPages,
-      [page.id]: {
-        ...page,
-        inTrash: true,
-        deletedAt: new Date().toISOString(),
-        deletedByName: 'Sam',
+    const response = await apiClient.api.v1.workspaces[':id'].pages[
+      ':pageId'
+    ].trash.$post({
+      param: {
+        id: input.workspaceId,
+        pageId: input.pageId,
       },
+    })
+
+    if (!response.ok) {
+      return matchExhaustive(response.status, {
+        '401': () =>
+          Result.err(new AuthenticationError({ message: 'Unauthorized' })),
+        '403': () =>
+          Result.err(
+            new InsufficientPagePermissionError({
+              message: 'You do not have permission to move this page to trash.',
+              requiredRole: 'editor' as any,
+            }),
+          ),
+        '404': () =>
+          Result.err(
+            new PageNotFoundError({
+              message: "This page doesn't exist.",
+              pageId: input.pageId,
+            }),
+          ),
+        '500': () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: 'Failed to move page to trash',
+            }),
+          ),
+      })
     }
 
     return Result.ok(true)
@@ -281,66 +299,161 @@ export class PagesApi {
 
   async restoreFromTrash(
     input: RestoreFromTrashInput,
-  ): Promise<Result<Page, PageNotFoundError>> {
-    await delay(400)
+  ): Promise<
+    Result<
+      Page,
+      | PageNotFoundError
+      | InsufficientPagePermissionError
+      | AppError
+      | AuthenticationError
+    >
+  > {
+    const apiClient = getApiClient()
 
-    const page = mockPages[input.pageId]
-    if (!page) {
-      return Result.err(
-        new PageNotFoundError({
-          message: "This page doesn't exist.",
-          pageId: input.pageId,
-        }),
-      )
+    const response = await apiClient.api.v1.workspaces[':id'].pages[
+      ':pageId'
+    ].restore.$post({
+      param: {
+        id: input.workspaceId,
+        pageId: input.pageId,
+      },
+    })
+
+    if (!response.ok) {
+      return matchExhaustive(response.status, {
+        '401': () =>
+          Result.err(new AuthenticationError({ message: 'Unauthorized' })),
+        '403': () =>
+          Result.err(
+            new InsufficientPagePermissionError({
+              message: 'You do not have permission to restore this page.',
+              requiredRole: 'editor' as any,
+            }),
+          ),
+        '404': () =>
+          Result.err(
+            new PageNotFoundError({
+              message: "This page doesn't exist.",
+              pageId: input.pageId,
+            }),
+          ),
+        '500': () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: 'Failed to restore page from trash',
+            }),
+          ),
+      })
     }
 
-    const restored: InternalPage = {
-      ...page,
-      inTrash: false,
-      deletedAt: undefined,
-      deletedByName: undefined,
-    }
-    mockPages = { ...mockPages, [page.id]: restored }
-
-    return Result.ok(toPublicPage(restored))
+    const result = (await response.json()) as unknown as { data: Page }
+    return Result.ok(result.data)
   }
 
   async deletePermanently(
     input: DeletePermanentlyInput,
-  ): Promise<Result<true, PageNotFoundError>> {
-    await delay(450)
+  ): Promise<
+    Result<
+      true,
+      | PageNotFoundError
+      | InsufficientPagePermissionError
+      | AppError
+      | AuthenticationError
+    >
+  > {
+    const apiClient = getApiClient()
 
-    if (!mockPages[input.pageId]) {
-      return Result.err(
-        new PageNotFoundError({
-          message: "This page doesn't exist.",
-          pageId: input.pageId,
-        }),
-      )
+    const response = await apiClient.api.v1.workspaces[':id'].pages[
+      ':pageId'
+    ].$delete({
+      param: {
+        id: input.workspaceId,
+        pageId: input.pageId,
+      },
+    })
+
+    if (!response.ok) {
+      return matchExhaustive(response.status, {
+        '401': () =>
+          Result.err(new AuthenticationError({ message: 'Unauthorized' })),
+        '403': () =>
+          Result.err(
+            new InsufficientPagePermissionError({
+              message:
+                'You do not have permission to permanently delete this page. Only workspace owners can permanently delete pages.',
+              requiredRole: 'owner' as any,
+            }),
+          ),
+        '404': () =>
+          Result.err(
+            new PageNotFoundError({
+              message: "This page doesn't exist.",
+              pageId: input.pageId,
+            }),
+          ),
+        '500': () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: 'Failed to permanently delete page',
+            }),
+          ),
+      })
     }
-
-    const { [input.pageId]: _removed, ...rest } = mockPages
-    mockPages = rest
 
     return Result.ok(true)
   }
 
   async getTrashedPages(
     workspaceId: string,
-  ): Promise<Result<TrashedPage[], AppError>> {
-    await delay(400)
+  ): Promise<
+    Result<
+      TrashedPage[],
+      InsufficientPagePermissionError | AppError | AuthenticationError
+    >
+  > {
+    const apiClient = getApiClient()
 
-    const trashed: TrashedPage[] = Object.values(mockPages)
-      .filter((p) => p.workspaceId === workspaceId && p.inTrash)
-      .map((p) => ({
-        id: p.id,
-        title: p.title,
-        icon: p.icon ?? undefined,
-        deletedAt: p.deletedAt ?? p.updatedAt.toISOString(),
-        deletedByName: p.deletedByName ?? 'Sam',
-      }))
+    const response = await apiClient.api.v1.workspaces[':id'].pages.trash.$get({
+      param: {
+        id: workspaceId,
+      },
+    })
 
-    return Result.ok(trashed)
+    if (!response.ok) {
+      return matchExhaustive(response.status, {
+        '401': () =>
+          Result.err(new AuthenticationError({ message: 'Unauthorized' })),
+        '403': () =>
+          Result.err(
+            new InsufficientPagePermissionError({
+              message: 'You do not have permission to view trash.',
+              requiredRole: 'viewer' as any,
+            }),
+          ),
+        '500': () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: 'Failed to fetch trashed pages',
+            }),
+          ),
+      })
+    }
+
+    const result = (await response.json()) as unknown as { data: Page[] }
+    const trashedPages: TrashedPage[] = result.data.map((page) => ({
+      id: page.id,
+      title: page.title,
+      icon: page.icon ?? undefined,
+      deletedAt: page.updatedAt
+        ? new Date(page.updatedAt).toISOString()
+        : new Date().toISOString(),
+      deletedByName: '',
+    }))
+
+    return Result.ok(trashedPages)
   }
 
   async getPagePermissions(

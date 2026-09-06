@@ -3,7 +3,15 @@ import * as HttpStatusPhrases from "stoker/http-status-phrases";
 
 import type { AppRouteHandler } from "#/lib/types";
 import { errorResponseJson, successResponseJson } from "#/lib/utils";
-import type { CreateRoute, GetByIdRoute, ListRoute } from "./routes";
+import type {
+  CreateRoute,
+  GetByIdRoute,
+  ListRoute,
+  ListTrashRoute,
+  MoveToTrashRoute,
+  RestoreFromTrashRoute,
+  DeletePermanentlyRoute,
+} from "./routes";
 
 export const listHandler: AppRouteHandler<ListRoute> = async (c) => {
   const currentUser = c.var.currentUser;
@@ -83,4 +91,105 @@ export const createHandler: AppRouteHandler<CreateRoute> = async (c) => {
   }
 
   return c.json(successResponseJson(result.value), HttpStatusCodes.CREATED);
+};
+
+export const listTrashHandler: AppRouteHandler<ListTrashRoute> = async (c) => {
+  const { id: workspaceId } = c.req.valid("param");
+
+  const result = await c.var.services.pages.getTrashedPages(workspaceId);
+
+  if (result.isErr()) {
+    console.error("Error fetching trashed pages:", result.error);
+    return result.error.match({
+      DatabaseError: () =>
+        c.json(
+          errorResponseJson("Failed to get trashed pages"),
+          HttpStatusCodes.INTERNAL_SERVER_ERROR,
+        ),
+    });
+  }
+
+  return c.json(successResponseJson(result.value), HttpStatusCodes.OK);
+};
+
+export const moveToTrashHandler: AppRouteHandler<MoveToTrashRoute> = async (
+  c,
+) => {
+  const currentUser = c.var.currentUser;
+  const { id: workspaceId, pageId } = c.req.valid("param");
+
+  const result = await c.var.services.pages.moveToTrash(
+    { userId: currentUser.id },
+    workspaceId,
+    pageId,
+  );
+
+  if (result.isErr()) {
+    console.error("Error moving page to trash:", result.error);
+    return result.error.match({
+      DatabaseError: () =>
+        c.json(
+          errorResponseJson("Failed to move page to trash"),
+          HttpStatusCodes.INTERNAL_SERVER_ERROR,
+        ),
+      NotFoundError: () =>
+        c.json(errorResponseJson("Page not found"), HttpStatusCodes.NOT_FOUND),
+    });
+  }
+
+  return c.json(successResponseJson(result.value), HttpStatusCodes.OK);
+};
+
+export const restoreFromTrashHandler: AppRouteHandler<
+  RestoreFromTrashRoute
+> = async (c) => {
+  const currentUser = c.var.currentUser;
+  const { id: workspaceId, pageId } = c.req.valid("param");
+
+  const result = await c.var.services.pages.restoreFromTrash(
+    { userId: currentUser.id },
+    workspaceId,
+    pageId,
+  );
+
+  if (result.isErr()) {
+    console.error("Error restoring page from trash:", result.error);
+    return result.error.match({
+      DatabaseError: () =>
+        c.json(
+          errorResponseJson("Failed to restore page"),
+          HttpStatusCodes.INTERNAL_SERVER_ERROR,
+        ),
+      NotFoundError: () =>
+        c.json(errorResponseJson("Page not found"), HttpStatusCodes.NOT_FOUND),
+    });
+  }
+
+  return c.json(successResponseJson(result.value), HttpStatusCodes.OK);
+};
+
+export const deletePermanentlyHandler: AppRouteHandler<
+  DeletePermanentlyRoute
+> = async (c) => {
+  const { id: workspaceId, pageId } = c.req.valid("param");
+
+  const result = await c.var.services.pages.deletePermanently(
+    workspaceId,
+    pageId,
+  );
+
+  if (result.isErr()) {
+    console.error("Error permanently deleting page:", result.error);
+    return result.error.match({
+      DatabaseError: () =>
+        c.json(
+          errorResponseJson("Failed to delete page permanently"),
+          HttpStatusCodes.INTERNAL_SERVER_ERROR,
+        ),
+      NotFoundError: () =>
+        c.json(errorResponseJson("Page not found"), HttpStatusCodes.NOT_FOUND),
+    });
+  }
+
+  return c.json(successResponseJson(result.value), HttpStatusCodes.OK);
 };

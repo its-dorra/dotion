@@ -9,6 +9,9 @@ import {
   handleDocumentIconChangedWsMessage,
   handleDocumentTitleChangedWsMessage,
   handlePageAddedWsMessage,
+  handlePageMovedToTrashWsMessage,
+  handlePageRestoredWsMessage,
+  handlePageDeletedPermanentlyWsMessage,
   updatePagePermissionInCache,
 } from '@/features/pages/utils'
 import type { PagePermissionRole } from '@/features/pages/types'
@@ -55,6 +58,18 @@ export const useWorkspaceRealtime = () => {
       switch (data.type) {
         case 'page.created': {
           handlePageAddedWsMessage(queryClient, data.payload)
+          break
+        }
+        case 'page.moved_to_trash': {
+          handlePageMovedToTrashWsMessage(queryClient, data.payload)
+          break
+        }
+        case 'page.restored': {
+          handlePageRestoredWsMessage(queryClient, data.payload)
+          break
+        }
+        case 'page.deleted_permanently': {
+          handlePageDeletedPermanentlyWsMessage(queryClient, data.payload)
           break
         }
         case 'document.title.changed': {

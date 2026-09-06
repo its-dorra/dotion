@@ -36,13 +36,15 @@ export const pagePolicy = defineResourcePolicy("page", {
     isPageEditorPredicate(resource.userWorkspaceRole, resource.userPageRole),
 
   delete: ({ resource }) =>
-    isWorkspaceOwnerPredicate(resource.userWorkspaceRole),
+    isPageEditorPredicate(resource.userWorkspaceRole, resource.userPageRole),
 
   restore: ({ resource }) =>
+    isPageEditorPredicate(resource.userWorkspaceRole, resource.userPageRole),
+
+  deletePermanently: ({ resource }) =>
     isWorkspaceOwnerPredicate(resource.userWorkspaceRole),
 
-  move: ({ resource }) =>
-    isWorkspaceOwnerPredicate(resource.userWorkspaceRole),
+  move: ({ resource }) => isWorkspaceOwnerPredicate(resource.userWorkspaceRole),
 
   managePermissions: ({ resource }) =>
     isWorkspaceOwnerPredicate(resource.userWorkspaceRole),

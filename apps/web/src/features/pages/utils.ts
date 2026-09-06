@@ -22,6 +22,45 @@ export const handlePageAddedWsMessage = (
   )
 }
 
+export const handlePageMovedToTrashWsMessage = (
+  queryClient: QueryClient,
+  payload: Extract<
+    WorkspaceWsMessage,
+    { type: 'page.moved_to_trash' }
+  >['payload'],
+) => {
+  queryClient.invalidateQueries({
+    queryKey: pagesKeys.tree(payload.workspaceId),
+  })
+  queryClient.invalidateQueries({
+    queryKey: pagesKeys.trash(payload.workspaceId),
+  })
+}
+
+export const handlePageRestoredWsMessage = (
+  queryClient: QueryClient,
+  payload: Extract<WorkspaceWsMessage, { type: 'page.restored' }>['payload'],
+) => {
+  queryClient.invalidateQueries({
+    queryKey: pagesKeys.tree(payload.workspaceId),
+  })
+  queryClient.invalidateQueries({
+    queryKey: pagesKeys.trash(payload.workspaceId),
+  })
+}
+
+export const handlePageDeletedPermanentlyWsMessage = (
+  queryClient: QueryClient,
+  payload: Extract<
+    WorkspaceWsMessage,
+    { type: 'page.deleted_permanently' }
+  >['payload'],
+) => {
+  queryClient.invalidateQueries({
+    queryKey: pagesKeys.trash(payload.workspaceId),
+  })
+}
+
 export const handleDocumentTitleChangedWsMessage = (
   queryClient: QueryClient,
   payload: Extract<

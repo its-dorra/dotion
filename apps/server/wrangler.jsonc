@@ -82,10 +82,20 @@
         "binding": "PAGE_INDEXING_QUEUE",
         "queue": "dotion-page-indexing",
       },
+      {
+        "binding": "PAGE_CLEANUP_QUEUE",
+        "queue": "dotion-page-cleanup",
+      },
     ],
     "consumers": [
       {
         "queue": "dotion-page-indexing",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+      },
+      {
+        "queue": "dotion-page-cleanup",
         "max_batch_size": 10,
         "max_batch_timeout": 5,
         "max_retries": 3,

@@ -46,6 +46,22 @@ export interface WorkspaceEventPublisher {
     workspaceId: WorkspaceId,
     payload: { pageId: PageId; userId: UserId; role: string },
   ): Promise<void>;
+  broadcastPageMovedToTrash(
+    workspaceId: WorkspaceId,
+    pageId: PageId,
+  ): Promise<void>;
+  broadcastPageRestored(workspaceId: WorkspaceId, page: Page): Promise<void>;
+  broadcastPageDeletedPermanently(
+    workspaceId: WorkspaceId,
+    pageId: PageId,
+  ): Promise<void>;
+}
+
+export interface PageCleanupQueue {
+  enqueuePageAssetCleanup(payload: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+  }): Promise<void>;
 }
 
 export interface PageEventPublisher {

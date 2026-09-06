@@ -15,7 +15,7 @@ import type {
   PageAccessRequest,
 } from "@dotion/shared/pages/types";
 import { Result } from "better-result";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 export interface PagePermissionRow {
   pageId: PageId;
@@ -41,7 +41,9 @@ export class PagesRepository {
           icon: pages.icon,
         })
         .from(pages)
-        .where(eq(pages.workspaceId, workspaceId));
+        .where(
+          and(eq(pages.workspaceId, workspaceId), eq(pages.inTrash, false)),
+        );
 
       return Result.ok(result);
     } catch (error) {
@@ -450,6 +452,159 @@ export class PagesRepository {
       console.error("PagesRepository.updateAccessRequestStatus error:", error);
       return Result.err(
         new DatabaseError({ message: "Failed to update access request" }),
+      );
+    }
+  }
+
+  async getTrashedPages(
+    workspaceId: WorkspaceId,
+  ): Promise<Result<Page[], DatabaseError>> {
+    try {
+      const rows = await this.db
+        .select({
+          id: pages.id,
+          parentId: pages.parentId,
+          workspaceId: pages.workspaceId,
+          title: pages.title,
+          icon: pages.icon,
+          cover: pages.cover,
+          inTrash: pages.inTrash,
+          createdAt: pages.createdAt,
+          updatedAt: pages.updatedAt,
+        })
+        .from(pages)
+        .where(and(eq(pages.workspaceId, workspaceId), eq(pages.inTrash, true)))
+        .orderBy(desc(pages.updatedAt));
+
+      return Result.ok(rows);
+    } catch (error) {
+      console.error("PagesRepository.getTrashedPages error:", error);
+      return Result.err(
+        new DatabaseError({ message: "Failed to fetch trashed pages" }),
+      );
+    }
+  }
+
+  async getDescendantPageIds(
+    workspaceId: WorkspaceId,
+    pageId: PageId,
+  ): Promise<Result<PageId[], DatabaseError>> {
+    try {
+      const query = sql<{ id: PageId }>`
+      WITH RECURSIVE page_tree AS (
+        SELECT ${pages.id} AS id
+        FROM ${pages}
+        WHERE ${pages.parentId} = ${pageId}
+          AND ${pages.workspaceId} = ${workspaceId}
+
+        UNION ALL
+
+        SELECT ${pages.id} AS id
+        FROM ${pages}
+        INNER JOIN page_tree
+          ON ${pages.parentId} = page_tree.id
+        WHERE ${pages.workspaceId} = ${workspaceId}
+      )
+      SELECT id
+      FROM page_tree
+    `;
+
+      const result = await this.db.execute(query);
+
+      return Result.ok(result.rows.map((row) => row.id) as PageId[]);
+    } catch (error) {
+      console.error("PagesRepository.getDescendantPageIds error:", error);
+
+      return Result.err(
+        new DatabaseError({
+          message: "Failed to get descendant page IDs",
+        }),
+      );
+    }
+  }
+
+  async moveToTrash(
+    tx: AppDB,
+    pageIds: PageId[],
+  ): Promise<Result<true, DatabaseError>> {
+    try {
+      if (pageIds.length === 0) {
+        return Result.ok(true);
+      }
+
+      await tx
+        .update(pages)
+        .set({ inTrash: true, updatedAt: new Date() })
+        .where(inArray(pages.id, pageIds));
+
+      return Result.ok(true);
+    } catch (error) {
+      console.error("PagesRepository.moveToTrash error:", error);
+      return Result.err(
+        new DatabaseError({ message: "Failed to move pages to trash" }),
+      );
+    }
+  }
+
+  async restoreFromTrash(
+    tx: AppDB,
+    pageId: PageId,
+    parentId: PageId | null,
+    descendantIds: PageId[] = [],
+  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
+    try {
+      const [updated] = await tx
+        .update(pages)
+        .set({ inTrash: false, parentId, updatedAt: new Date() })
+        .where(eq(pages.id, pageId))
+        .returning({
+          id: pages.id,
+          parentId: pages.parentId,
+          workspaceId: pages.workspaceId,
+          title: pages.title,
+          icon: pages.icon,
+          cover: pages.cover,
+          inTrash: pages.inTrash,
+          createdAt: pages.createdAt,
+          updatedAt: pages.updatedAt,
+        });
+
+      if (!updated) {
+        return Result.err(new NotFoundError({ message: "Page not found" }));
+      }
+
+      if (descendantIds.length > 0) {
+        await tx
+          .update(pages)
+          .set({ inTrash: false, updatedAt: new Date() })
+          .where(inArray(pages.id, descendantIds));
+      }
+
+      return Result.ok(updated);
+    } catch (error) {
+      console.error("PagesRepository.restoreFromTrash error:", error);
+      return Result.err(
+        new DatabaseError({ message: "Failed to restore page from trash" }),
+      );
+    }
+  }
+
+  async deletePermanently(
+    tx: AppDB,
+    pageIds: PageId[],
+  ): Promise<Result<true, DatabaseError>> {
+    try {
+      if (pageIds.length === 0) {
+        return Result.ok(true);
+      }
+
+      await tx.delete(pages).where(inArray(pages.id, pageIds));
+
+      return Result.ok(true);
+    } catch (error) {
+      console.error("PagesRepository.deletePermanently error:", error);
+      return Result.err(
+        new DatabaseError({ message: "Failed to permanently delete page" }),
       );
     }
   }

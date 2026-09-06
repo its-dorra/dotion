@@ -48,6 +48,10 @@ export const workspaceMembers = snakeCase.table(
       columns: [t.workspaceId, t.userId],
     }),
     index("workspace_members_user_id_idx").on(t.userId),
+    index("workspace_members_workspace_id_created_at_idx").on(
+      t.workspaceId,
+      t.createdAt,
+    ),
     uniqueIndex("workspace_members_workspace_id_owner")
       .on(t.workspaceId)
       .where(sql`${t.role} = 'owner'`),
@@ -81,6 +85,11 @@ export const workspaceInvitations = snakeCase.table(
   (t) => [
     index("workspace_invitations_workspace_id_idx").on(t.workspaceId),
     index("workspace_invitations_invited_user_id_idx").on(t.invitedUserId),
+    index("workspace_invitations_workspace_status_created_at_idx").on(
+      t.workspaceId,
+      t.status,
+      t.createdAt,
+    ),
     uniqueIndex("workspace_invitations_pending_unique")
       .on(t.workspaceId, t.invitedUserId)
       .where(sql`${t.status} = 'pending'`),

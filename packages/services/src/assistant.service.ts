@@ -96,35 +96,21 @@ export class AssistantService {
         }),
       );
 
-      // 3. Fetch prior conversation history (sliding context memory)
-      const priorMessages = yield* Result.await(
+      // 3. Concurrently fetch prior conversation history & retrieve relevant workspace knowledge via Hybrid Search
+      const [priorMessages, retrievedSections] = await Promise.all([
         this.assistantRepository
           .listMessages(input.threadId, { limit: 10 })
-          .then(
-            Result.match({
-              ok: (list) => Result.ok(list.items),
-              err: () => Result.ok([]),
-            }),
-          ),
-      );
-
-      // 4. Retrieve relevant workspace knowledge via Hybrid Search
-      const retrievedSections = yield* Result.await(
+          .then((res) => (res.isOk() ? res.value.items : [])),
         this.searchService
           .hybridSearch({
             workspaceId: input.workspaceId,
             query: input.content,
             limit: 5,
           })
-          .then(
-            Result.match({
-              ok: (sections) => Result.ok(sections),
-              err: () => Result.ok([]),
-            }),
-          ),
-      );
+          .then((res) => (res.isOk() ? res.value : [])),
+      ]);
 
-      // 5. Build structured Context and Citations map
+      // 4. Build structured Context and Citations map
       const citations: AssistantCitation[] = [];
       let contextBlock = "<workspace_context>\n";
 
@@ -162,8 +148,12 @@ export class AssistantService {
               tokensUsed: usage.totalTokens,
             });
 
-            // Auto-generate title if thread is named "New Chat"
-            if (thread.title === "New Chat") {
+            // Auto-generate title if thread is named "New Chat" or untitled
+            if (
+              !thread.title ||
+              thread.title === "New Chat" ||
+              thread.title.trim() === ""
+            ) {
               const summaryTitle = await this.aiService.generateSummaryTitle(
                 input.content,
               );

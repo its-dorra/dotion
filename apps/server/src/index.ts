@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/cloudflare";
 import app from "./app";
-import { processPageIndexingBatch } from "./queues";
+import { processQueueBatch } from "./queues";
 
 export { WorkspacesDO } from "./routes/workspaces/durable-object";
 export { PagesDO } from "./routes/workspaces/pages/durable-object";
@@ -22,6 +22,6 @@ export default Sentry.withSentry(
   }),
   {
     fetch: app.fetch,
-    queue: processPageIndexingBatch,
+    queue: processQueueBatch,
   } satisfies ExportedHandler<Env>,
 );

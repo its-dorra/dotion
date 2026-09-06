@@ -28,6 +28,10 @@ interface __BaseEnv_Env {
     pageId: string;
     version?: number;
   }>;
+  PAGE_CLEANUP_QUEUE: Queue<{
+    workspaceId: string;
+    pageId: string;
+  }>;
 }
 declare namespace Cloudflare {
   interface GlobalProps {
@@ -15770,6 +15774,8 @@ interface StreamScopedCaptions {
    * Uploads the caption or subtitle file to the endpoint for a specific BCP47 language.
    * One caption or subtitle file per language is allowed.
    * @param language The BCP 47 language tag for the caption or subtitle.
+   * @param in
+... [truncated for diff preview]
    * @param input The caption or subtitle stream to upload.
    * @returns The created caption entry.
    * @throws {NotFoundError} if the video is not found

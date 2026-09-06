@@ -3,6 +3,7 @@ import type {
   PageEventPublisher,
   UserEventPublisher,
   UserCreditsManager,
+  PageCleanupQueue,
 } from "@dotion/services";
 import type { WorkspaceId, PageId } from "@dotion/shared/ids";
 import type { UserId } from "@dotion/shared/users/types";
@@ -23,7 +24,10 @@ import type {
 export class DurableObjectWorkspaceEventPublisher implements WorkspaceEventPublisher {
   constructor(private readonly env: Env) {}
 
-  async broadcastPageCreated(workspaceId: WorkspaceId, page: Page): Promise<void> {
+  async broadcastPageCreated(
+    workspaceId: WorkspaceId,
+    page: Page,
+  ): Promise<void> {
     try {
       const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
       const stub = this.env.DOTION_WORKSPACE_DO.get(doId);
@@ -56,7 +60,10 @@ export class DurableObjectWorkspaceEventPublisher implements WorkspaceEventPubli
     }
   }
 
-  async broadcastMemberRemoved(workspaceId: WorkspaceId, userId: UserId): Promise<void> {
+  async broadcastMemberRemoved(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+  ): Promise<void> {
     try {
       const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
       const stub = this.env.DOTION_WORKSPACE_DO.get(doId);
@@ -152,6 +159,60 @@ export class DurableObjectWorkspaceEventPublisher implements WorkspaceEventPubli
       console.error("Failed to broadcast page.permission_updated:", error);
     }
   }
+
+  async broadcastPageMovedToTrash(
+    workspaceId: WorkspaceId,
+    pageId: PageId,
+  ): Promise<void> {
+    try {
+      const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
+      const stub = this.env.DOTION_WORKSPACE_DO.get(doId);
+      await stub.broadcastJSONToAll({
+        type: "page.moved_to_trash",
+        payload: {
+          workspaceId,
+          pageId,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to broadcast page.moved_to_trash:", error);
+    }
+  }
+
+  async broadcastPageRestored(
+    workspaceId: WorkspaceId,
+    page: Page,
+  ): Promise<void> {
+    try {
+      const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
+      const stub = this.env.DOTION_WORKSPACE_DO.get(doId);
+      await stub.broadcastJSONToAll({
+        type: "page.restored",
+        payload: page,
+      });
+    } catch (error) {
+      console.error("Failed to broadcast page.restored:", error);
+    }
+  }
+
+  async broadcastPageDeletedPermanently(
+    workspaceId: WorkspaceId,
+    pageId: PageId,
+  ): Promise<void> {
+    try {
+      const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
+      const stub = this.env.DOTION_WORKSPACE_DO.get(doId);
+      await stub.broadcastJSONToAll({
+        type: "page.deleted_permanently",
+        payload: {
+          workspaceId,
+          pageId,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to broadcast page.deleted_permanently:", error);
+    }
+  }
 }
 
 export class DurableObjectPageEventPublisher implements PageEventPublisher {
@@ -173,7 +234,10 @@ export class DurableObjectPageEventPublisher implements PageEventPublisher {
     }
   }
 
-  async broadcastCommentResolved(pageId: PageId, commentId: CommentId): Promise<void> {
+  async broadcastCommentResolved(
+    pageId: PageId,
+    commentId: CommentId,
+  ): Promise<void> {
     try {
       const doId = this.env.DOTION_PAGES_DO.idFromName(pageId);
       const stub = this.env.DOTION_PAGES_DO.get(doId);
@@ -210,7 +274,10 @@ export class DurableObjectPageEventPublisher implements PageEventPublisher {
 export class DurableObjectUserEventPublisher implements UserEventPublisher {
   constructor(private readonly env: Env) {}
 
-  async broadcastNotification(userId: UserId, notification: Notification): Promise<void> {
+  async broadcastNotification(
+    userId: UserId,
+    notification: Notification,
+  ): Promise<void> {
     try {
       const doId = this.env.DOTION_USERS_DO.idFromName(userId);
       const stub = this.env.DOTION_USERS_DO.get(doId);
@@ -220,7 +287,10 @@ export class DurableObjectUserEventPublisher implements UserEventPublisher {
     }
   }
 
-  async broadcastNotificationRead(userId: UserId, notificationId: string): Promise<void> {
+  async broadcastNotificationRead(
+    userId: UserId,
+    notificationId: string,
+  ): Promise<void> {
     try {
       const doId = this.env.DOTION_USERS_DO.idFromName(userId);
       const stub = this.env.DOTION_USERS_DO.get(doId);
@@ -268,5 +338,20 @@ export class DurableObjectUserCreditsManager implements UserCreditsManager {
     const doId = this.env.DOTION_USER_CREDITS_DO.idFromName(userId);
     const stub = this.env.DOTION_USER_CREDITS_DO.get(doId);
     return stub.settleTokenUsage(params);
+  }
+}
+
+export class CloudflarePageCleanupQueue implements PageCleanupQueue {
+  constructor(private readonly env: Env) {}
+
+  async enqueuePageAssetCleanup(payload: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+  }): Promise<void> {
+    try {
+      await this.env.PAGE_CLEANUP_QUEUE.send(payload);
+    } catch (error) {
+      console.error("Failed to enqueue page asset cleanup:", error);
+    }
   }
 }

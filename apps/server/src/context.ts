@@ -29,6 +29,7 @@ import {
   DurableObjectPageEventPublisher,
   DurableObjectUserEventPublisher,
   DurableObjectUserCreditsManager,
+  CloudflarePageCleanupQueue,
 } from "./lib/realtime-publishers";
 
 export const createAppContext = (env: Env) => {
@@ -90,6 +91,7 @@ function buildServices(
   const pagePublisher = new DurableObjectPageEventPublisher(env);
   const userPublisher = new DurableObjectUserEventPublisher(env);
   const creditsManager = new DurableObjectUserCreditsManager(env);
+  const pageCleanupQueue = new CloudflarePageCleanupQueue(env);
 
   const users = new UsersService(repositories.users);
   const notifications = new NotificationsService(
@@ -115,6 +117,7 @@ function buildServices(
     kvCache,
     workspacePublisher,
     pagePublisher,
+    pageCleanupQueue,
   );
   const comments = new CommentsService(
     repositories.comments,

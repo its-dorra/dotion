@@ -5,7 +5,9 @@ import {
   text,
   boolean,
   bytea,
+  index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { workspaceMembers, workspaces } from "./workspaces";
 import { createdAt, updatedAt, textId } from "../utils";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
@@ -38,6 +40,9 @@ export const pages = snakeCase.table(
       columns: [t.parentId],
       foreignColumns: [t.id],
     }).onDelete("set null"),
+    index("pages_workspace_id_in_trash_idx").on(t.workspaceId, t.inTrash),
+    index("pages_workspace_id_updated_at_idx").on(t.workspaceId, t.updatedAt),
+    index("pages_parent_id_idx").on(t.parentId),
   ],
 );
 
@@ -60,6 +65,7 @@ export const pagePermissions = snakeCase.table(
       columns: [t.workspaceId, t.userId],
       foreignColumns: [workspaceMembers.workspaceId, workspaceMembers.userId],
     }).onDelete("cascade"),
+    index("page_permissions_workspace_user_idx").on(t.workspaceId, t.userId),
   ],
 );
 
@@ -88,5 +94,12 @@ export const pageAccessRequests = snakeCase.table(
       columns: [t.workspaceId, t.userId],
       foreignColumns: [workspaceMembers.workspaceId, workspaceMembers.userId],
     }).onDelete("cascade"),
+    index("page_access_requests_pending_idx")
+      .on(t.pageId, t.userId, t.createdAt)
+      .where(sql`${t.status} = 'pending'`),
+    index("page_access_requests_workspace_user_idx").on(
+      t.workspaceId,
+      t.userId,
+    ),
   ],
 );
