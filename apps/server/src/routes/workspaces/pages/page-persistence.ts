@@ -158,7 +158,6 @@ export class PagePersistence {
     const now = Date.now();
     let hasError = false;
 
-    // 1. Check & persist metadata if pending and ready (with 100ms tolerance for timer jitter)
     const pendingMetadata = await this.storage.get<UpdatePageMetadataInput>(
       STORAGE_PENDING_METADATA,
     );
@@ -172,10 +171,36 @@ export class PagePersistence {
 
     if (isMetadataReady) {
       try {
-        const metadataResult = await this.pagesService.updatePageMetadata(
-          this.pageId,
-          pendingMetadata,
-        );
+        let metadataResult;
+        let targetWorkspaceId = this.workspaceId;
+
+        if (pendingMetadata.title !== undefined) {
+          if (!targetWorkspaceId) {
+            const pageLookup = await this.pagesService.getPageById(this.pageId);
+            if (pageLookup.isOk()) {
+              targetWorkspaceId = pageLookup.value.workspaceId;
+            }
+          }
+
+          if (targetWorkspaceId) {
+            metadataResult =
+              await this.pagesService.updatePageMetadataWithOutbox(
+                this.pageId,
+                pendingMetadata,
+                targetWorkspaceId,
+              );
+          } else {
+            metadataResult = await this.pagesService.updatePageMetadata(
+              this.pageId,
+              pendingMetadata,
+            );
+          }
+        } else {
+          metadataResult = await this.pagesService.updatePageMetadata(
+            this.pageId,
+            pendingMetadata,
+          );
+        }
 
         if (!metadataResult.isOk()) {
           console.error(
@@ -222,6 +247,28 @@ export class PagePersistence {
             `PagePersistence: persisted page ${this.pageId} metadata:`,
             pendingMetadata,
           );
+
+          if (
+            pendingMetadata.title !== undefined &&
+            this.env?.PAGE_INDEXING_QUEUE &&
+            targetWorkspaceId
+          ) {
+            try {
+              const message: PageIndexingQueueMessage = {
+                workspaceId: targetWorkspaceId,
+                pageId: this.pageId,
+              };
+              await this.env.PAGE_INDEXING_QUEUE.send(message);
+              console.log(
+                `PagePersistence: enqueued indexing message for page ${this.pageId} (title update).`,
+              );
+            } catch (err) {
+              console.warn(
+                "PagePersistence: fast-path queue send failed on title update (will be caught by outbox poller):",
+                err,
+              );
+            }
+          }
         }
       } catch (error) {
         console.error(
@@ -232,7 +279,6 @@ export class PagePersistence {
       }
     }
 
-    // 2. Check & persist Yjs content if dirty and ready (with 100ms tolerance for timer jitter)
     const isContentDirty = document && document.isDirty();
     const isContentReady =
       isContentDirty &&
@@ -247,13 +293,24 @@ export class PagePersistence {
       const state = document.encodeState();
 
       try {
-        // Ensure DO local storage is updated
         await this.storage.put(STORAGE_YJS_STATE, state);
 
-        const updateResult = await this.pagesService.updatePageContent(
-          this.pageId,
-          state,
-        );
+        let targetWorkspaceId = this.workspaceId;
+        if (!targetWorkspaceId) {
+          const pageLookup = await this.pagesService.getPageById(this.pageId);
+          if (pageLookup.isOk()) {
+            targetWorkspaceId = pageLookup.value.workspaceId;
+          }
+        }
+
+        const updateResult = targetWorkspaceId
+          ? await this.pagesService.updatePageContentWithOutbox(
+              this.pageId,
+              state,
+              targetWorkspaceId,
+              revision,
+            )
+          : await this.pagesService.updatePageContent(this.pageId, state);
 
         if (!updateResult.isOk()) {
           console.error(
@@ -272,37 +329,20 @@ export class PagePersistence {
             `PagePersistence: persisted page ${this.pageId} content at revision ${revision}.`,
           );
 
-          // Enqueue asynchronous background indexing job
-          if (this.env?.PAGE_INDEXING_QUEUE) {
+          if (this.env?.PAGE_INDEXING_QUEUE && targetWorkspaceId) {
             try {
-              let targetWorkspaceId = this.workspaceId;
-              if (!targetWorkspaceId) {
-                const pageLookup = await this.pagesService.getPageById(
-                  this.pageId,
-                );
-                if (pageLookup.isOk()) {
-                  targetWorkspaceId = pageLookup.value.workspaceId;
-                }
-              }
-
-              if (targetWorkspaceId) {
-                const message: PageIndexingQueueMessage = {
-                  workspaceId: targetWorkspaceId,
-                  pageId: this.pageId,
-                  version: revision,
-                };
-                await this.env.PAGE_INDEXING_QUEUE.send(message);
-                console.log(
-                  `PagePersistence: successfully enqueued indexing message for page ${this.pageId} (version ${revision}).`,
-                );
-              } else {
-                console.warn(
-                  `PagePersistence: skipping page indexing enqueue, workspaceId not found for page ${this.pageId}.`,
-                );
-              }
+              const message: PageIndexingQueueMessage = {
+                workspaceId: targetWorkspaceId,
+                pageId: this.pageId,
+                version: revision,
+              };
+              await this.env.PAGE_INDEXING_QUEUE.send(message);
+              console.log(
+                `PagePersistence: successfully enqueued indexing message for page ${this.pageId} (version ${revision}).`,
+              );
             } catch (err) {
-              console.error(
-                "PagePersistence: failed to enqueue page indexing job:",
+              console.warn(
+                "PagePersistence: fast-path queue send failed on content update (will be caught by outbox poller):",
                 err,
               );
             }

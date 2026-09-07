@@ -1,4 +1,4 @@
-import { useIsMobile } from '@/lib/use-is-mobile'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { CreateWorkspaceDialog } from './create-workspace-dialog'
 import { CreateWorkspaceDrawer } from './create-workspace-drawer'
 

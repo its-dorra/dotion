@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/cloudflare";
 import app from "./app";
 import { processQueueBatch } from "./queues";
+import { handleScheduledOutbox } from "./scheduled/outbox-poller";
 
 export { WorkspacesDO } from "./routes/workspaces/durable-object";
 export { PagesDO } from "./routes/workspaces/pages/durable-object";
@@ -23,5 +24,8 @@ export default Sentry.withSentry(
   {
     fetch: app.fetch,
     queue: processQueueBatch,
+    scheduled: async (_event, env, ctx) => {
+      ctx.waitUntil(handleScheduledOutbox(env));
+    },
   } satisfies ExportedHandler<Env>,
 );

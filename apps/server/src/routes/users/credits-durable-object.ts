@@ -90,7 +90,6 @@ export class UserCreditsDO extends DurableObject<Env> {
       }
     }
 
-    // Check if 24 hours have elapsed to reset the daily allowance
     if (now - current.last_reset_at >= RESET_INTERVAL_MS) {
       const updatedBalance = current.daily_allowance;
       this.ctx.storage.sql.exec(

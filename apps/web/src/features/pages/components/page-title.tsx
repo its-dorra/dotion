@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import * as m from '@/paraglide/messages'
 
 interface PageTitleProps {
@@ -9,15 +9,20 @@ interface PageTitleProps {
 
 export function PageTitle({ title, onChange, readOnly }: PageTitleProps) {
   const [value, setValue] = useState(title)
+  const [prevTitle, setPrevTitle] = useState(title)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => {
-    if (document.activeElement !== textareaRef.current) {
+  if (title !== prevTitle) {
+    setPrevTitle(title)
+    if (
+      typeof document !== 'undefined' &&
+      document.activeElement !== textareaRef.current
+    ) {
       setValue(title)
     }
-  }, [title])
+  }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = textareaRef.current
     if (el) {
       el.style.height = 'auto'

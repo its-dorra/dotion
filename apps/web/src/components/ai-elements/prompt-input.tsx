@@ -27,7 +27,6 @@ export function PromptInput({
 }: PromptInputProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
 
-  // Auto-resize textarea
   React.useEffect(() => {
     const textarea = textareaRef.current
     if (!textarea) return

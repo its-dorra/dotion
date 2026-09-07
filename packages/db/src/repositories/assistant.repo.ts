@@ -287,7 +287,6 @@ export class AssistantRepository {
         );
       }
 
-      // Update parent thread updatedAt
       await tx
         .update(assistantThreads)
         .set({ updatedAt: new Date() })

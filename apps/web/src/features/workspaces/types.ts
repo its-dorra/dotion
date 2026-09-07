@@ -8,6 +8,7 @@ import type {
   WorkspaceInvitationWithDetails,
 } from '@dotion/shared/workspaces/types'
 import type { PaginatedData } from '@dotion/shared/pagination/types'
+import type { UserSearchResult } from '@dotion/shared/users/types'
 
 export type {
   WorkspaceId,
@@ -17,6 +18,7 @@ export type {
   WorkspaceMemberDetail,
   WorkspaceInvitationWithDetails,
   PaginatedData,
+  UserSearchResult,
 }
 
 export type WorkspaceRole = 'owner' | 'member'

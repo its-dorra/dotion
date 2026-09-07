@@ -35,8 +35,6 @@ export class WorkspacesDO extends DurableObject<Env> {
       console.error("Invalid message received:", data.error);
       return;
     }
-
-    // this.broadcastJSONToAll(data.data);
   }
 
   async webSocketClose(

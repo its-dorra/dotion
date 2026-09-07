@@ -61,7 +61,6 @@ export const handleCommentCreatedWsMessage = ({
     (oldData) => {
       if (!oldData) return oldData
 
-      // If it's a top-level comment
       if (!formattedComment.parentId) {
         let found = false
         const updatedPages = oldData.pages.map((page) => {
@@ -92,7 +91,6 @@ export const handleCommentCreatedWsMessage = ({
         return { ...oldData, pages: updatedPages }
       }
 
-      // If it's a reply, update parent across pages
       const updatedPages = oldData.pages.map((page) => ({
         ...page,
         payload: page.payload.map((rootComment) => {

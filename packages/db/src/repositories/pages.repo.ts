@@ -207,8 +207,16 @@ export class PagesRepository {
     pageId: PageId,
     content: Uint8Array,
   ): Promise<Result<true, DatabaseError>> {
+    return this.updatePageContentTx(this.db, pageId, content);
+  }
+
+  async updatePageContentTx(
+    tx: AppDB,
+    pageId: PageId,
+    content: Uint8Array,
+  ): Promise<Result<true, DatabaseError>> {
     try {
-      await this.db
+      await tx
         .update(pages)
         .set({ content: Buffer.from(content) })
         .where(eq(pages.id, pageId));
@@ -256,8 +264,16 @@ export class PagesRepository {
     pageId: PageId,
     data: Partial<Pick<Page, "title" | "icon" | "cover">>,
   ): Promise<Result<Page, DatabaseError | NotFoundError>> {
+    return this.updatePageMetadataTx(this.db, pageId, data);
+  }
+
+  async updatePageMetadataTx(
+    tx: AppDB,
+    pageId: PageId,
+    data: Partial<Pick<Page, "title" | "icon" | "cover">>,
+  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
     try {
-      const [updated] = await this.db
+      const [updated] = await tx
         .update(pages)
         .set(data)
         .where(eq(pages.id, pageId))
@@ -313,6 +329,35 @@ export class PagesRepository {
     } catch (error) {
       console.error("PagesRepository.getPageById error:", error);
       return Result.err(new DatabaseError({ message: "Failed to fetch page" }));
+    }
+  }
+
+  async getPagesByIds(
+    pageIds: PageId[],
+  ): Promise<Result<Page[], DatabaseError>> {
+    if (pageIds.length === 0) return Result.ok([]);
+    try {
+      const rows = await this.db
+        .select({
+          id: pages.id,
+          parentId: pages.parentId,
+          workspaceId: pages.workspaceId,
+          title: pages.title,
+          icon: pages.icon,
+          cover: pages.cover,
+          inTrash: pages.inTrash,
+          createdAt: pages.createdAt,
+          updatedAt: pages.updatedAt,
+        })
+        .from(pages)
+        .where(inArray(pages.id, pageIds));
+
+      return Result.ok(rows as Page[]);
+    } catch (error) {
+      console.error("PagesRepository.getPagesByIds error:", error);
+      return Result.err(
+        new DatabaseError({ message: "Failed to fetch pages" }),
+      );
     }
   }
 

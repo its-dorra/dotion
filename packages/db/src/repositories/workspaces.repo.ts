@@ -125,6 +125,7 @@ export class WorkspacesRepository {
 
       return Result.ok(data);
     } catch (e) {
+      console.error("Error create workspace member", e);
       const errorMessage = e instanceof Error ? e.message : String(e);
       if (
         errorMessage.includes("UNIQUE") ||

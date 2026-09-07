@@ -21,6 +21,7 @@ import { Result } from "better-result";
 import type { NotificationsService } from "./notifications.service";
 import type { WorkspacesService } from "./workspaces.service";
 import type { UsersService } from "./users.service";
+import type { OutboxService } from "./outbox.service";
 import type {
   PermissionCacheInvalidator,
   WorkspaceEventPublisher,
@@ -43,6 +44,7 @@ export class PagesService {
     private readonly workspaceEventPublisher?: WorkspaceEventPublisher,
     _pageEventPublisher?: PageEventPublisher,
     private readonly pageCleanupQueue?: PageCleanupQueue,
+    private readonly outboxService?: OutboxService,
   ) {}
 
   async getPagesTree(
@@ -93,6 +95,12 @@ export class PagesService {
     return this.pagesRepository.getPageById(pageId);
   }
 
+  async getPagesByIds(
+    pageIds: PageId[],
+  ): Promise<Result<Page[], DatabaseError>> {
+    return this.pagesRepository.getPagesByIds(pageIds);
+  }
+
   async getPageWithoutContent(
     workspaceId: WorkspaceId,
     pageId: PageId,
@@ -114,11 +122,75 @@ export class PagesService {
     return this.pagesRepository.updatePageContent(pageId, content);
   }
 
+  async updatePageContentWithOutbox(
+    pageId: PageId,
+    content: Uint8Array,
+    workspaceId: WorkspaceId,
+    version?: number,
+  ): Promise<Result<true, DatabaseError>> {
+    return this.dbClient.transaction(async (tx) => {
+      return Result.gen(async function* (this: PagesService) {
+        yield* Result.await(
+          this.pagesRepository.updatePageContentTx(tx, pageId, content),
+        );
+        if (this.outboxService) {
+          yield* Result.await(
+            this.outboxService.upsertEntryTx(tx, {
+              type: "page_indexing",
+              aggregateId: pageId,
+              payload: {
+                workspaceId,
+                pageId,
+                version,
+              },
+            }),
+          );
+        }
+        return Result.ok(true as const);
+      }, this).then(
+        Result.tapError(() => {
+          tx.rollback();
+        }),
+      );
+    });
+  }
+
   async updatePageMetadata(
     pageId: PageId,
     data: UpdatePageMetadataInput,
   ): Promise<Result<Page, DatabaseError | NotFoundError>> {
     return this.pagesRepository.updatePageMetadata(pageId, data);
+  }
+
+  async updatePageMetadataWithOutbox(
+    pageId: PageId,
+    data: UpdatePageMetadataInput,
+    workspaceId: WorkspaceId,
+  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
+    return this.dbClient.transaction(async (tx) => {
+      return Result.gen(async function* (this: PagesService) {
+        const page = yield* Result.await(
+          this.pagesRepository.updatePageMetadataTx(tx, pageId, data),
+        );
+        if (data.title !== undefined && this.outboxService) {
+          yield* Result.await(
+            this.outboxService.upsertEntryTx(tx, {
+              type: "page_indexing",
+              aggregateId: pageId,
+              payload: {
+                workspaceId,
+                pageId,
+              },
+            }),
+          );
+        }
+        return Result.ok(page);
+      }, this).then(
+        Result.tapError(() => {
+          tx.rollback();
+        }),
+      );
+    });
   }
 
   async getPagePermissions(

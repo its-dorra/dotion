@@ -5,13 +5,12 @@ import notificationRouter from "./routes/notifications";
 import authorizationRouter from "./routes/authorization";
 
 const app = createApp()
-  .basePath("/api")
-  .route("v1/workspaces", workspaceRouter)
-  .route("v1/users", userRouter)
-  .route("v1/notifications", notificationRouter)
-  .route("v1/authorization", authorizationRouter);
+  .route("/api/v1/workspaces", workspaceRouter)
+  .route("/api/v1/users", userRouter)
+  .route("/api/v1/notifications", notificationRouter)
+  .route("/api/v1/authorization", authorizationRouter);
 
-app.on(["POST", "GET"], "/auth/*", (c) => c.var.auth.handler(c.req.raw));
+app.on(["POST", "GET"], "/api/auth/*", (c) => c.var.auth.handler(c.req.raw));
 app.get("/", (c) => c.text("Dotion API Server is running!"));
 app.get("/health", (c) => c.text("OK"));
 

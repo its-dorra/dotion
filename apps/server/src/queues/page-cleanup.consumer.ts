@@ -1,12 +1,6 @@
 import { createAppContext } from "#/context";
 import { PageCleanupQueueMessageSchema } from "@dotion/shared/pages/schema";
-import type { PageCleanupQueueMessage } from "@dotion/shared/pages/types";
 
-/**
- * Consumes and processes background page cleanup queue messages.
- * Validates message payload against Zod schema and deletes all R2 files
- * stored under the page's prefix in the workspace bucket.
- */
 export async function processPageCleanupBatch(
   batch: MessageBatch<unknown>,
   env: Env,
@@ -14,7 +8,6 @@ export async function processPageCleanupBatch(
   const { services } = createAppContext(env);
 
   for (const msg of batch.messages) {
-    // 1. Validate queue message schema with Zod
     const parseResult = PageCleanupQueueMessageSchema.safeParse(msg.body);
     if (!parseResult.success) {
       console.error(
@@ -25,14 +18,13 @@ export async function processPageCleanupBatch(
       continue;
     }
 
-    const { workspaceId, pageId }: PageCleanupQueueMessage = parseResult.data;
+    const { workspaceId, pageId } = parseResult.data;
 
     try {
-      // 2. Delete all page files in R2 storage
-      const deleteResult = await services.storage.deletePageFiles(
+      const deleteResult = await services.storage.deletePageFiles({
         workspaceId,
         pageId,
-      );
+      });
 
       if (deleteResult.isErr()) {
         console.error(
@@ -44,7 +36,7 @@ export async function processPageCleanupBatch(
       }
 
       console.log(
-        `PageCleanupConsumer: successfully cleaned up assets for page ${pageId}.`,
+        `PageCleanupConsumer: successfully cleaned up ${deleteResult.value.deletedCount} assets for page ${pageId}.`,
       );
       msg.ack();
     } catch (error) {

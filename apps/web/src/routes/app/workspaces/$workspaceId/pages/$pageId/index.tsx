@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { PageDetail } from '@/features/pages/components/page-detail'
 import { PageDetailLoading } from '@/features/pages/components/page-detail-loading'
@@ -66,17 +65,16 @@ export const Route = createFileRoute(
   component: PagePage,
   errorComponent: PageDetailError,
   notFoundComponent: PageNotFound,
+  pendingComponent: PageDetailLoading,
 })
 
 function PagePage() {
   const { workspaceId, pageId } = Route.useParams()
 
   return (
-    <Suspense fallback={<PageDetailLoading />}>
-      <PageDetail
-        workspaceId={workspaceId as WorkspaceId}
-        pageId={pageId as PageId}
-      />
-    </Suspense>
+    <PageDetail
+      workspaceId={workspaceId as WorkspaceId}
+      pageId={pageId as PageId}
+    />
   )
 }

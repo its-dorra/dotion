@@ -32,7 +32,6 @@ export function Profile() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     if (!hasChanges) return
-    // Profile save action
   }
 
   return (

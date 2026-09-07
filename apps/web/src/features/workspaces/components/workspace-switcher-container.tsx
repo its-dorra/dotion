@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { workspacesListQueryOptions } from '../query-options'
@@ -10,12 +10,10 @@ import { CreateWorkspaceModal } from './create-workspace-modal'
 
 interface WorkspaceSwitcherContainerProps {
   currentWorkspaceId?: string
-  onResolveWorkspace?: (workspaceId: string) => void
 }
 
 export function WorkspaceSwitcherContainer({
   currentWorkspaceId,
-  onResolveWorkspace,
 }: WorkspaceSwitcherContainerProps) {
   const navigate = useNavigate()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -26,12 +24,6 @@ export function WorkspaceSwitcherContainer({
   const currentWorkspace = currentWorkspaceId
     ? workspaces?.find((w) => w.id === currentWorkspaceId)
     : undefined
-
-  useEffect(() => {
-    if (currentWorkspace?.id) {
-      onResolveWorkspace?.(currentWorkspace.id)
-    }
-  }, [currentWorkspace?.id, onResolveWorkspace])
 
   function handleSelectWorkspace(workspaceId: string) {
     navigate({

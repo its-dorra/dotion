@@ -57,7 +57,11 @@ export function createAuth(
         clientSecret: env.GOOGLE_CLIENT_SECRET,
       },
     },
-    plugins: [openAPI()],
+    plugins: [
+      openAPI({
+        disableDefaultReference: true,
+      }),
+    ],
   });
 }
 

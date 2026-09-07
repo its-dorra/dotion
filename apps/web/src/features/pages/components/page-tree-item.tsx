@@ -63,7 +63,7 @@ export function PageTreeItem({
     <div>
       <div
         className={cn(
-          'group flex items-center gap-1 rounded-md py-1 pr-1 text-sm hover:bg-accent',
+          'group flex items-center gap-1 rounded-md py-1 pe-1 text-sm hover:bg-accent',
           isActive && 'bg-accent',
         )}
         style={{ paddingInlineStart: `${depth * 12 + 4}px` }}
@@ -79,8 +79,8 @@ export function PageTreeItem({
         >
           <ChevronRight
             className={cn(
-              'h-3.5 w-3.5 transition-transform',
-              isExpanded && 'rotate-90',
+              'h-3.5 w-3.5 transition-transform rtl:rotate-180',
+              isExpanded && 'rotate-90 rtl:rotate-90',
             )}
           />
         </button>

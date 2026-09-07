@@ -3,7 +3,12 @@ import { AuthenticationError, AuthorizationError, AppError } from '@/lib/errors'
 import { getApiClient } from '@/lib/api-client'
 import { matchExhaustive } from '@/lib/utils'
 import { SearchError } from './errors'
-import type { SearchResultItem, SearchRequestQuery, WorkspaceId } from './types'
+import type {
+  SearchResultItem,
+  SearchRequestQuery,
+  WorkspaceId,
+  PaginatedData,
+} from './types'
 
 export class SearchApi {
   async search(
@@ -11,7 +16,7 @@ export class SearchApi {
     query: SearchRequestQuery,
   ): Promise<
     Result<
-      SearchResultItem[],
+      PaginatedData<SearchResultItem>,
       AuthenticationError | AuthorizationError | SearchError | AppError
     >
   > {
@@ -23,7 +28,9 @@ export class SearchApi {
         },
         query: {
           q: query.q,
+          page: query.page !== undefined ? String(query.page) : undefined,
           limit: query.limit !== undefined ? String(query.limit) : undefined,
+          mode: query.mode,
         },
       })
 
@@ -54,7 +61,7 @@ export class SearchApi {
       }
 
       const result = await response.json()
-      return Result.ok(result.items)
+      return Result.ok(result as PaginatedData<SearchResultItem>)
     } catch (error) {
       console.error('SearchApi.search error:', error)
       return Result.err(

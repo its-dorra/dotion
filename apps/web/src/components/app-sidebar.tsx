@@ -65,10 +65,7 @@ export function AppSidebar({
           <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0 group-data-[collapsible=icon]:hidden" />
         </div>
 
-        <WorkspaceSwitcherContainer
-          currentWorkspaceId={activeWorkspaceId}
-          onResolveWorkspace={() => {}}
-        />
+        <WorkspaceSwitcherContainer currentWorkspaceId={activeWorkspaceId} />
       </SidebarHeader>
       <SidebarContent className="gap-3 p-2">
         <div>

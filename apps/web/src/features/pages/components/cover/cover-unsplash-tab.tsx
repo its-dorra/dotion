@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { Search, Loader2, ImageIcon, ExternalLink, Check } from 'lucide-react'
+import { useDebouncedValue } from '@tanstack/react-pacer'
+import { Search, Loader2, ImageIcon } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { InfiniteScroll } from '@/components/ui/infinite-scroll'
 import {
   Empty,
   EmptyDescription,
@@ -14,6 +16,7 @@ import * as m from '@/paraglide/messages'
 import { unsplashInfiniteQueryOptions } from '../../unsplash/query-options'
 import { unsplashApi } from '../../unsplash/api'
 import type { UnsplashPhoto } from '../../unsplash/types'
+import { CoverUnsplashPhotoCard } from './cover-unsplash-photo-card'
 
 interface CoverUnsplashTabProps {
   cover?: string | null
@@ -35,38 +38,12 @@ const POPULAR_KEYWORDS = [
 
 export function CoverUnsplashTab({ cover, onSelect }: CoverUnsplashTabProps) {
   const [inputValue, setInputValue] = useState('')
-  const [debouncedQuery, setDebouncedQuery] = useState('')
-  const observerRef = useRef<HTMLDivElement>(null)
-
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(inputValue.trim())
-    }, 350)
-    return () => clearTimeout(timer)
-  }, [inputValue])
+  const [debouncedQuery] = useDebouncedValue(inputValue.trim(), { wait: 350 })
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } =
     useInfiniteQuery(unsplashInfiniteQueryOptions(debouncedQuery))
 
   const photos = data?.pages.flatMap((page) => page) ?? []
-
-  useEffect(() => {
-    const el = observerRef.current
-    if (!el) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          void fetchNextPage()
-        }
-      },
-      { threshold: 0.1 },
-    )
-
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   function handlePhotoSelect(photo: UnsplashPhoto) {
     if (photo.downloadLocation) {
@@ -89,7 +66,6 @@ export function CoverUnsplashTab({ cover, onSelect }: CoverUnsplashTabProps) {
           />
         </div>
 
-        {/* Popular keyword pills */}
         <div className="flex flex-wrap gap-1.5">
           {POPULAR_KEYWORDS.map((keyword) => (
             <button
@@ -130,70 +106,23 @@ export function CoverUnsplashTab({ cover, onSelect }: CoverUnsplashTabProps) {
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {photos.map((photo) => {
-                const isSelected = cover === photo.url
-                return (
-                  <div
-                    key={photo.id}
-                    className="group relative h-24 rounded-lg overflow-hidden border transition-all hover:ring-2 hover:ring-primary/80"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handlePhotoSelect(photo)}
-                      className="w-full h-full text-left focus-visible:outline-none cursor-pointer"
-                    >
-                      <img
-                        src={photo.thumbUrl}
-                        alt={photo.description ?? 'Unsplash cover'}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2">
-                        <span className="text-[10px] font-medium text-white/90 truncate drop-shadow-sm">
-                          {photo.description ??
-                            `Photo by ${photo.photographer}`}
-                        </span>
-                      </div>
-                    </button>
-
-                    <a
-                      href={photo.photographerUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="absolute bottom-1 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] text-white/80 hover:text-white flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-xs"
-                      title={`Photo by ${photo.photographer} on Unsplash`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <span>{photo.photographer}</span>
-                      <ExternalLink className="h-2.5 w-2.5" />
-                    </a>
-
-                    {isSelected ? (
-                      <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow">
-                        <Check className="h-3 w-3" />
-                      </div>
-                    ) : null}
-                  </div>
-                )
-              })}
+              {photos.map((photo) => (
+                <CoverUnsplashPhotoCard
+                  key={photo.id}
+                  photo={photo}
+                  isSelected={cover === photo.url}
+                  onSelect={handlePhotoSelect}
+                />
+              ))}
             </div>
 
-            {/* Bottom Sentinel & Loading indicator for Infinite Scrolling */}
-            <div
-              ref={observerRef}
-              className="py-2 flex justify-center items-center min-h-[32px]"
-            >
-              {isFetchingNextPage ? (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>{m.page_cover_unsplash_loading()}</span>
-                </div>
-              ) : hasNextPage ? (
-                <span className="text-xs text-muted-foreground/50">
-                  {m.page_cover_unsplash_scroll_more()}
-                </span>
-              ) : null}
-            </div>
+            <InfiniteScroll
+              hasNextPage={hasNextPage}
+              fetchNextPage={fetchNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              loadingText={m.page_cover_unsplash_loading()}
+              loadMoreText={m.page_cover_unsplash_scroll_more()}
+            />
           </div>
         )}
 

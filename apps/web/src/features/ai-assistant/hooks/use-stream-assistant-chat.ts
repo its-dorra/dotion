@@ -34,12 +34,10 @@ export function useStreamAssistantChat(workspaceId: WorkspaceId) {
         })
       },
       onSuccess: (_data, variables) => {
-        // Refresh messages to pull the persisted assistant response and citations
         queryClient.invalidateQueries({
           queryKey: assistantKeys.messages(workspaceId, variables.threadId),
         })
 
-        // On first turn, invalidate threads list to pick up the newly generated title
         if (variables.isFirstTurn) {
           queryClient.invalidateQueries({
             queryKey: assistantKeys.threads(workspaceId),

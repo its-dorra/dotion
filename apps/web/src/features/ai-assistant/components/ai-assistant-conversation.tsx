@@ -34,7 +34,6 @@ export function AiAssistantConversation({
 }: AiAssistantConversationProps) {
   const navigate = useNavigate()
 
-  // Message queries called right inside the conversation container
   const messagesQuery = useInfiniteQuery(
     assistantMessagesInfiniteQueryOptions(
       workspaceId,

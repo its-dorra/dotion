@@ -5,3 +5,4 @@ export * from "./comments";
 export * from "./notifications";
 export * from "./search";
 export * from "./assistant";
+export * from "./outbox";

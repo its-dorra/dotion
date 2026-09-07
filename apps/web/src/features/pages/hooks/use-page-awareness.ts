@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { PageYjsProvider } from '../lib/page-yjs-provider'
+import { generateUserColor } from '../lib/user-colors'
 
 export interface CollaborativeUser {
   clientId: number
@@ -16,8 +17,22 @@ interface AwarenessUserState {
 
 export function usePageAwareness(
   provider: PageYjsProvider | null | undefined,
+  currentUser?: { id: string; name: string } | null,
 ): CollaborativeUser[] {
   const [collaborators, setCollaborators] = useState<CollaborativeUser[]>([])
+
+  useEffect(() => {
+    if (!provider || !currentUser) return
+
+    provider.awareness.setLocalStateField('user', {
+      name: currentUser.name,
+      color: generateUserColor(currentUser.id),
+    })
+
+    return () => {
+      provider.awareness.setLocalStateField('user', null)
+    }
+  }, [provider, currentUser?.id, currentUser?.name])
 
   useEffect(() => {
     if (!provider) {

@@ -48,7 +48,6 @@ export function createCustomAIMenuItems(
     })
   }
 
-  // Translation commands (Arabic, French, English)
   const translateToArabic: AIMenuSuggestionItem = {
     key: 'translate_ar',
     title: isAr
@@ -109,7 +108,6 @@ export function createCustomAIMenuItems(
     },
   }
 
-  // Selection edits
   const improveWriting: AIMenuSuggestionItem = {
     key: 'improve_writing',
     title: isAr
@@ -254,7 +252,6 @@ export function createCustomAIMenuItems(
     },
   }
 
-  // Non-selection / General items (brainstorming, writing)
   const brainstormIdeas: AIMenuSuggestionItem = {
     key: 'brainstorm_ideas',
     title: isAr

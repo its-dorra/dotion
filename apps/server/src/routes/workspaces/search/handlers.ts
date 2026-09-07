@@ -5,12 +5,14 @@ import type { SearchRoute } from "./routes";
 
 export const searchHandler: AppRouteHandler<SearchRoute> = async (c) => {
   const { id: workspaceId } = c.req.valid("param");
-  const { q, limit } = c.req.valid("query");
+  const { q, page, limit, mode } = c.req.valid("query");
 
   const result = await c.var.services.search.hybridSearch({
     workspaceId,
     query: q,
+    page,
     limit,
+    mode,
   });
 
   if (result.isErr()) {
@@ -21,5 +23,5 @@ export const searchHandler: AppRouteHandler<SearchRoute> = async (c) => {
     );
   }
 
-  return c.json({ items: result.value }, HttpStatusCodes.OK);
+  return c.json(result.value, HttpStatusCodes.OK);
 };

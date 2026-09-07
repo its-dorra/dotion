@@ -46,11 +46,10 @@ export interface ParsedSection {
 }
 
 const MEDIA_BLOCK_TYPES = new Set(["image", "video", "audio", "file", "embed"]);
+const MAX_SECTION_CHARS = 3000;
+const OVERLAP_CHARS = 200;
 
 export class ChunkingService {
-  /**
-   * Helper to extract plain text with inline links from inline content structures
-   */
   private extractInlineText(content: BlockNoteBlock["content"]): string {
     if (!content) return "";
     if (typeof content === "string") return content.trim();
@@ -81,7 +80,6 @@ export class ChunkingService {
         .trim();
     }
 
-    // Table block support
     if (
       typeof content === "object" &&
       "rows" in content &&
@@ -107,10 +105,6 @@ export class ChunkingService {
     return "";
   }
 
-  /**
-   * Formats a single BlockNote block into Markdown representation (e.g. [ ] / [x] checklists,
-   * headings, code fences, blockquotes, callouts, and indented lists).
-   */
   private formatBlockToMarkdown(block: BlockNoteBlock, depth = 0): string {
     const indent = "  ".repeat(depth);
     const text = this.extractInlineText(block.content);
@@ -152,9 +146,6 @@ export class ChunkingService {
     }
   }
 
-  /**
-   * Helper to compute SHA-256 hash string for delta comparisons
-   */
   private async computeHash(input: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(input);
@@ -163,9 +154,6 @@ export class ChunkingService {
     return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
-  /**
-   * Extract blocks directly from a Yjs document update binary
-   */
   parseYDocBlocks(ydoc: Y.Doc): BlockNoteBlock[] {
     const fragment = ydoc.getXmlFragment("document-store");
     const blocks: BlockNoteBlock[] = [];
@@ -334,32 +322,27 @@ export class ChunkingService {
     return blocks;
   }
 
-  /**
-   * Parses a BlockNote document block array into semantic sections by heading boundaries.
-   * Strictly filters out and ignores any file or media blocks.
-   */
   async parseDocumentSections(
     pageTitle: string,
     blocks: BlockNoteBlock[],
   ): Promise<ParsedSection[]> {
+    const safeTitle = pageTitle.trim() || "Untitled";
+
     if (!Array.isArray(blocks) || blocks.length === 0) {
-      const defaultContent = pageTitle.trim();
-      const defaultHash = await this.computeHash(
-        `${pageTitle}\n${defaultContent}`,
-      );
+      const defaultHash = await this.computeHash(`${safeTitle}\n${safeTitle}`);
       return [
         {
           sectionIndex: 0,
-          sectionTitle: pageTitle,
+          sectionTitle: safeTitle,
           headingBlockId: "root",
           blockIds: ["root"],
-          content: defaultContent,
+          content: safeTitle,
           contentHash: defaultHash,
         },
       ];
     }
 
-    const sections: Array<{
+    const rawSections: Array<{
       sectionTitle: string;
       headingBlockId: string;
       blockIds: string[];
@@ -367,32 +350,32 @@ export class ChunkingService {
     }> = [];
 
     let currentSection = {
-      sectionTitle: pageTitle,
+      sectionTitle: safeTitle,
       headingBlockId: "root",
       blockIds: [] as string[],
       lines: [] as string[],
     };
 
+    let blockCounter = 0;
+
     const traverse = (nodeList: BlockNoteBlock[], depth = 0) => {
       for (const block of nodeList) {
         const blockType = (block.type ?? "paragraph").toLowerCase();
-        const blockId = block.id ?? crypto.randomUUID();
+        blockCounter++;
+        const blockId = block.id ?? `block-${depth}-${blockCounter}`;
 
-        // Strictly skip all media/file blocks
         if (MEDIA_BLOCK_TYPES.has(blockType)) {
           continue;
         }
 
         const rawText = this.extractInlineText(block.content);
 
-        // Heading marks a new section boundary
         if (blockType === "heading" && rawText.length > 0) {
-          // If previous section had accumulated text, push it
           if (
             currentSection.lines.length > 0 ||
             currentSection.blockIds.length > 0
           ) {
-            sections.push(currentSection);
+            rawSections.push(currentSection);
           }
 
           currentSection = {
@@ -407,7 +390,6 @@ export class ChunkingService {
           currentSection.lines.push(formattedLine);
         }
 
-        // Recursively traverse child blocks if present with incremented depth
         if (Array.isArray(block.children) && block.children.length > 0) {
           traverse(block.children, depth + 1);
         }
@@ -417,32 +399,105 @@ export class ChunkingService {
     traverse(blocks);
 
     if (currentSection.lines.length > 0 || currentSection.blockIds.length > 0) {
-      sections.push(currentSection);
+      rawSections.push(currentSection);
     }
 
-    // If all blocks were media or empty, provide fallback section
-    if (sections.length === 0) {
-      const fallbackHash = await this.computeHash(`${pageTitle}\n${pageTitle}`);
+    if (rawSections.length === 0) {
+      const fallbackHash = await this.computeHash(`${safeTitle}\n${safeTitle}`);
       return [
         {
           sectionIndex: 0,
-          sectionTitle: pageTitle,
+          sectionTitle: safeTitle,
           headingBlockId: "root",
           blockIds: ["root"],
-          content: pageTitle,
+          content: safeTitle,
           contentHash: fallbackHash,
         },
       ];
     }
 
-    // Format final sections with sectionIndex and contentHash
+    // Sub-split oversized sections by paragraph boundaries
+    const normalizedSections: Array<{
+      sectionTitle: string;
+      headingBlockId: string;
+      blockIds: string[];
+      content: string;
+    }> = [];
+
+    for (const sec of rawSections) {
+      const fullText = sec.lines.join("\n").trim();
+      if (fullText.length <= MAX_SECTION_CHARS) {
+        normalizedSections.push({
+          sectionTitle: sec.sectionTitle,
+          headingBlockId: sec.headingBlockId,
+          blockIds: sec.blockIds,
+          content: fullText || sec.sectionTitle,
+        });
+      } else {
+        // Sub-split lines
+        let currentChunkLines: string[] = [];
+        let currentChunkLen = 0;
+        let partIndex = 1;
+
+        for (const line of sec.lines) {
+          if (
+            currentChunkLen + line.length > MAX_SECTION_CHARS &&
+            currentChunkLines.length > 0
+          ) {
+            normalizedSections.push({
+              sectionTitle: `${sec.sectionTitle} (Part ${partIndex})`,
+              headingBlockId: `${sec.headingBlockId}-part-${partIndex}`,
+              blockIds: sec.blockIds,
+              content: currentChunkLines.join("\n").trim(),
+            });
+            partIndex++;
+            currentChunkLines = [line];
+            currentChunkLen = line.length;
+          } else {
+            currentChunkLines.push(line);
+            currentChunkLen += line.length + 1;
+          }
+        }
+
+        if (currentChunkLines.length > 0) {
+          normalizedSections.push({
+            sectionTitle:
+              partIndex === 1
+                ? sec.sectionTitle
+                : `${sec.sectionTitle} (Part ${partIndex})`,
+            headingBlockId:
+              partIndex === 1
+                ? sec.headingBlockId
+                : `${sec.headingBlockId}-part-${partIndex}`,
+            blockIds: sec.blockIds,
+            content: currentChunkLines.join("\n").trim(),
+          });
+        }
+      }
+    }
+
+    // Apply sliding context overlap and compute content hashes
     const result: ParsedSection[] = [];
-    for (let i = 0; i < sections.length; i++) {
-      const s = sections[i];
+    let previousRawContent = "";
+
+    for (let i = 0; i < normalizedSections.length; i++) {
+      const s = normalizedSections[i];
       if (!s) continue;
-      const content = s.lines.join("\n").trim();
+
+      const rawContent = s.content;
+      let finalContent = rawContent;
+
+      if (previousRawContent.length > 0) {
+        const overlap = previousRawContent.slice(-OVERLAP_CHARS).trim();
+        if (overlap.length > 0) {
+          finalContent = `[Context: ${overlap}]\n---\n${rawContent}`;
+        }
+      }
+
+      previousRawContent = rawContent;
+
       const contentHash = await this.computeHash(
-        `${s.sectionTitle}\n${content}`,
+        `${s.sectionTitle}\n${finalContent}`,
       );
 
       result.push({
@@ -450,11 +505,31 @@ export class ChunkingService {
         sectionTitle: s.sectionTitle,
         headingBlockId: s.headingBlockId,
         blockIds: s.blockIds,
-        content: content || s.sectionTitle,
+        content: finalContent,
         contentHash,
       });
     }
 
     return result;
+  }
+
+  async parseBinaryYDocToSections(
+    pageTitle: string,
+    contentBinary: Uint8Array | null,
+  ): Promise<ParsedSection[]> {
+    let blocks: BlockNoteBlock[] = [];
+    if (contentBinary && contentBinary.length > 0) {
+      try {
+        const ydoc = new Y.Doc();
+        Y.applyUpdate(ydoc, contentBinary);
+        blocks = this.parseYDocBlocks(ydoc);
+      } catch (e) {
+        console.error(
+          "ChunkingService: failed to parse Y.Doc binary content:",
+          e,
+        );
+      }
+    }
+    return this.parseDocumentSections(pageTitle, blocks);
   }
 }

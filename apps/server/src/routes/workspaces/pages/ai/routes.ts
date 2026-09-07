@@ -12,7 +12,7 @@ import {
 } from "#/lib/http-response-helpers";
 import type { BlockNoteToolDefinitions } from "@dotion/services";
 import type { UIMessage } from "ai";
-import { z } from "zod";
+import { z } from "@hono/zod-openapi";
 
 const tags = ["AI"];
 
@@ -22,12 +22,20 @@ export const StreamTextRequestSchema = z.object({
       (val) => Array.isArray(val),
       "Must be an array of chat messages",
     )
+    .openapi({
+      type: "array",
+      description: "AI SDK messages",
+    })
     .describe("List of chat messages from BlockNote AI"),
   toolDefinitions: z
     .custom<BlockNoteToolDefinitions>(
       (val) => typeof val === "object" && val !== null,
       "Must be a tool definitions map",
     )
+    .openapi({
+      type: "object",
+      description: "Blocknote tool definitions",
+    })
     .describe(
       "Client-side tool definitions for BlockNote document manipulation",
     ),

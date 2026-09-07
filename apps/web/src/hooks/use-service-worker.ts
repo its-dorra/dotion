@@ -16,7 +16,6 @@ export function useServiceWorker(): UseServiceWorkerReturn {
     const reg = registrationRef.current
     if (!reg || !reg.waiting) return
 
-    // Tell the waiting worker to activate immediately
     reg.waiting.postMessage({ type: 'SKIP_WAITING' })
   }, [])
 
@@ -41,7 +40,6 @@ export function useServiceWorker(): UseServiceWorkerReturn {
       return
     }
 
-    // Handle page reload once new SW has activated and taken control
     const handleControllerChange = () => {
       if (refreshingRef.current) return
       refreshingRef.current = true
@@ -53,20 +51,17 @@ export function useServiceWorker(): UseServiceWorkerReturn {
       handleControllerChange,
     )
 
-    // Register custom Service Worker
     navigator.serviceWorker
       .register('/sw.js', { scope: '/' })
       .then((registration) => {
         registrationRef.current = registration
         setIsRegistered(true)
 
-        // If there's already a waiting worker, flag update available
         if (registration.waiting) {
           setUpdateAvailable(true)
           return
         }
 
-        // Listen for new service worker installation
         registration.addEventListener('updatefound', () => {
           const installingWorker = registration.installing
           if (!installingWorker) return
@@ -76,7 +71,6 @@ export function useServiceWorker(): UseServiceWorkerReturn {
               installingWorker.state === 'installed' &&
               navigator.serviceWorker.controller
             ) {
-              // New update installed and ready to take over
               setUpdateAvailable(true)
             }
           })

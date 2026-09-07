@@ -8,6 +8,7 @@ import {
   NotificationsRepository,
   SearchRepository,
   AssistantRepository,
+  OutboxRepository,
 } from "@dotion/db/repositories";
 import {
   WorkspacesService,
@@ -23,6 +24,7 @@ import {
   ChunkingService,
   SearchService,
   AssistantService,
+  OutboxService,
 } from "@dotion/services";
 import {
   DurableObjectWorkspaceEventPublisher,
@@ -91,6 +93,7 @@ function buildRepositories(db: DBClient) {
     comments: new CommentsRepository(db),
     search: new SearchRepository(db),
     assistant: new AssistantRepository(db),
+    outbox: new OutboxRepository(db),
   };
 }
 
@@ -106,6 +109,7 @@ function buildServices(
   const creditsManager = new DurableObjectUserCreditsManager(env);
   const pageCleanupQueue = new CloudflarePageCleanupQueue(env);
 
+  const outbox = new OutboxService(repositories.outbox, db);
   const users = new UsersService(repositories.users);
   const notifications = new NotificationsService(
     repositories.notifications,
@@ -131,6 +135,7 @@ function buildServices(
     workspacePublisher,
     pagePublisher,
     pageCleanupQueue,
+    outbox,
   );
   const comments = new CommentsService(
     repositories.comments,
@@ -143,7 +148,13 @@ function buildServices(
   // Search & Embedding Services
   const embedding = new EmbeddingService(env.GEMINI_API_KEY);
   const chunking = new ChunkingService();
-  const search = new SearchService(repositories.search, embedding, pages, db);
+  const search = new SearchService(
+    repositories.search,
+    embedding,
+    chunking,
+    pages,
+    db,
+  );
 
   const ai = new AIService(env.GEMINI_API_KEY, creditsManager, search);
 
@@ -172,6 +183,7 @@ function buildServices(
     chunking,
     search,
     assistant,
+    outbox,
   };
 }
 

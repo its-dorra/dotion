@@ -10,6 +10,7 @@ export const fileId = z.string().brand("FileId");
 export const pageSectionId = z.uuid().brand("PageSectionId");
 export const assistantThreadId = z.uuid().brand("AssistantThreadId");
 export const assistantMessageId = z.uuid().brand("AssistantMessageId");
+export const outboxEntryId = z.uuid().brand("OutboxEntryId");
 
 export type UserId = z.infer<typeof userId>;
 export type WorkspaceId = z.infer<typeof workspaceId>;
@@ -21,3 +22,4 @@ export type FileId = z.infer<typeof fileId>;
 export type PageSectionId = z.infer<typeof pageSectionId>;
 export type AssistantThreadId = z.infer<typeof assistantThreadId>;
 export type AssistantMessageId = z.infer<typeof assistantMessageId>;
+export type OutboxEntryId = z.infer<typeof outboxEntryId>;

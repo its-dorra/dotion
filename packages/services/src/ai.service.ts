@@ -16,6 +16,7 @@ import {
 import { z } from "zod";
 import type { UserId } from "@dotion/shared/users/types";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
+import type { AssistantCitation } from "@dotion/shared/assistant/types";
 import type { UserCreditsManager } from "./realtime.types";
 import type { SearchService } from "./search.service";
 
@@ -50,27 +51,86 @@ export interface StreamEditorAIInput {
 
 export interface StreamRAGInput {
   userId: UserId;
+  workspaceId: WorkspaceId;
   history: { role: string; content: string }[];
-  contextBlock: string;
   userPrompt: string;
-  onFinish?: (text: string, usage: AIUsageMetrics) => Promise<void> | void;
+  contextBlock?: string;
+  onCitationCollected?: (citation: AssistantCitation) => void;
+  onFinish?: (
+    text: string,
+    usage: AIUsageMetrics,
+    citations: AssistantCitation[],
+  ) => Promise<void> | void;
 }
 
-export const STRICT_RAG_SYSTEM_PROMPT = `You are Dotion AI, a dedicated and factual workspace assistant. Your sole purpose is to help users understand, find, and synthesize information from their Dotion workspace documents and notes.
-
-STRICT OPERATING RULES:
-1. DOMAIN SCOPE: You ONLY answer questions related to the user's workspace documents, notes, projects, and Dotion content.
-   - If the user asks general, out-of-domain questions (such as solving math puzzles, writing generic code algorithms unrelated to workspace notes, recipes, general world trivia, or open-ended chatting), immediately refuse by responding:
-     "I am Dotion's workspace assistant. I can only assist with questions regarding your workspace documents, notes, and content."
-2. FACTUAL GROUNDING: When answering workspace queries, rely EXCLUSIVELY on facts directly provided in the <workspace_context> below. Do NOT extrapolate, speculate, or fabricate details.
-3. ABSENCE OF INFORMATION: If the provided context does not contain the answer, state clearly:
-   "I cannot find this information in the workspace documents."
-4. CITATIONS: Every factual claim must include a bracketed citation matching the source ID (e.g., [1], [2]).
-   - Format: Place citation tags immediately after the corresponding statement.
-   - Example: "Cloudflare KV stores session cookies [1], whereas vector embeddings are stored in Neon [2]."
-   - Never invent or cite source IDs that are not present in <workspace_context>.
-5. FORMATTING: Use clean Markdown with headers, bullet points, and code blocks where helpful.
-6. LANGUAGE: Respond in the exact language of the user's prompt (English, French, or Arabic).`;
+export const STRICT_RAG_SYSTEM_PROMPT = [
+  "You are Dotion AI, the workspace knowledge assistant.",
+  "Your primary purpose is to help users understand, find, summarize,",
+  "and synthesize information contained in their Dotion workspace.",
+  "## SCOPE",
+  "Answer questions about the user's workspace, including:",
+  "- documents and pages",
+  "- projects and tasks",
+  "- decisions and notes",
+  "- workspace architecture and procedures",
+  "- information contained in workspace databases",
+  "For unrelated general questions, explain that you are Dotion's",
+  "workspace assistant and can only help with workspace-related content.",
+  "## WORKSPACE GROUNDING",
+  "Workspace content is the authoritative source for workspace-specific",
+  "facts, decisions, names, procedures, and claims.",
+  "When a question requires workspace information, use `searchWorkspace`",
+  "before answering.",
+  "Never invent workspace-specific information.",
+  "You may use general knowledge to explain or clarify information",
+  "retrieved from the workspace, but clearly distinguish general",
+  "knowledge from information contained in the workspace.",
+  "## SEARCH STRATEGY",
+  "Use:",
+  "- `conceptual` for semantic questions, explanations, summaries,",
+  "  and broad questions.",
+  "- `exact` for names, identifiers, code symbols, error messages,",
+  "  quoted phrases, URLs, table names, and other exact terminology.",
+  "- `balanced` when both semantic and lexical matching are important.",
+  "For complex or multi-part questions, perform multiple searches when",
+  "necessary.",
+  "After searching, evaluate whether the retrieved sources actually",
+  "answer the question. If they are insufficient, ambiguous, or",
+  "irrelevant, refine the query and search again.",
+  "Do not confidently answer from weak or unrelated retrieval results.",
+  "## EVIDENCE",
+  "Every workspace-specific factual claim must be supported by retrieved",
+  "workspace content.",
+  "Do not:",
+  "- fabricate missing information;",
+  "- assume something exists because it is common or likely;",
+  "- silently resolve conflicting workspace information;",
+  "- treat unrelated search results as evidence.",
+  "If workspace sources conflict, explicitly describe the conflict and",
+  "cite the relevant sources.",
+  "If the workspace only partially answers the question, answer the",
+  "supported portion and clearly state what cannot be determined.",
+  "If no relevant information can be found, say:",
+  '"I couldn\'t find this information in your workspace."',
+  "## CITATIONS",
+  "Use `[N]` citations for workspace-derived claims.",
+  "`[N]` must correspond exactly to the `sourceId` returned by",
+  "`searchWorkspace`.",
+  "Place citations immediately after the claim they support.",
+  "Do not invent citation numbers or cite sources that do not support",
+  "the claim.",
+  "When multiple sources support a claim, cite all relevant sources.",
+  "## LANGUAGE",
+  "Respond in the primary language of the user's latest message.",
+  "Preserve technical identifiers, code, names, and quoted text in their",
+  "original form unless translation is requested.",
+  "## RESPONSE STYLE",
+  "Be concise and useful.",
+  "Use Markdown when appropriate.",
+  "Do not mention internal tools, embeddings, retrieval algorithms,",
+  "search queries, or implementation details unless the user asks about",
+  "them.",
+].join("\n");
 
 export class AIService {
   private readonly googleClient: ReturnType<typeof createGoogleGenerativeAI>;
@@ -123,9 +183,6 @@ export class AIService {
     }
   }
 
-  /**
-   * Stream interactive document transformations for the BlockNote editor.
-   */
   async streamEditorAI(
     input: StreamEditorAIInput,
   ): Promise<
@@ -145,32 +202,12 @@ export class AIService {
 
         const blockNoteTools = toolDefinitionsToToolSet(input.toolDefinitions);
 
-        // Server-side workspace knowledge tool injected into editor AI
         const tools = {
           ...blockNoteTools,
           ...(input.workspaceId && this.searchService
             ? {
-                searchWorkspaceKnowledge: tool({
-                  description:
-                    "Search the workspace knowledge base to retrieve facts, documentation, notes, and context from other pages.",
-                  inputSchema: z.object({
-                    query: z.string().describe("The semantic search query"),
-                  }),
-                  execute: async ({ query }: { query: string }) => {
-                    const results = await this.searchService!.hybridSearch({
-                      workspaceId: input.workspaceId!,
-                      query,
-                      limit: 5,
-                    });
-                    if (results.isErr()) {
-                      return { error: "Failed to search workspace knowledge" };
-                    }
-                    return results.value.map((item) => ({
-                      pageTitle: item.pageTitle,
-                      sectionTitle: item.sectionTitle,
-                      content: item.content,
-                    }));
-                  },
+                searchWorkspace: this.createWorkspaceSearchTool({
+                  workspaceId: input.workspaceId,
                 }),
               }
             : {}),
@@ -229,28 +266,43 @@ export class AIService {
   async streamRAG(
     input: StreamRAGInput,
   ): Promise<
-    Result<ReturnType<typeof streamText>, AIError | QuotaExceededError>
+    Result<ReturnType<typeof streamText<any>>, AIError | QuotaExceededError>
   > {
     return Result.gen(async function* (this: AIService) {
       yield* Result.await(this.checkQuota(input.userId));
 
       try {
         const model = this.googleClient("gemini-3.6-flash");
+        const citations: AssistantCitation[] = [];
 
         const modelMessages: ModelMessage[] = input.history.map((msg) => ({
           role: msg.role === "assistant" ? "assistant" : "user",
           content: msg.content,
         }));
 
+        const userMessageContent = input.contextBlock
+          ? `${input.contextBlock}\n\nUser Question:\n${input.userPrompt}`
+          : input.userPrompt;
+
         modelMessages.push({
           role: "user",
-          content: `${input.contextBlock}\n\nUser Question:\n${input.userPrompt}`,
+          content: userMessageContent,
         });
+
+        const tools = {
+          searchWorkspace: this.createWorkspaceSearchTool({
+            workspaceId: input.workspaceId,
+            citations,
+            onCitationCollected: input.onCitationCollected,
+          }),
+        };
 
         const result = streamText({
           model,
           system: STRICT_RAG_SYSTEM_PROMPT,
           messages: modelMessages,
+          tools,
+          toolChoice: "auto",
           onFinish: async ({ text: assistantResponse, usage }) => {
             try {
               const promptTokens = usage.inputTokens ?? 0;
@@ -265,11 +317,15 @@ export class AIService {
               );
 
               if (input.onFinish) {
-                await input.onFinish(assistantResponse, {
-                  totalTokens,
-                  promptTokens,
-                  completionTokens,
-                });
+                await input.onFinish(
+                  assistantResponse,
+                  {
+                    totalTokens,
+                    promptTokens,
+                    completionTokens,
+                  },
+                  citations,
+                );
               }
             } catch (error) {
               console.error("Error in onFinish RAG callback:", error);
@@ -295,9 +351,73 @@ export class AIService {
     }, this);
   }
 
-  /**
-   * Generate a short 3-4 word summary title for a new conversation thread.
-   */
+  private createWorkspaceSearchTool(options: {
+    workspaceId: WorkspaceId;
+    citations?: AssistantCitation[];
+    onCitationCollected?: (citation: AssistantCitation) => void;
+  }) {
+    return tool({
+      description:
+        "Search the workspace knowledge base across all pages. Specify 'query' and 'mode' ('conceptual' for explanations, summaries, and broad questions in any language; 'exact' for specific code identifiers, table names, error codes, or quoted phrases; 'balanced' for general lookups).",
+      inputSchema: z.object({
+        query: z.string().describe("The search query to look up"),
+        limit: z
+          .number()
+          .min(1)
+          .max(15)
+          .optional()
+          .describe("Number of relevant sections to retrieve (default: 5)"),
+        mode: z
+          .enum(["conceptual", "exact", "balanced"])
+          .default("conceptual")
+          .optional()
+          .describe(
+            "Search mode: 'conceptual' (default, optimal for explanations in any language), 'exact' (for code/IDs), or 'balanced'",
+          ),
+      }),
+      execute: async ({ query, limit, mode }) => {
+        const searchSvc = this.searchService;
+        if (!searchSvc) {
+          return { error: "Workspace search is not available." };
+        }
+
+        const results = await searchSvc.hybridSearch({
+          workspaceId: options.workspaceId,
+          query,
+          limit: limit ?? 5,
+          mode: mode ?? "conceptual",
+        });
+
+        if (results.isErr()) {
+          return { error: "Failed to search workspace knowledge." };
+        }
+
+        const items = results.value.payload;
+        if (options.citations) {
+          items.forEach((item) => {
+            const citation: AssistantCitation = {
+              pageId: item.pageId,
+              pageTitle: item.pageTitle,
+              sectionTitle: item.sectionTitle,
+              headingBlockId: item.headingBlockId,
+            };
+            options.citations!.push(citation);
+            options.onCitationCollected?.(citation);
+          });
+        }
+
+        return items.map((item, index) => ({
+          sourceId: options.citations
+            ? options.citations.length - items.length + index + 1
+            : index + 1,
+          pageTitle: item.pageTitle,
+          sectionTitle: item.sectionTitle,
+          content: item.content,
+        }));
+      },
+    });
+  }
+
   async generateSummaryTitle(userPrompt: string): Promise<string | null> {
     try {
       const model = this.googleClient("gemini-2.5-flash");

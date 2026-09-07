@@ -12,7 +12,6 @@ import type { AIService, AIError, QuotaExceededError } from "./ai.service";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
 import type { UserId } from "@dotion/shared/users/types";
 import type { AssistantThreadId } from "@dotion/shared/ids";
-import type { AssistantCitation } from "@dotion/shared/assistant/types";
 import type { DatabaseError, NotFoundError } from "@dotion/db/errors";
 
 export interface StreamChatInput {
@@ -25,7 +24,7 @@ export interface StreamChatInput {
 export class AssistantService {
   constructor(
     private readonly assistantRepository: AssistantRepository,
-    private readonly searchService: SearchService,
+    _searchService: SearchService,
     private readonly aiService: AIService,
     private readonly dbClient: DBClient,
   ) {}
@@ -82,12 +81,10 @@ export class AssistantService {
     >
   > {
     return Result.gen(async function* (this: AssistantService) {
-      // 1. Verify thread exists
       const thread = yield* Result.await(
         this.assistantRepository.getThread(input.threadId),
       );
 
-      // 2. Persist incoming user message
       yield* Result.await(
         this.assistantRepository.createMessage(this.dbClient, {
           threadId: input.threadId,
@@ -96,50 +93,17 @@ export class AssistantService {
         }),
       );
 
-      // 3. Concurrently fetch prior conversation history & retrieve relevant workspace knowledge via Hybrid Search
-      const [priorMessages, retrievedSections] = await Promise.all([
-        this.assistantRepository
-          .listMessages(input.threadId, { limit: 10 })
-          .then((res) => (res.isOk() ? res.value.items : [])),
-        this.searchService
-          .hybridSearch({
-            workspaceId: input.workspaceId,
-            query: input.content,
-            limit: 5,
-          })
-          .then((res) => (res.isOk() ? res.value : [])),
-      ]);
+      const priorMessages = await this.assistantRepository
+        .listMessages(input.threadId, { limit: 10 })
+        .then((res) => (res.isOk() ? res.value.items : []));
 
-      // 4. Build structured Context and Citations map
-      const citations: AssistantCitation[] = [];
-      let contextBlock = "<workspace_context>\n";
-
-      if (retrievedSections.length === 0) {
-        contextBlock += "No matching workspace documents found.\n";
-      } else {
-        retrievedSections.forEach((section, index) => {
-          const sourceId = index + 1;
-          citations.push({
-            pageId: section.pageId,
-            pageTitle: section.pageTitle,
-            sectionTitle: section.sectionTitle,
-            headingBlockId: section.headingBlockId,
-          });
-
-          contextBlock += `[${sourceId}] Document: "${section.pageTitle}" > Section: "${section.sectionTitle}"\n${section.content}\n\n`;
-        });
-      }
-      contextBlock += "</workspace_context>";
-
-      // 6. Delegate LLM stream execution to unified AIService
       return this.aiService.streamRAG({
         userId: input.userId,
+        workspaceId: input.workspaceId,
         history: priorMessages,
-        contextBlock,
         userPrompt: input.content,
-        onFinish: async (assistantResponse, usage) => {
+        onFinish: async (assistantResponse, usage, citations) => {
           try {
-            // Save assistant message to PostgreSQL
             await this.assistantRepository.createMessage(this.dbClient, {
               threadId: input.threadId,
               role: "assistant",
@@ -148,7 +112,6 @@ export class AssistantService {
               tokensUsed: usage.totalTokens,
             });
 
-            // Auto-generate title if thread is named "New Chat" or untitled
             if (
               !thread.title ||
               thread.title === "New Chat" ||

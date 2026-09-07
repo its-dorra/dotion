@@ -1,4 +1,4 @@
-import { useIsMobile } from '@/lib/use-is-mobile'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { InvitationDialog } from './invitation-dialog'
 import { InvitationDrawer } from './invitation-drawer'
 import type { WorkspaceInvitation } from '../types'

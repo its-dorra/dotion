@@ -9,7 +9,6 @@ import {
 import { WorkspaceMemberRoleSchema } from "../workspaces/schema";
 import { PagePermissionRoleSchema } from "../pages/schema";
 
-// 1. Explicit Resource Action Enums
 export const WorkspaceInstanceActionsSchema = z.enum([
   "view",
   "update",
@@ -96,7 +95,6 @@ export const UserActionsSchema = z.union([
   UserCollectionActionsSchema,
 ]);
 
-// 2. Resource ID Inputs
 export const WorkspaceInputSchema = z.object({
   workspaceId,
 });
@@ -127,7 +125,6 @@ export const UserInputSchema = z.object({
   userId,
 });
 
-// 3. Central Schema Map (Single Source of Truth)
 export const resourceSchemas = {
   workspace: {
     instanceActions: WorkspaceInstanceActionsSchema,
@@ -266,7 +263,6 @@ export const ResourceTypeSchema = z.enum([
   "user",
 ]);
 
-// 4. All Action Enums Union (Strictly typed, no z.string())
 export const AllActionsSchema = z.enum([
   "view",
   "update",
@@ -288,7 +284,6 @@ export const AllActionsSchema = z.enum([
   "resolve",
 ]);
 
-// 5. Query Schema for GET /authorization/check (Compatible with OpenAPI query parameters)
 export const CheckPermissionQuerySchema = z
   .object({
     resource: ResourceTypeSchema,

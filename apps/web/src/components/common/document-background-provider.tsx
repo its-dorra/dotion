@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo } from 'react'
+import { createContext, useContext, useState, useMemo } from 'react'
 import {
   type DocumentBackgroundPreset,
   type BackgroundPresetConfig,
@@ -43,46 +43,44 @@ export function DocumentBackgroundProvider({
   storageKey = 'dotion_doc_background',
   colorStorageKey = 'dotion_doc_background_color',
 }: DocumentBackgroundProviderProps) {
-  const [background, setBackgroundState] =
-    useState<DocumentBackgroundPreset>(defaultBackground)
+  const [background, setBackgroundState] = useState<DocumentBackgroundPreset>(
+    () => {
+      if (typeof window === 'undefined') return defaultBackground
+      try {
+        const stored = localStorage.getItem(
+          storageKey,
+        ) as DocumentBackgroundPreset | null
+        return stored && PRESET_MAP.has(stored) ? stored : defaultBackground
+      } catch {
+        return defaultBackground
+      }
+    },
+  )
+
   const [backgroundColor, setBackgroundColorState] =
-    useState<DocumentBackgroundColor>(defaultColor)
-
-  useEffect(() => {
-    try {
-      const storedPreset = localStorage.getItem(
-        storageKey,
-      ) as DocumentBackgroundPreset | null
-      if (storedPreset && PRESET_MAP.has(storedPreset)) {
-        setBackgroundState(storedPreset)
+    useState<DocumentBackgroundColor>(() => {
+      if (typeof window === 'undefined') return defaultColor
+      try {
+        const stored = localStorage.getItem(
+          colorStorageKey,
+        ) as DocumentBackgroundColor | null
+        return stored && COLOR_MAP.has(stored) ? stored : defaultColor
+      } catch {
+        return defaultColor
       }
-
-      const storedColor = localStorage.getItem(
-        colorStorageKey,
-      ) as DocumentBackgroundColor | null
-      if (storedColor && COLOR_MAP.has(storedColor)) {
-        setBackgroundColorState(storedColor)
-      }
-    } catch {
-      // Ignore localStorage errors (e.g. private browsing mode)
-    }
-  }, [storageKey, colorStorageKey])
+    })
 
   const setBackground = (preset: DocumentBackgroundPreset) => {
     try {
       localStorage.setItem(storageKey, preset)
-    } catch {
-      // Ignore
-    }
+    } catch {}
     setBackgroundState(preset)
   }
 
   const setBackgroundColor = (color: DocumentBackgroundColor) => {
     try {
       localStorage.setItem(colorStorageKey, color)
-    } catch {
-      // Ignore
-    }
+    } catch {}
     setBackgroundColorState(color)
   }
 

@@ -70,7 +70,6 @@ export function RouteErrorFallback({
 
   const errorStack = error instanceof Error ? error.stack : null
 
-  // Title and Description resolution
   let title = m.error_generic_title()
   let description = m.error_generic_description()
   let icon = <AlertTriangle className="size-8 text-destructive" />

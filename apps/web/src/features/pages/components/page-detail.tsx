@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { pageDetailQueryOptions } from '../query-options'
 import { workspaceDetailQueryOptions } from '@/features/workspaces/query-options'
@@ -14,7 +14,6 @@ import { usePageYjs } from '../hooks/use-page-yjs'
 import { usePageAwareness } from '../hooks/use-page-awareness'
 import { usePageCommentsRealtime } from '@/features/comments/hooks/use-page-comments-realtime'
 import { useUpdatePageMetadata } from '../hooks/use-update-page-metadata'
-import { generateUserColor } from '../lib/user-colors'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import type { PageId } from '@dotion/shared/pages/types'
 
@@ -40,7 +39,7 @@ export function PageDetail({
   usePageCommentsRealtime({ workspaceId, pageId, wsClient })
 
   const session = useSession()
-  const collaborators = usePageAwareness(provider)
+  const collaborators = usePageAwareness(provider, session.data?.user)
   const [isMobileCommentsOpen, setIsMobileCommentsOpen] = useState(false)
 
   const { updateTitle, updateIcon, updateCover } = useUpdatePageMetadata({
@@ -48,19 +47,6 @@ export function PageDetail({
     pageId: page.id,
     wsClient,
   })
-
-  useEffect(() => {
-    if (!provider || !session.data?.user) return
-
-    provider.awareness.setLocalStateField('user', {
-      name: session.data.user.name,
-      color: generateUserColor(session.data.user.id),
-    })
-
-    return () => {
-      provider.awareness.setLocalStateField('user', null)
-    }
-  }, [provider, session.data?.user])
 
   const { data: updatePerm } = useQuery(
     canQueryOptions({

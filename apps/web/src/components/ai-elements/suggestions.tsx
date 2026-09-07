@@ -14,39 +14,38 @@ interface SuggestionsProps {
   className?: string
 }
 
-export const DEFAULT_WORKSPACE_SUGGESTIONS: SuggestionItem[] = [
-  {
-    id: 'sug_1',
-    label: 'Summarize roadmap',
-    prompt:
-      'Summarize the roadmap and current project goals from our workspace documents.',
-  },
-  {
-    id: 'sug_2',
-    label: 'Explain architecture',
-    prompt:
-      'Give me an overview of the system architecture described in our docs.',
-  },
-  {
-    id: 'sug_3',
-    label: 'Find meeting action items',
-    prompt:
-      'What are the most recent open action items from our meeting notes?',
-  },
-  {
-    id: 'sug_4',
-    label: 'Search database schema',
-    prompt:
-      'Explain the database tables and entity relationships documented in our workspace.',
-  },
-]
+export function getDefaultWorkspaceSuggestions(): SuggestionItem[] {
+  return [
+    {
+      id: 'sug_1',
+      label: m.ai_suggestion_summarize_roadmap_label(),
+      prompt: m.ai_suggestion_summarize_roadmap_prompt(),
+    },
+    {
+      id: 'sug_2',
+      label: m.ai_suggestion_explain_arch_label(),
+      prompt: m.ai_suggestion_explain_arch_prompt(),
+    },
+    {
+      id: 'sug_3',
+      label: m.ai_suggestion_action_items_label(),
+      prompt: m.ai_suggestion_action_items_prompt(),
+    },
+    {
+      id: 'sug_4',
+      label: m.ai_suggestion_schema_label(),
+      prompt: m.ai_suggestion_schema_prompt(),
+    },
+  ]
+}
 
 export function Suggestions({
-  suggestions = DEFAULT_WORKSPACE_SUGGESTIONS,
+  suggestions,
   onSelectSuggestion,
   className,
 }: SuggestionsProps) {
-  if (!suggestions || suggestions.length === 0) return null
+  const items = suggestions ?? getDefaultWorkspaceSuggestions()
+  if (!items || items.length === 0) return null
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
@@ -55,7 +54,7 @@ export function Suggestions({
         <span>{m.ai_suggestions_title()}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {suggestions.map((item) => (
+        {items.map((item) => (
           <button
             key={item.id}
             type="button"

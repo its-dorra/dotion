@@ -119,14 +119,15 @@ export class StorageService {
     return this.getFile(storageKey, options);
   }
 
-  async deletePageFiles(
-    workspaceId: WorkspaceId,
-    pageId: PageId,
-  ): Promise<Result<void, StorageError>> {
+  async deletePageFiles(params: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+  }): Promise<Result<{ deletedCount: number }, StorageError>> {
     try {
-      const prefix = `workspaces/${workspaceId}/pages/${pageId}/`;
+      const prefix = `workspaces/${params.workspaceId}/pages/${params.pageId}/`;
       let truncated = true;
       let cursor: string | undefined;
+      let deletedCount = 0;
 
       while (truncated) {
         const list = await this.r2.list({
@@ -137,13 +138,14 @@ export class StorageService {
         if (list.objects.length > 0) {
           const keys = list.objects.map((obj) => obj.key);
           await this.r2.delete(keys);
+          deletedCount += keys.length;
         }
 
         truncated = list.truncated;
         cursor = list.truncated ? list.cursor : undefined;
       }
 
-      return Result.ok(undefined);
+      return Result.ok({ deletedCount });
     } catch (error: unknown) {
       console.error("StorageService.deletePageFiles error:", error);
       return Result.err(

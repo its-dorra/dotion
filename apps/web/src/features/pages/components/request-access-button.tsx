@@ -14,27 +14,54 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { canQueryOptions } from '@/features/authorization/query-options'
 import { pageAccessRequestStatusQueryOptions } from '../query-options'
 import { useRequestPageAccess } from '../hooks/use-request-page-access'
 import * as m from '@/paraglide/messages'
-import type { PageId } from '@dotion/shared/pages/types'
+import type { AllPageRole, PageId } from '@dotion/shared/pages/types'
 import type { WorkspaceId } from '@/features/workspaces/types'
 
 interface RequestAccessButtonProps {
   workspaceId: WorkspaceId
   pageId: PageId
-  currentRole?: 'viewer' | 'commenter'
+  currentRole?: AllPageRole
 }
 
 export function RequestAccessButton({
   workspaceId,
   pageId,
-  currentRole = 'viewer',
+  currentRole,
 }: RequestAccessButtonProps) {
+  const { data: updatePerm } = useQuery({
+    ...canQueryOptions({
+      resource: { type: 'page', id: { pageId } },
+      action: 'update',
+    }),
+    enabled: currentRole === undefined,
+  })
+  const isEditor = updatePerm?.allowed ?? false
+
+  const { data: commentPerm } = useQuery({
+    ...canQueryOptions({
+      resource: 'comment',
+      action: 'create',
+      scope: { pageId },
+    }),
+    enabled: currentRole === undefined,
+  })
+  const isCommenter = commentPerm?.allowed ?? false
+
+  const effectiveRole: AllPageRole =
+    currentRole ?? (isEditor ? 'editor' : isCommenter ? 'commenter' : 'viewer')
+
   const { data: statusData } = useQuery(
     pageAccessRequestStatusQueryOptions(workspaceId, pageId),
   )
   const requestAccess = useRequestPageAccess()
+
+  if (effectiveRole === 'editor') {
+    return null
+  }
 
   const hasPending = statusData?.hasPendingRequest
   const requestedRole = statusData?.request?.requestedRole ?? 'editor'
@@ -73,7 +100,7 @@ export function RequestAccessButton({
     })
   }
 
-  if (currentRole === 'commenter') {
+  if (effectiveRole === 'commenter') {
     return (
       <Button
         variant="outline"

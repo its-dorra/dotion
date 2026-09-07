@@ -1,4 +1,4 @@
-import { useIsMobile } from '@/lib/use-is-mobile'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { InviteMemberDialog } from './invite-member-dialog'
 import { InviteMemberSheet } from './invite-member-sheet'
 

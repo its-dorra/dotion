@@ -18,9 +18,7 @@ export function CodeBlock({ language, value, className }: CodeBlockProps) {
       await navigator.clipboard.writeText(value)
       setHasCopied(true)
       setTimeout(() => setHasCopied(false), 2000)
-    } catch {
-      // Non-fatal
-    }
+    } catch {}
   }
 
   return (

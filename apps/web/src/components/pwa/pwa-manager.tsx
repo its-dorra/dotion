@@ -10,7 +10,6 @@ export function PwaManager() {
   const wasOnlineRef = useRef(isOnline)
   const isFirstRender = useRef(true)
 
-  // 1. Service Worker update notification
   useEffect(() => {
     if (updateAvailable) {
       toast(m.pwa_update_available(), {
@@ -24,7 +23,6 @@ export function PwaManager() {
     }
   }, [updateAvailable, updateServiceWorker])
 
-  // 2. Online/Offline status toasts
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false

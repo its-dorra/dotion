@@ -1,4 +1,6 @@
 import * as React from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Sparkles, User, Copy, Check } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { CodeBlock } from './code-block'
@@ -19,205 +21,6 @@ export interface MessageProps {
   className?: string
 }
 
-function parseMarkdownContent(
-  text: string,
-  citations?: AssistantCitation[],
-  onSelectCitation?: (citation: AssistantCitation) => void,
-) {
-  // Split into code block chunks vs text chunks
-  const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g
-  const elements: React.ReactNode[] = []
-  let lastIndex = 0
-  let match: RegExpExecArray | null
-
-  while ((match = codeBlockRegex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      const textChunk = text.slice(lastIndex, match.index)
-      elements.push(
-        <div key={`text-${lastIndex}`} className="space-y-2">
-          {renderTextParagraphs(textChunk, citations, onSelectCitation)}
-        </div>,
-      )
-    }
-
-    const language = match[1] ?? ''
-    const code = match[2] ?? ''
-    elements.push(
-      <CodeBlock
-        key={`code-${match.index}`}
-        language={language}
-        value={code.trimEnd()}
-      />,
-    )
-
-    lastIndex = match.index + match[0].length
-  }
-
-  if (lastIndex < text.length) {
-    const textChunk = text.slice(lastIndex)
-    elements.push(
-      <div key={`text-${lastIndex}`} className="space-y-2">
-        {renderTextParagraphs(textChunk, citations, onSelectCitation)}
-      </div>,
-    )
-  }
-
-  return elements
-}
-
-function renderTextParagraphs(
-  chunk: string,
-  citations?: AssistantCitation[],
-  onSelectCitation?: (citation: AssistantCitation) => void,
-) {
-  const lines = chunk.split('\n\n')
-
-  return lines.map((para, pIdx) => {
-    const trimmed = para.trim()
-    if (!trimmed) return null
-
-    // Headings
-    if (trimmed.startsWith('### ')) {
-      return (
-        <h4
-          key={pIdx}
-          className="text-xs font-semibold text-foreground mt-2 mb-1"
-        >
-          {renderFormattedInline(trimmed.slice(4), citations, onSelectCitation)}
-        </h4>
-      )
-    }
-    if (trimmed.startsWith('## ')) {
-      return (
-        <h3
-          key={pIdx}
-          className="text-sm font-semibold text-foreground mt-2.5 mb-1 border-b pb-0.5"
-        >
-          {renderFormattedInline(trimmed.slice(3), citations, onSelectCitation)}
-        </h3>
-      )
-    }
-    if (trimmed.startsWith('# ')) {
-      return (
-        <h2
-          key={pIdx}
-          className="text-base font-bold text-foreground mt-3 mb-1"
-        >
-          {renderFormattedInline(trimmed.slice(2), citations, onSelectCitation)}
-        </h2>
-      )
-    }
-
-    // Bullet lists
-    if (
-      trimmed.startsWith('- ') ||
-      trimmed.startsWith('* ') ||
-      trimmed.startsWith('• ')
-    ) {
-      const items = trimmed.split(/\n(?=[-•*]\s)/)
-      return (
-        <ul
-          key={pIdx}
-          className="list-disc list-inside space-y-1 my-1 pl-1 text-xs"
-        >
-          {items.map((item, iIdx) => (
-            <li key={iIdx} className="leading-relaxed">
-              {renderFormattedInline(
-                item.replace(/^[-•*]\s+/, ''),
-                citations,
-                onSelectCitation,
-              )}
-            </li>
-          ))}
-        </ul>
-      )
-    }
-
-    // Numbered lists
-    if (/^\d+\.\s/.test(trimmed)) {
-      const items = trimmed.split(/\n(?=\d+\.\s)/)
-      return (
-        <ol
-          key={pIdx}
-          className="list-decimal list-inside space-y-1 my-1 pl-1 text-xs"
-        >
-          {items.map((item, iIdx) => (
-            <li key={iIdx} className="leading-relaxed">
-              {renderFormattedInline(
-                item.replace(/^\d+\.\s+/, ''),
-                citations,
-                onSelectCitation,
-              )}
-            </li>
-          ))}
-        </ol>
-      )
-    }
-
-    return (
-      <p key={pIdx} className="leading-relaxed text-xs">
-        {renderFormattedInline(trimmed, citations, onSelectCitation)}
-      </p>
-    )
-  })
-}
-
-function renderFormattedInline(
-  text: string,
-  citations?: AssistantCitation[],
-  onSelectCitation?: (citation: AssistantCitation) => void,
-): React.ReactNode {
-  // Match inline code `code`, bold **bold**, and citations [1], [2]
-  const inlineRegex = /(`[^`]+`|\*\*[^*]+\*\*|\[\d+\])/g
-  const parts = text.split(inlineRegex)
-
-  return parts.map((part, i) => {
-    if (part.startsWith('`') && part.endsWith('`')) {
-      return (
-        <code
-          key={i}
-          className="rounded-xs bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground font-medium"
-        >
-          {part.slice(1, -1)}
-        </code>
-      )
-    }
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return (
-        <strong key={i} className="font-semibold text-foreground">
-          {part.slice(2, -2)}
-        </strong>
-      )
-    }
-    const citationMatch = part.match(/^\[(\d+)\]$/)
-    if (citationMatch) {
-      const sourceNum = parseInt(citationMatch[1]!, 10)
-      const citation = citations?.[sourceNum - 1]
-
-      return (
-        <button
-          key={i}
-          type="button"
-          onClick={() => citation && onSelectCitation?.(citation)}
-          className={cn(
-            'inline-flex items-center justify-center rounded-xs bg-primary/15 hover:bg-primary hover:text-primary-foreground text-primary font-mono text-[10px] font-bold px-1 py-0 mx-0.5 transition-colors cursor-pointer align-baseline',
-            !citation && 'opacity-60 cursor-default',
-          )}
-          title={
-            citation
-              ? `Source ${sourceNum}: ${citation.pageTitle}${citation.sectionTitle ? ` > ${citation.sectionTitle}` : ''}`
-              : `Source [${sourceNum}]`
-          }
-        >
-          {sourceNum}
-        </button>
-      )
-    }
-
-    return part
-  })
-}
-
 export function Message({
   role,
   content,
@@ -235,10 +38,13 @@ export function Message({
       await navigator.clipboard.writeText(content)
       setHasCopied(true)
       setTimeout(() => setHasCopied(false), 2000)
-    } catch {
-      // Non-fatal
-    }
+    } catch {}
   }
+
+  // Pre-process citations like [1], [2] to reference links so ReactMarkdown renders them as interactive buttons
+  const processedContent = React.useMemo(() => {
+    return content.replace(/(?<=\s|^|[(])\[(\d+)\]/g, '[$1](#citation-$1)')
+  }, [content])
 
   if (role === 'user') {
     return (
@@ -281,7 +87,7 @@ export function Message({
           <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             {tokensUsed !== undefined && tokensUsed > 0 && (
               <span className="font-mono text-[9px] text-muted-foreground/70">
-                {tokensUsed} tokens
+                {m.ai_message_tokens({ count: tokensUsed })}
               </span>
             )}
             <button
@@ -300,7 +106,167 @@ export function Message({
         </div>
 
         <div className="text-foreground/90 space-y-2 text-xs leading-relaxed">
-          {parseMarkdownContent(content, citations, onSelectCitation)}
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              code({ className: codeClassName, children, ...props }) {
+                const match = /language-(\w+)/.exec(codeClassName || '')
+                const codeString = String(children).replace(/\n$/, '')
+                const isInline = !match && !String(children).includes('\n')
+
+                if (isInline) {
+                  return (
+                    <code
+                      className="rounded-xs bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground font-medium"
+                      {...props}
+                    >
+                      {children}
+                    </code>
+                  )
+                }
+
+                return (
+                  <CodeBlock
+                    language={match ? match[1] : ''}
+                    value={codeString}
+                  />
+                )
+              },
+              a({ href, children, ...props }) {
+                const citationMatch = href?.match(/^#citation-(\d+)$/)
+                if (citationMatch) {
+                  const sourceNum = parseInt(citationMatch[1]!, 10)
+                  const citation = citations?.[sourceNum - 1]
+
+                  return (
+                    <button
+                      key={`citation-${sourceNum}`}
+                      type="button"
+                      onClick={() => citation && onSelectCitation?.(citation)}
+                      className={cn(
+                        'inline-flex items-center justify-center rounded-xs bg-primary/15 hover:bg-primary hover:text-primary-foreground text-primary font-mono text-[10px] font-bold px-1 py-0 mx-0.5 transition-colors cursor-pointer align-baseline',
+                        !citation && 'opacity-60 cursor-default',
+                      )}
+                      title={
+                        citation
+                          ? m.ai_message_source_tooltip({
+                              number: sourceNum,
+                              title: `${citation.pageTitle}${citation.sectionTitle ? ` > ${citation.sectionTitle}` : ''}`,
+                            })
+                          : m.ai_message_source_fallback({ number: sourceNum })
+                      }
+                    >
+                      {sourceNum}
+                    </button>
+                  )
+                }
+
+                return (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                    {...props}
+                  >
+                    {children}
+                  </a>
+                )
+              },
+              h1({ children }) {
+                return (
+                  <h2 className="text-base font-bold text-foreground mt-3 mb-1.5">
+                    {children}
+                  </h2>
+                )
+              },
+              h2({ children }) {
+                return (
+                  <h3 className="text-sm font-semibold text-foreground mt-2.5 mb-1 border-b pb-0.5">
+                    {children}
+                  </h3>
+                )
+              },
+              h3({ children }) {
+                return (
+                  <h4 className="text-xs font-semibold text-foreground mt-2 mb-1">
+                    {children}
+                  </h4>
+                )
+              },
+              p({ children }) {
+                return (
+                  <p className="leading-relaxed text-xs my-1.5">{children}</p>
+                )
+              },
+              ul({ children }) {
+                return (
+                  <ul className="list-disc list-inside space-y-1 my-1 pl-1 text-xs">
+                    {children}
+                  </ul>
+                )
+              },
+              ol({ children }) {
+                return (
+                  <ol className="list-decimal list-inside space-y-1 my-1 pl-1 text-xs">
+                    {children}
+                  </ol>
+                )
+              },
+              li({ children }) {
+                return <li className="leading-relaxed">{children}</li>
+              },
+              blockquote({ children }) {
+                return (
+                  <blockquote className="border-s-2 border-primary/40 ps-3 my-2 text-xs italic text-muted-foreground">
+                    {children}
+                  </blockquote>
+                )
+              },
+              table({ children }) {
+                return (
+                  <div className="overflow-x-auto my-2">
+                    <table className="w-full text-xs border-collapse border border-border">
+                      {children}
+                    </table>
+                  </div>
+                )
+              },
+              thead({ children }) {
+                return (
+                  <thead className="bg-muted/60 text-foreground font-semibold">
+                    {children}
+                  </thead>
+                )
+              },
+              th({ children }) {
+                return (
+                  <th className="border border-border px-2.5 py-1 text-left font-semibold">
+                    {children}
+                  </th>
+                )
+              },
+              td({ children }) {
+                return (
+                  <td className="border border-border px-2.5 py-1">
+                    {children}
+                  </td>
+                )
+              },
+              hr() {
+                return <hr className="my-2.5 border-border" />
+              },
+              strong({ children }) {
+                return (
+                  <strong className="font-semibold text-foreground">
+                    {children}
+                  </strong>
+                )
+              },
+            }}
+          >
+            {processedContent}
+          </ReactMarkdown>
           {isStreaming && (
             <span className="inline-block h-3.5 w-1.5 bg-primary animate-pulse ml-0.5 align-middle rounded-xs" />
           )}

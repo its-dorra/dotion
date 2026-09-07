@@ -32,7 +32,6 @@ export function AiAssistantInput({
 
     let currentThreadId = activeThreadId
 
-    // Auto-create thread if none exists
     if (!currentThreadId) {
       const newThread = await createThreadMutation.mutateAsync({
         title: trimmed.slice(0, 32),

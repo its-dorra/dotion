@@ -39,18 +39,17 @@ export const pageSections = snakeCase.table(
     blockIds: jsonb().$type<string[]>().notNull(),
     content: text().notNull(),
     contentHash: text().notNull(),
-    embedding: vector({ dimensions: 768 }).notNull(),
+    embedding: vector({ dimensions: 1536 }).notNull(),
     textVector: tsvector("text_vector").generatedAlwaysAs(
-      sql`to_tsvector('english', coalesce(section_title, '') || ' ' || coalesce(content, ''))`,
+      sql`to_tsvector('simple', coalesce(section_title, '') || ' ' || coalesce(content, ''))`,
     ),
     createdAt,
     updatedAt,
   },
   (t) => [
-    index("idx_page_sections_embedding_hnsw").using(
-      "hnsw",
-      t.embedding.op("vector_cosine_ops"),
-    ),
+    index("idx_page_sections_embedding_hnsw")
+      .using("hnsw", t.embedding.op("vector_cosine_ops"))
+      .with({ m: 16, ef_construction: 200 }),
     index("idx_page_sections_bm25")
       .using("lakebase_bm25", t.textVector)
       .with({ default_limit: 50, prefilter: true }),

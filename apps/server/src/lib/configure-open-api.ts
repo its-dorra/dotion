@@ -15,8 +15,9 @@ export default function configureOpenAPI(app: AppOpenAPI) {
     "/api/reference",
     Scalar({
       pageTitle: "Dotion API reference",
-      theme: "kepler",
-      layout: "classic",
+      theme: "bluePlanet",
+      layout: "modern",
+      darkMode: true,
       defaultHttpClient: {
         targetKey: "js",
         clientKey: "fetch",

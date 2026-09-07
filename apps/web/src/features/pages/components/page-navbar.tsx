@@ -31,7 +31,7 @@ export function PageNavbar({
       <div className="flex items-center gap-2">
         <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground" />
       </div>
-      <div className="flex shrink-0 items-center gap-3 ml-auto">
+      <div className="flex shrink-0 items-center gap-3 ms-auto">
         <CollaboratorsList users={collaborators} />
         <div className="flex items-center gap-2">
           <LastEditedIndicator lastEditedAt={page.updatedAt} />

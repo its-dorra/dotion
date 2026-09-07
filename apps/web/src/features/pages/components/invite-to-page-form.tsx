@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { z } from 'zod'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { FieldError } from '@/components/ui/field'
 import {
   Select,
   SelectContent,
@@ -8,11 +8,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useAppForm } from '@/integrations/tanstack-form/form'
 import { useInviteToPage } from '../hooks/use-invite-to-page'
 import type { PagePermissionRole } from '../types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import type { PageId } from '@dotion/shared/pages/types'
 import * as m from '@/paraglide/messages'
+
+const inviteToPageSchema = z.object({
+  email: z.string().trim().email(),
+  role: z.enum(['viewer', 'commenter', 'editor']),
+})
 
 interface InviteToPageFormProps {
   workspaceId: WorkspaceId
@@ -23,60 +29,93 @@ export function InviteToPageForm({
   workspaceId,
   pageId,
 }: InviteToPageFormProps) {
-  const [email, setEmail] = useState('')
-  const [role, setRole] = useState<PagePermissionRole>('editor')
   const inviteToPage = useInviteToPage()
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault()
-    const trimmedEmail = email.trim()
-    if (!trimmedEmail) return
-
-    await inviteToPage.mutateAsync({
-      workspaceId,
-      pageId,
-      email: trimmedEmail,
-      role,
-    })
-    setEmail('')
-  }
+  const form = useAppForm({
+    defaultValues: {
+      email: '',
+      role: 'editor' as PagePermissionRole,
+    },
+    validators: {
+      onSubmit: inviteToPageSchema,
+    },
+    onSubmit: async ({ value, formApi }) => {
+      await inviteToPage.mutateAsync(
+        {
+          workspaceId,
+          pageId,
+          email: value.email.trim(),
+          role: value.role,
+        },
+        {
+          onSuccess: () => {
+            formApi.reset()
+          },
+        },
+      )
+    },
+  })
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-1.5">
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        form.handleSubmit()
+      }}
+      className="flex flex-col gap-1.5"
+    >
       <div className="flex gap-1.5">
-        <Input
-          type="email"
-          placeholder={m.auth_email()}
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          className="h-8 flex-1 text-sm"
-        />
-        <Select
-          value={role}
-          onValueChange={(value) => setRole(value as PagePermissionRole)}
-        >
-          <SelectTrigger className="h-8 w-28 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="viewer">{m.workspace_role_viewer()}</SelectItem>
-            <SelectItem value="commenter">{m.page_role_commenter()}</SelectItem>
-            <SelectItem value="editor">{m.page_role_editor()}</SelectItem>
-          </SelectContent>
-        </Select>
+        <form.Field name="email">
+          {(field) => (
+            <div className="flex-1">
+              <Input
+                type="email"
+                placeholder={m.auth_email()}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+                className="h-8 text-sm"
+              />
+              <FieldError errors={field.state.meta.errors} />
+            </div>
+          )}
+        </form.Field>
+
+        <form.Field name="role">
+          {(field) => (
+            <Select
+              value={field.state.value}
+              onValueChange={(value) =>
+                field.handleChange(value as PagePermissionRole)
+              }
+            >
+              <SelectTrigger className="h-8 w-28 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="viewer">
+                  {m.workspace_role_viewer()}
+                </SelectItem>
+                <SelectItem value="commenter">
+                  {m.page_role_commenter()}
+                </SelectItem>
+                <SelectItem value="editor">{m.page_role_editor()}</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </form.Field>
       </div>
+
       {inviteToPage.error?.message ? (
         <p className="text-xs text-destructive">{inviteToPage.error.message}</p>
       ) : null}
-      <Button
-        type="submit"
-        size="sm"
-        disabled={inviteToPage.isPending || !email.trim()}
-      >
-        {inviteToPage.isPending
-          ? m.page_share_inviting()
-          : m.page_share_invite()}
-      </Button>
+
+      <form.AppForm>
+        <form.SubscribeButton size="sm">
+          {m.page_share_invite()}
+        </form.SubscribeButton>
+      </form.AppForm>
     </form>
   )
 }
