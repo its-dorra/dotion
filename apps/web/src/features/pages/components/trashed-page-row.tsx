@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { FileText, RotateCcw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Can } from '@/features/authorization/components/can'
@@ -13,7 +14,7 @@ interface TrashedPageRowProps {
   onDeletePermanently: (pageId: string) => void
 }
 
-export function TrashedPageRow({
+export const TrashedPageRow = memo(function TrashedPageRow({
   page,
   workspaceId,
   onDeletePermanently,
@@ -75,4 +76,4 @@ export function TrashedPageRow({
       </Can>
     </div>
   )
-}
+})

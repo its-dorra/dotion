@@ -1,6 +1,18 @@
 import type { AppDB, DBClient } from "../index";
 import { pageSections } from "../schema";
-import { and, desc, eq, inArray, sql, cosineDistance } from "drizzle-orm";
+import {
+  and,
+  eq,
+  gt,
+  gte,
+  lt,
+  lte,
+  ne,
+  inArray,
+  notInArray,
+  sql,
+  cosineDistance,
+} from "drizzle-orm";
 import { Result } from "better-result";
 import { DatabaseError } from "../errors";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
@@ -147,38 +159,29 @@ export class SearchRepository {
     }
   }
 
-  async deletePageSectionsByPage(
-    tx: AppDB,
-    pageId: PageId,
-  ): Promise<Result<void, DatabaseError>> {
-    try {
-      await tx.delete(pageSections).where(eq(pageSections.pageId, pageId));
-      return Result.ok(undefined);
-    } catch (error) {
-      console.error("SearchRepository.deletePageSectionsByPage error:", error);
-      return Result.err(
-        new DatabaseError({ message: "Failed to delete page sections" }),
-      );
-    }
-  }
-
   async searchBM25(
     workspaceId: WorkspaceId,
     query: string,
     limit: number = 20,
+    options?: { excludedPageIds?: PageId[] },
   ): Promise<Result<SearchHit[], DatabaseError>> {
     try {
       const trimmedQuery = query.trim();
       if (!trimmedQuery) return Result.ok([]);
 
       const sanitizedQuery = trimmedQuery
-        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .replace(/[^\p{L}\p{N}\s_\-\."']/gu, " ")
+        .replace(/\s+/g, " ")
         .trim();
       if (!sanitizedQuery) return Result.ok([]);
 
-      // lakebase_text BM25 ranking query using <@> operator and to_bm25query
-      // <@> computes the negative BM25 score against the 'idx_page_sections_bm25' index.
-      // Ordering ASC returns the most relevant documents first.
+      const whereConditions = [eq(pageSections.workspaceId, workspaceId)];
+      if (options?.excludedPageIds && options.excludedPageIds.length > 0) {
+        whereConditions.push(
+          notInArray(pageSections.pageId, options.excludedPageIds),
+        );
+      }
+
       const rows = await this.db
         .select({
           sectionId: pageSections.id,
@@ -192,7 +195,7 @@ export class SearchRepository {
           score: sql<number>`-1 * (${pageSections.textVector} <@> to_bm25query(to_tsvector('simple', ${sanitizedQuery}), 'idx_page_sections_bm25'))`,
         })
         .from(pageSections)
-        .where(eq(pageSections.workspaceId, workspaceId))
+        .where(and(...whereConditions))
         .orderBy(
           sql`${pageSections.textVector} <@> to_bm25query(to_tsvector('simple', ${sanitizedQuery}), 'idx_page_sections_bm25') ASC`,
         )
@@ -212,8 +215,20 @@ export class SearchRepository {
     queryEmbedding: number[],
     limit: number = 20,
     minSimilarity: number = 0.25,
+    options?: { excludedPageIds?: PageId[] },
   ): Promise<Result<SearchHit[], DatabaseError>> {
     try {
+      const whereConditions = [
+        eq(pageSections.workspaceId, workspaceId),
+        sql`1 - (${cosineDistance(pageSections.embedding, queryEmbedding)}) > ${minSimilarity}`,
+      ];
+      if (options?.excludedPageIds && options.excludedPageIds.length > 0) {
+        whereConditions.push(
+          notInArray(pageSections.pageId, options.excludedPageIds),
+        );
+      }
+
+      // Use cosineDistance ASC to enable HNSW index scan using vector_cosine_ops (<=>)
       const rows = await this.db
         .select({
           sectionId: pageSections.id,
@@ -227,13 +242,8 @@ export class SearchRepository {
           score: sql<number>`1 - (${cosineDistance(pageSections.embedding, queryEmbedding)})`,
         })
         .from(pageSections)
-        .where(
-          and(
-            eq(pageSections.workspaceId, workspaceId),
-            sql`1 - (${cosineDistance(pageSections.embedding, queryEmbedding)}) > ${minSimilarity}`,
-          ),
-        )
-        .orderBy((t) => desc(t.score))
+        .where(and(...whereConditions))
+        .orderBy(cosineDistance(pageSections.embedding, queryEmbedding))
         .limit(limit);
 
       return Result.ok(rows as SearchHit[]);
@@ -241,6 +251,62 @@ export class SearchRepository {
       console.error("SearchRepository.searchVector error:", error);
       return Result.err(
         new DatabaseError({ message: "Failed to execute vector search" }),
+      );
+    }
+  }
+
+  async getAdjacentSections(
+    pageId: PageId,
+    sectionIndex: number,
+    count: number = 1,
+    direction: "prev" | "next" | "both" = "both",
+  ): Promise<Result<SearchHit[], DatabaseError>> {
+    try {
+      let condition;
+      if (direction === "prev") {
+        condition = and(
+          eq(pageSections.pageId, pageId),
+          gte(pageSections.sectionIndex, Math.max(0, sectionIndex - count)),
+          lt(pageSections.sectionIndex, sectionIndex),
+        );
+      } else if (direction === "next") {
+        condition = and(
+          eq(pageSections.pageId, pageId),
+          gt(pageSections.sectionIndex, sectionIndex),
+          lte(pageSections.sectionIndex, sectionIndex + count),
+        );
+      } else {
+        condition = and(
+          eq(pageSections.pageId, pageId),
+          gte(pageSections.sectionIndex, Math.max(0, sectionIndex - count)),
+          lte(pageSections.sectionIndex, sectionIndex + count),
+          ne(pageSections.sectionIndex, sectionIndex),
+        );
+      }
+
+      const rows = await this.db
+        .select({
+          sectionId: pageSections.id,
+          pageId: pageSections.pageId,
+          workspaceId: pageSections.workspaceId,
+          sectionIndex: pageSections.sectionIndex,
+          sectionTitle: pageSections.sectionTitle,
+          headingBlockId: pageSections.headingBlockId,
+          blockIds: pageSections.blockIds,
+          content: pageSections.content,
+          score: sql<number>`1.0`,
+        })
+        .from(pageSections)
+        .where(condition)
+        .orderBy(pageSections.sectionIndex);
+
+      return Result.ok(rows as SearchHit[]);
+    } catch (error) {
+      console.error("SearchRepository.getAdjacentSections error:", error);
+      return Result.err(
+        new DatabaseError({
+          message: "Failed to fetch adjacent page sections",
+        }),
       );
     }
   }

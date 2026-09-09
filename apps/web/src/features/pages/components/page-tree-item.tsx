@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState, memo } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   ChevronRight,
@@ -18,6 +18,7 @@ import {
 import { Can } from '@/features/authorization/components/can'
 import { useCreatePage } from '../hooks/use-create-page'
 import { useMoveToTrash } from '../hooks/use-move-to-trash'
+import { hasDescendant } from '../lib/build-page-tree'
 import type { PageTreeNodeWithChildren } from '../lib/build-page-tree'
 import type { PageId } from '@dotion/shared/pages/types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
@@ -30,15 +31,55 @@ interface PageTreeItemProps {
   depth: number
 }
 
-export function PageTreeItem({
+function arePageTreeItemPropsEqual(
+  prev: PageTreeItemProps,
+  next: PageTreeItemProps,
+): boolean {
+  if (
+    prev.node !== next.node ||
+    prev.workspaceId !== next.workspaceId ||
+    prev.depth !== next.depth
+  ) {
+    return false
+  }
+
+  if (prev.activePageId === next.activePageId) {
+    return true
+  }
+
+  const wasActive = prev.node.id === prev.activePageId
+  const isActive = next.node.id === next.activePageId
+  if (wasActive !== isActive) {
+    return false
+  }
+
+  if (next.activePageId && hasDescendant(next.node, next.activePageId)) {
+    return false
+  }
+  if (prev.activePageId && hasDescendant(prev.node, prev.activePageId)) {
+    return false
+  }
+
+  return true
+}
+
+export const PageTreeItem = memo(function PageTreeItem({
   node,
   workspaceId,
   activePageId,
   depth,
 }: PageTreeItemProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(
+    () => !!activePageId && hasDescendant(node, activePageId),
+  )
   const createPage = useCreatePage()
   const moveToTrash = useMoveToTrash()
+
+  useEffect(() => {
+    if (activePageId && hasDescendant(node, activePageId)) {
+      setIsExpanded(true)
+    }
+  }, [activePageId, node])
 
   const isActive = node.id === activePageId
   const showChildren = isExpanded && node.children.length > 0
@@ -53,7 +94,7 @@ export function PageTreeItem({
   }
 
   function handleMoveToTrash(pageId: PageId) {
-    moveToTrash.mutateAsync({
+    return moveToTrash.mutateAsync({
       pageId,
       workspaceId: workspaceId as WorkspaceId,
     })
@@ -89,6 +130,7 @@ export function PageTreeItem({
           to="/app/workspaces/$workspaceId/pages/$pageId"
           params={{ workspaceId, pageId: node.id }}
           className="flex min-w-0 flex-1 items-center gap-1.5 truncate"
+          preload="viewport"
         >
           {node.icon ? (
             <span className="shrink-0 leading-none">{node.icon}</span>
@@ -162,4 +204,4 @@ export function PageTreeItem({
       ) : null}
     </div>
   )
-}
+}, arePageTreeItemPropsEqual)

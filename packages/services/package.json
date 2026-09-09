@@ -16,10 +16,11 @@
     "@dotion/auth": "workspace:*",
     "@dotion/db": "workspace:*",
     "@dotion/shared": "workspace:*",
-    "ai": "^6.0.5",
+    "@mastra/core": "^1.64.0",
+    "ai": "catalog:",
     "better-result": "^3.0.1",
-    "zod": "catalog:",
-    "yjs": "catalog:"
+    "yjs": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241230.0",

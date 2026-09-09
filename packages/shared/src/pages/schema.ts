@@ -111,5 +111,3 @@ export const PageCleanupQueueMessageSchema = z.object({
   workspaceId,
   pageId,
 });
-
-export const pageCleanupQueueMessageSchema = PageCleanupQueueMessageSchema;

@@ -47,10 +47,9 @@ export interface ParsedSection {
 
 const MEDIA_BLOCK_TYPES = new Set(["image", "video", "audio", "file", "embed"]);
 const MAX_SECTION_CHARS = 3000;
-const OVERLAP_CHARS = 200;
 
 export class ChunkingService {
-  private extractInlineText(content: BlockNoteBlock["content"]): string {
+  public extractInlineText(content: BlockNoteBlock["content"]): string {
     if (!content) return "";
     if (typeof content === "string") return content.trim();
 
@@ -446,7 +445,7 @@ export class ChunkingService {
           ) {
             normalizedSections.push({
               sectionTitle: `${sec.sectionTitle} (Part ${partIndex})`,
-              headingBlockId: `${sec.headingBlockId}-part-${partIndex}`,
+              headingBlockId: sec.headingBlockId,
               blockIds: sec.blockIds,
               content: currentChunkLines.join("\n").trim(),
             });
@@ -465,10 +464,7 @@ export class ChunkingService {
               partIndex === 1
                 ? sec.sectionTitle
                 : `${sec.sectionTitle} (Part ${partIndex})`,
-            headingBlockId:
-              partIndex === 1
-                ? sec.headingBlockId
-                : `${sec.headingBlockId}-part-${partIndex}`,
+            headingBlockId: sec.headingBlockId,
             blockIds: sec.blockIds,
             content: currentChunkLines.join("\n").trim(),
           });
@@ -476,28 +472,16 @@ export class ChunkingService {
       }
     }
 
-    // Apply sliding context overlap and compute content hashes
+    // Compute content hashes on clean content (prevents cascading re-embeddings)
     const result: ParsedSection[] = [];
-    let previousRawContent = "";
 
     for (let i = 0; i < normalizedSections.length; i++) {
       const s = normalizedSections[i];
       if (!s) continue;
 
       const rawContent = s.content;
-      let finalContent = rawContent;
-
-      if (previousRawContent.length > 0) {
-        const overlap = previousRawContent.slice(-OVERLAP_CHARS).trim();
-        if (overlap.length > 0) {
-          finalContent = `[Context: ${overlap}]\n---\n${rawContent}`;
-        }
-      }
-
-      previousRawContent = rawContent;
-
       const contentHash = await this.computeHash(
-        `${s.sectionTitle}\n${finalContent}`,
+        `${s.sectionTitle}\n${rawContent}`,
       );
 
       result.push({
@@ -505,7 +489,7 @@ export class ChunkingService {
         sectionTitle: s.sectionTitle,
         headingBlockId: s.headingBlockId,
         blockIds: s.blockIds,
-        content: finalContent,
+        content: rawContent,
         contentHash,
       });
     }

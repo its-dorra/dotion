@@ -1,4 +1,5 @@
 import * as HttpStatusCodes from "stoker/http-status-codes";
+import { createUIMessageStreamResponse, toUIMessageStream } from "ai";
 import type { AppRouteHandler } from "#/lib/types";
 import { errorResponseJson } from "#/lib/utils";
 import type { StreamTextRoute } from "./routes";
@@ -37,5 +38,7 @@ export const streamTextHandler: AppRouteHandler<StreamTextRoute> = async (
     });
   }
 
-  return result.value.toUIMessageStreamResponse();
+  return createUIMessageStreamResponse({
+    stream: toUIMessageStream({ stream: result.value.stream }),
+  });
 };

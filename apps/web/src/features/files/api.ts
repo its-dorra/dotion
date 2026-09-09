@@ -31,9 +31,7 @@ export class FilesApi {
             'X-File-Name': encodeURIComponent(input.file.name || 'file'),
             'X-File-Size': String(input.file.size),
           },
-          body: input.file.stream(),
-          // @ts-expect-error - duplex is required in standard fetch when body is a ReadableStream
-          duplex: 'half',
+          body: input.file,
           credentials: 'include',
         },
       )

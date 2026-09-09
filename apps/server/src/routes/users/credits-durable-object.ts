@@ -18,7 +18,7 @@ export interface TokenLedgerRow {
   [key: string]: SqlStorageValue;
 }
 
-const DEFAULT_DAILY_ALLOWANCE = 15_000;
+const DEFAULT_DAILY_ALLOWANCE = 90_000;
 const RESET_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export class UserCreditsDO extends DurableObject<Env> {

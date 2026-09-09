@@ -13,7 +13,7 @@ import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 interface UseUpdatePageMetadataOptions {
   workspaceId: WorkspaceId
   pageId: PageId
-  wsClient: WebSocketClient<PageWsMessage>
+  wsClient: WebSocketClient<PageWsMessage> | null
 }
 
 export function useUpdatePageMetadata({
@@ -25,7 +25,6 @@ export function useUpdatePageMetadata({
 
   const sendMetadataUpdate = useCallback(
     (metadata: UpdatePageMetadataInput) => {
-      // 1. Optimistically update page detail query
       queryClient.setQueryData(
         pageDetailQueryOptions(workspaceId, pageId).queryKey,
         (old) => {
@@ -39,7 +38,6 @@ export function useUpdatePageMetadata({
         },
       )
 
-      // 2. Optimistically update workspace tree query (for title and icon changes)
       if (metadata.title !== undefined || metadata.icon !== undefined) {
         queryClient.setQueryData(
           pageTreeQueryOptions(workspaceId).queryKey,
@@ -64,7 +62,7 @@ export function useUpdatePageMetadata({
       }
 
       wsClient
-        .send({
+        ?.send({
           type: 'metadata',
           data: {
             type: 'page.update_metadata',

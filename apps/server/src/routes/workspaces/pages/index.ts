@@ -13,6 +13,7 @@ import type { PageId } from "@dotion/shared/pages/types";
 const route = createRoute()
   .openapi(routes.listRoute, handlers.listHandler)
   .openapi(routes.listTrashRoute, handlers.listTrashHandler)
+  .openapi(routes.emptyTrashRoute, handlers.emptyTrashHandler)
   .openapi(routes.createRoute, handlers.createHandler)
   .openapi(routes.moveToTrashRoute, handlers.moveToTrashHandler)
   .openapi(routes.restoreFromTrashRoute, handlers.restoreFromTrashHandler)

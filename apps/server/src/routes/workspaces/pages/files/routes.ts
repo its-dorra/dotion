@@ -34,19 +34,6 @@ export const uploadRoute = createAuthorizedRoute({
       id: workspaceId,
       pageId: pageId,
     }),
-    body: {
-      content: {
-        "application/octet-stream": {
-          schema: z.string().openapi({
-            type: "string",
-            format: "binary",
-            description: "Binary file stream",
-          }),
-        },
-      },
-      description: "Binary file stream payload",
-      required: true,
-    },
   },
   responses: {
     [HttpStatusCodes.CREATED]: jsonContent(

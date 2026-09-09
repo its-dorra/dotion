@@ -13,6 +13,7 @@ import type {
   CreatePageSectionInput,
   UpdatePageSectionInput,
   PageSectionMeta,
+  PageSection,
   IndexPageResult,
   SearchMode,
 } from "@dotion/shared/search/types";
@@ -22,11 +23,8 @@ export const SEARCH_MODE_WEIGHTS: Record<
   SearchMode,
   { vector: number; bm25: number }
 > = {
-  // Explanations, how-tos, summaries in any language (Assistant / Editor AI)
   conceptual: { vector: 0.8, bm25: 0.2 },
-  // Default interactive search (SearchDialog, general queries)
   balanced: { vector: 0.65, bm25: 0.35 },
-  // Quoted phrases, code symbols, error codes, identifiers
   exact: { vector: 0.2, bm25: 0.8 },
 } as const;
 
@@ -43,6 +41,26 @@ export class SearchService {
     pageId: PageId,
   ): Promise<Result<PageSectionMeta[], DatabaseError>> {
     return this.searchRepository.getPageSectionsMeta(pageId);
+  }
+
+  async getSectionsByPage(
+    pageId: PageId,
+  ): Promise<Result<PageSection[], DatabaseError>> {
+    return this.searchRepository.getSectionsByPage(pageId);
+  }
+
+  async getAdjacentSections(
+    pageId: PageId,
+    sectionIndex: number,
+    count: number = 1,
+    direction: "prev" | "next" | "both" = "both",
+  ): Promise<Result<SearchHit[], DatabaseError>> {
+    return this.searchRepository.getAdjacentSections(
+      pageId,
+      sectionIndex,
+      count,
+      direction,
+    );
   }
 
   async syncPageSections(input: {
@@ -251,9 +269,6 @@ export class SearchService {
     let wBm25 = options.weights?.bm25 ?? 0.35;
     let wVector = options.weights?.vector ?? 0.65;
 
-    // Cross-lingual / Zero-Candidate Normalization:
-    // If one retriever produced 0 candidates (e.g. cross-lingual search where BM25 has no lexical overlap),
-    // allocate full 1.0 weight to the active retriever so cross-lingual results aren't artificially deflated.
     if (bm25Hits.length === 0 && vectorHits.length > 0) {
       wVector = 1.0;
       wBm25 = 0;
@@ -316,9 +331,16 @@ export class SearchService {
     const effectiveWeights = SEARCH_MODE_WEIGHTS[params.mode ?? "balanced"];
 
     return Result.gen(async function* (this: SearchService) {
-      const queryEmbedding = yield* Result.await(
-        this.embeddingService.embedText(query, "RETRIEVAL_QUERY"),
+      const [trashedPages, queryEmbedding] = yield* Result.await(
+        Result.allAsync([
+          this.pagesService.getTrashedPages(params.workspaceId),
+          this.embeddingService.embedText(query, "RETRIEVAL_QUERY"),
+        ]),
       );
+
+      const excludedPageIds = trashedPages.map((p) => p.id);
+      const searchOptions =
+        excludedPageIds.length > 0 ? { excludedPageIds } : undefined;
 
       const candidateDepth = Math.max(40, page * limit * 2);
 
@@ -328,11 +350,14 @@ export class SearchService {
             params.workspaceId,
             query,
             candidateDepth,
+            searchOptions,
           ),
           this.searchRepository.searchVector(
             params.workspaceId,
             queryEmbedding,
             candidateDepth,
+            undefined,
+            searchOptions,
           ),
         ]),
       );
@@ -340,6 +365,18 @@ export class SearchService {
       const fused = this.reciprocalRankFusion(bm25Hits, vectorHits, {
         weights: effectiveWeights,
       });
+
+      if (fused.length === 0) {
+        return Result.ok({
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            hasMore: false,
+          },
+          payload: [],
+        });
+      }
 
       const total = fused.length;
       const offset = (page - 1) * limit;
@@ -358,12 +395,12 @@ export class SearchService {
         });
       }
 
-      const uniquePageIds = Array.from(
+      const pagedUniquePageIds = Array.from(
         new Set(pagedFused.map((item) => item.hit.pageId)),
       );
 
       const pages = yield* Result.await(
-        this.pagesService.getPagesByIds(uniquePageIds),
+        this.pagesService.getPagesByIds(pagedUniquePageIds),
       );
 
       const pageMap = new Map<PageId, { title: string; icon: string | null }>();

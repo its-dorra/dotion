@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
 import { createWorkspaceWebSocket } from '../websocket'
 
 export const useWorkspaceWs = (workspaceId: string) => {
@@ -7,11 +7,14 @@ export const useWorkspaceWs = (workspaceId: string) => {
     [workspaceId],
   )
 
-  const status = useSyncExternalStore(
-    client.subscribeStatus.bind(client),
-    client.getStatus.bind(client),
-    client.getStatus.bind(client),
+  const subscribeStatus = useCallback(
+    (onStoreChange: () => void) => client.subscribeStatus(onStoreChange),
+    [client],
   )
+
+  const getStatus = useCallback(() => client.getStatus(), [client])
+
+  const status = useSyncExternalStore(subscribeStatus, getStatus, getStatus)
 
   useEffect(() => {
     client.connect()
@@ -21,11 +24,20 @@ export const useWorkspaceWs = (workspaceId: string) => {
     }
   }, [client])
 
+  const subscribe = useCallback(
+    (listener: Parameters<typeof client.subscribe>[0]) =>
+      client.subscribe(listener),
+    [client],
+  )
+
+  const send = useCallback(
+    (message: Parameters<typeof client.send>[0]) => client.send(message),
+    [client],
+  )
+
   return {
     status,
-
-    subscribe: client.subscribe.bind(client),
-
-    send: client.send.bind(client),
+    subscribe,
+    send,
   }
 }

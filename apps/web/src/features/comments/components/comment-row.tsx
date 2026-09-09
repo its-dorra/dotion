@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { MemberAvatar } from '@/features/workspaces/components/member-avatar'
 import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -22,7 +23,11 @@ interface CommentRowProps {
   pageId: PageId
 }
 
-export function CommentRow({ comment, workspaceId, pageId }: CommentRowProps) {
+export const CommentRow = memo(function CommentRow({
+  comment,
+  workspaceId,
+  pageId,
+}: CommentRowProps) {
   const deleteComment = useDeleteComment()
 
   async function handleDelete() {
@@ -70,4 +75,4 @@ export function CommentRow({ comment, workspaceId, pageId }: CommentRowProps) {
       </div>
     </div>
   )
-}
+})

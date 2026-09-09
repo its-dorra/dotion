@@ -3,7 +3,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { AiAssistantHeader } from './ai-assistant-header'
 import { AiAssistantConversation } from './ai-assistant-conversation'
 import { AiAssistantInput } from './ai-assistant-input'
-import { useStreamAssistantChat } from '../hooks/use-stream-assistant-chat'
+import { useAssistantChat } from '../hooks/use-assistant-chat'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import type { AssistantThreadId } from '../types'
 
@@ -21,7 +21,10 @@ export function AiAssistantDrawerPresenter({
   const [activeThreadId, setActiveThreadId] =
     React.useState<AssistantThreadId | null>(null)
 
-  const streamChat = useStreamAssistantChat(workspaceId)
+  const chat = useAssistantChat({
+    workspaceId,
+    activeThreadId,
+  })
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -38,16 +41,19 @@ export function AiAssistantDrawerPresenter({
         <AiAssistantConversation
           workspaceId={workspaceId}
           activeThreadId={activeThreadId}
-          isStreaming={streamChat.isStreaming}
-          streamingText={streamChat.streamingText}
-          optimisticUserMessage={streamChat.optimisticUserMessage}
+          isStreaming={chat.isStreaming}
+          streamingText={chat.streamingText}
+          toolParts={chat.toolParts}
+          optimisticUserMessage={chat.optimisticUserMessage}
         />
 
         <AiAssistantInput
           workspaceId={workspaceId}
           activeThreadId={activeThreadId}
           onThreadCreated={setActiveThreadId}
-          streamChat={streamChat}
+          onSendMessage={chat.sendMessage}
+          onStop={chat.stop}
+          isStreaming={chat.isStreaming}
         />
       </SheetContent>
     </Sheet>

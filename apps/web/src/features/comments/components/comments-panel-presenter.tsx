@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { CommentCard } from './comment-card'
 import { CommentComposer } from './comment-composer'
 import { InfiniteScroll } from '@/components/ui/infinite-scroll'
@@ -25,8 +26,12 @@ export function CommentsPanelPresenter({
   fetchNextPage,
   isFetchingNextPage,
 }: CommentsPanelPresenterProps) {
-  const unresolvedFirst = [...comments].sort((a, b) =>
-    a.isResolved === b.isResolved ? 0 : a.isResolved ? 1 : -1,
+  const unresolvedFirst = useMemo(
+    () =>
+      [...comments].sort((a, b) =>
+        a.isResolved === b.isResolved ? 0 : a.isResolved ? 1 : -1,
+      ),
+    [comments],
   )
 
   return (

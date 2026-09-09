@@ -22,12 +22,8 @@ import {
 import { Result } from "better-result";
 import type { WorkspacesRepository } from "@dotion/db/repositories";
 import type { UsersService } from "./users.service";
-import type { NotificationsService } from "./notifications.service";
-import type {
-  PermissionCacheInvalidator,
-  WorkspaceEventPublisher,
-  UserEventPublisher,
-} from "./realtime.types";
+import type { OutboxService } from "./outbox.service";
+import type { DomainEventDispatcher } from "./event-dispatcher.types";
 import type {
   ResourceData,
   ScopeData,
@@ -37,11 +33,9 @@ export class WorkspacesService {
   constructor(
     private readonly workspacesRepository: WorkspacesRepository,
     private readonly usersService: UsersService,
-    private readonly notificationsService: NotificationsService,
     private readonly dbClient: DBClient,
-    private readonly cacheInvalidator?: PermissionCacheInvalidator,
-    private readonly workspaceEventPublisher?: WorkspaceEventPublisher,
-    private readonly userEventPublisher?: UserEventPublisher,
+    private readonly eventDispatcher: DomainEventDispatcher,
+    private readonly outboxService: OutboxService,
   ) {}
 
   async getAllWorkspaces(userId: UserId) {
@@ -82,7 +76,6 @@ export class WorkspacesService {
     workspaceId: WorkspaceId;
     query: string;
     pagination: PaginationQuery;
-    currentUserId?: UserId;
   }) {
     return Result.gen(async function* (this: WorkspacesService) {
       const [memberUserIds, pendingInvitedUserIds] = yield* Result.await(
@@ -219,22 +212,6 @@ export class WorkspacesService {
               }),
             );
 
-            const notification = yield* Result.await(
-              this.notificationsService.createNotificationTx(tx, {
-                userId: targetUser.id,
-                metadata: {
-                  type: "workspace_invitation",
-                  workspaceInvitationId: invitation.id,
-                  workspaceId: workspace.id,
-                  workspaceName: workspace.name,
-                  workspaceIcon: workspace.icon ?? undefined,
-                  invitedByUserId: inviterId,
-                  invitedByName: inviterName,
-                },
-                isRead: false,
-              }),
-            );
-
             const invitationWithDetails: WorkspaceInvitationWithDetails = {
               ...invitation,
               workspaceName: workspace.name,
@@ -244,11 +221,20 @@ export class WorkspacesService {
               invitedUserName: targetUser.name,
             };
 
-            return Result.ok({
-              invitation: invitationWithDetails,
-              notification,
-              targetUserId: targetUser.id,
-            });
+            yield* Result.await(
+              this.outboxService.emitEventTx(tx, {
+                type: "workspace.invitation_created",
+                aggregateId: invitation.id,
+                payload: {
+                  workspaceId,
+                  invitation: invitationWithDetails,
+                  invitedUserId: targetUser.id,
+                  invitedByUserId: inviterId,
+                },
+              }),
+            );
+
+            return Result.ok(invitationWithDetails);
           }, this).then(
             Result.tapError(() => {
               tx.rollback();
@@ -257,26 +243,20 @@ export class WorkspacesService {
         }),
       );
 
-      const { invitation, notification, targetUserId } = txResult;
-      await this.userEventPublisher?.broadcastNotification(
-        targetUserId,
-        notification,
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "workspace.invitation_created",
+          aggregateId: txResult.id,
+          payload: {
+            workspaceId,
+            invitation: txResult,
+            invitedUserId: targetUser.id,
+            invitedByUserId: inviterId,
+          },
+        }),
       );
-      await this.workspaceEventPublisher?.broadcastInvitationCreated(
-        workspaceId,
-        invitation,
-      );
-      await Promise.all([
-        this.userEventPublisher?.broadcastNotification(
-          targetUserId,
-          notification,
-        ),
-        this.workspaceEventPublisher?.broadcastInvitationCreated(
-          workspaceId,
-          invitation,
-        ),
-      ]);
-      return Result.ok(invitation);
+
+      return Result.ok(txResult);
     }, this);
   }
 
@@ -415,13 +395,18 @@ export class WorkspacesService {
       );
 
       const { workspace, member, invitation: inv } = txResult;
-      await Promise.all([
-        this.workspaceEventPublisher?.broadcastMemberJoined(workspace.id, {
-          invitationId: inv.id,
-          member,
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "workspace.member_joined",
+          aggregateId: workspace.id,
+          payload: {
+            workspaceId: workspace.id,
+            invitationId: inv.id,
+            member,
+            userId,
+          },
         }),
-        this.cacheInvalidator?.invalidateUserPermissions(userId),
-      ]);
+      );
       return Result.ok(workspace);
     }, this);
   }
@@ -452,9 +437,15 @@ export class WorkspacesService {
         ),
       );
 
-      await this.workspaceEventPublisher?.broadcastInvitationDeclined(
-        invitation.workspaceId,
-        invitation.id,
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "workspace.invitation_declined",
+          aggregateId: invitation.id,
+          payload: {
+            workspaceId: invitation.workspaceId,
+            invitationId: invitation.id,
+          },
+        }),
       );
       return Result.ok(true as const);
     }, this);
@@ -464,17 +455,28 @@ export class WorkspacesService {
     workspaceId: WorkspaceId,
     invitationId: WorkspaceInvitationId,
   ) {
-    return this.workspacesRepository
-      .updateInvitationStatus(this.dbClient, invitationId, "cancelled")
-      .then(
-        Result.tapAsync(async () => {
-          await this.workspaceEventPublisher?.broadcastInvitationCancelled(
+    return Result.gen(async function* (this: WorkspacesService) {
+      yield* Result.await(
+        this.workspacesRepository.updateInvitationStatus(
+          this.dbClient,
+          invitationId,
+          "cancelled",
+        ),
+      );
+
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "workspace.invitation_cancelled",
+          aggregateId: invitationId,
+          payload: {
             workspaceId,
             invitationId,
-          );
+          },
         }),
-      )
-      .then(Result.map(() => true as const));
+      );
+
+      return Result.ok(true as const);
+    }, this);
   }
 
   async updateMemberRole(
@@ -521,7 +523,18 @@ export class WorkspacesService {
         joinedAt: updatedRow.createdAt,
       };
 
-      await this.cacheInvalidator?.invalidateUserPermissions(targetUserId);
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "workspace.member_joined",
+          aggregateId: workspaceId,
+          payload: {
+            workspaceId,
+            invitationId: "",
+            member: memberDetail,
+            userId: targetUserId,
+          },
+        }),
+      );
       return Result.ok(memberDetail);
     }, this);
   }
@@ -561,13 +574,16 @@ export class WorkspacesService {
         }),
       );
 
-      await Promise.all([
-        this.workspaceEventPublisher?.broadcastMemberRemoved(
-          workspaceId,
-          targetUserId,
-        ),
-        this.cacheInvalidator?.invalidateUserPermissions(targetUserId),
-      ]);
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "workspace.member_removed",
+          aggregateId: workspaceId,
+          payload: {
+            workspaceId,
+            userId: targetUserId,
+          },
+        }),
+      );
       return Result.ok(true as const);
     }, this);
   }

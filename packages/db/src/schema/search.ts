@@ -5,6 +5,7 @@ import {
   jsonb,
   vector,
   index,
+  uniqueIndex,
   customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -54,7 +55,7 @@ export const pageSections = snakeCase.table(
       .using("lakebase_bm25", t.textVector)
       .with({ default_limit: 50, prefilter: true }),
     index("idx_page_sections_workspace_id").on(t.workspaceId),
-    index("idx_page_sections_page_id_section_index").on(
+    uniqueIndex("idx_page_sections_page_id_section_index").on(
       t.pageId,
       t.sectionIndex,
     ),

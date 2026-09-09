@@ -1,14 +1,34 @@
 import type { PageTreeNode } from '@dotion/shared/pages/types'
+import type { TrashedPage } from '../types'
 
 export interface PageTreeNodeWithChildren extends PageTreeNode {
   children: PageTreeNodeWithChildren[]
 }
 
-/**
- * Builds a nested tree from the flat, parentId-based list returned by the
- * API. Pages whose parent isn't present in the list (e.g. it's been
- * filtered out) are treated as root nodes, so nothing silently disappears.
- */
+export interface TrashedPageTreeNode extends TrashedPage {
+  children: TrashedPageTreeNode[]
+}
+
+export function buildTrashTree(pages: TrashedPage[]): TrashedPageTreeNode[] {
+  const byId = new Map<string, TrashedPageTreeNode>()
+
+  for (const page of pages) {
+    byId.set(page.id, { ...page, children: [] })
+  }
+
+  const roots: TrashedPageTreeNode[] = []
+
+  for (const page of byId.values()) {
+    if (page.parentId && byId.has(page.parentId)) {
+      byId.get(page.parentId)!.children.push(page)
+    } else {
+      roots.push(page)
+    }
+  }
+
+  return roots
+}
+
 export function buildPageTree(
   nodes: PageTreeNode[],
 ): PageTreeNodeWithChildren[] {
@@ -29,4 +49,14 @@ export function buildPageTree(
   }
 
   return roots
+}
+
+export function hasDescendant(
+  node: PageTreeNodeWithChildren,
+  pageId: string,
+): boolean {
+  for (const child of node.children) {
+    if (child.id === pageId || hasDescendant(child, pageId)) return true
+  }
+  return false
 }

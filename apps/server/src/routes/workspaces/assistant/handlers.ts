@@ -1,4 +1,5 @@
 import * as HttpStatusCodes from "stoker/http-status-codes";
+import { createUIMessageStreamResponse, toUIMessageStream } from "ai";
 import type { AppRouteHandler } from "#/lib/types";
 import { errorResponseJson } from "#/lib/utils";
 import type {
@@ -107,13 +108,13 @@ export const streamAssistantChatHandler: AppRouteHandler<
 > = async (c) => {
   const currentUser = c.var.currentUser;
   const { id: workspaceId, threadId } = c.req.valid("param");
-  const { content } = c.req.valid("json");
+  const { messages } = c.req.valid("json");
 
   const result = await c.var.services.assistant.streamChat({
     workspaceId,
     threadId,
     userId: currentUser.id,
-    content,
+    messages,
   });
 
   if (result.isErr()) {
@@ -146,5 +147,7 @@ export const streamAssistantChatHandler: AppRouteHandler<
     });
   }
 
-  return result.value.toUIMessageStreamResponse();
+  return createUIMessageStreamResponse({
+    stream: toUIMessageStream({ stream: result.value.stream }),
+  });
 };

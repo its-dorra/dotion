@@ -31,40 +31,33 @@ export class StorageService {
       const fileKey = `${fileUid}-${sanitizedFilename}`;
       const storageKey = `workspaces/${input.workspaceId}/pages/${input.pageId}/${fileKey}`;
 
-      let bytesRead = 0;
-      const streamToUpload = input.maxBytes
-        ? input.stream.pipeThrough(
-            new TransformStream<Uint8Array, Uint8Array>({
-              transform(chunk, controller) {
-                bytesRead += chunk.byteLength;
-                if (input.maxBytes && bytesRead > input.maxBytes) {
-                  controller.error(
-                    new Error(
-                      `File size exceeded maximum limit of ${input.maxBytes} bytes`,
-                    ),
-                  );
-                  return;
-                }
-                controller.enqueue(chunk);
-              },
-            }),
-          )
-        : input.stream;
+      if (input.size === undefined || Number.isNaN(input.size)) {
+        return Result.err(
+          new StorageError({
+            message: "File size must be specified for upload",
+          }),
+        );
+      }
 
-      const r2Object = await this.r2.put(storageKey, streamToUpload, {
-        httpMetadata: {
-          contentType: input.mimeType,
-        },
-        customMetadata: {
-          workspaceId: input.workspaceId,
-          pageId: input.pageId,
-          originalName: input.filename,
-          size: String(input.size ?? bytesRead),
-          uploadedAt: new Date().toISOString(),
-        },
-      });
+      const { readable, writable } = new FixedLengthStream(input.size);
 
-      const finalSize = r2Object?.size ?? input.size ?? bytesRead;
+      const [, r2Object] = await Promise.all([
+        input.stream.pipeTo(writable),
+        this.r2.put(storageKey, readable, {
+          httpMetadata: {
+            contentType: input.mimeType,
+          },
+          customMetadata: {
+            workspaceId: input.workspaceId,
+            pageId: input.pageId,
+            originalName: input.filename,
+            size: String(input.size),
+            uploadedAt: new Date().toISOString(),
+          },
+        }),
+      ]);
+
+      const finalSize = r2Object?.size ?? input.size;
       const url = `/api/v1/workspaces/${input.workspaceId}/pages/${input.pageId}/files/${fileKey}`;
 
       return Result.ok({

@@ -653,4 +653,32 @@ export class PagesRepository {
       );
     }
   }
+
+  async emptyTrash(
+    tx: AppDB,
+    workspaceId: WorkspaceId,
+  ): Promise<Result<PageId[], DatabaseError>> {
+    try {
+      const trashedPages = await tx
+        .select({ id: pages.id })
+        .from(pages)
+        .where(
+          and(eq(pages.workspaceId, workspaceId), eq(pages.inTrash, true)),
+        );
+
+      if (trashedPages.length === 0) {
+        return Result.ok([]);
+      }
+
+      const pageIds = trashedPages.map((p) => p.id as PageId);
+      await tx.delete(pages).where(inArray(pages.id, pageIds));
+
+      return Result.ok(pageIds);
+    } catch (error) {
+      console.error("PagesRepository.emptyTrash error:", error);
+      return Result.err(
+        new DatabaseError({ message: "Failed to empty trash" }),
+      );
+    }
+  }
 }

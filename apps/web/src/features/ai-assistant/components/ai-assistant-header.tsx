@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Sparkles } from 'lucide-react'
 import { SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { AiAssistantThreadSelector } from './ai-assistant-thread-selector'
@@ -11,7 +12,7 @@ interface AiAssistantHeaderProps {
   onSelectThread: (threadId: AssistantThreadId | null) => void
 }
 
-export function AiAssistantHeader({
+export const AiAssistantHeader = memo(function AiAssistantHeader({
   workspaceId,
   activeThreadId,
   onSelectThread,
@@ -41,4 +42,4 @@ export function AiAssistantHeader({
       </div>
     </SheetHeader>
   )
-}
+})

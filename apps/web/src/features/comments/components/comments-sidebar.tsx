@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import { CommentsContainer } from './comments-container'
 import type { PagePermissionRole } from '@/features/pages/types'
@@ -9,7 +10,7 @@ interface CommentsSidebarProps {
   currentUserRole: PagePermissionRole
 }
 
-export function CommentsSidebar({
+export const CommentsSidebar = memo(function CommentsSidebar({
   workspaceId,
   pageId,
   currentUserRole,
@@ -23,4 +24,4 @@ export function CommentsSidebar({
       />
     </aside>
   )
-}
+})

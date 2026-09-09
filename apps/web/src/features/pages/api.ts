@@ -12,6 +12,7 @@ import type {
   MoveToTrashInput,
   RestoreFromTrashInput,
   DeletePermanentlyInput,
+  EmptyTrashInput,
   UpdatePagePermissionInput,
   InviteToPageInput,
   SetPagePublicInput,
@@ -445,6 +446,7 @@ export class PagesApi {
     const result = (await response.json()) as unknown as { data: Page[] }
     const trashedPages: TrashedPage[] = result.data.map((page) => ({
       id: page.id,
+      parentId: page.parentId,
       title: page.title,
       icon: page.icon ?? undefined,
       deletedAt: page.updatedAt
@@ -454,6 +456,49 @@ export class PagesApi {
     }))
 
     return Result.ok(trashedPages)
+  }
+
+  async emptyTrash(
+    input: EmptyTrashInput,
+  ): Promise<
+    Result<
+      true,
+      InsufficientPagePermissionError | AppError | AuthenticationError
+    >
+  > {
+    const apiClient = getApiClient()
+
+    const response = await apiClient.api.v1.workspaces[
+      ':id'
+    ].pages.trash.$delete({
+      param: {
+        id: input.workspaceId,
+      },
+    })
+
+    if (!response.ok) {
+      return matchExhaustive(response.status, {
+        '401': () =>
+          Result.err(new AuthenticationError({ message: 'Unauthorized' })),
+        '403': () =>
+          Result.err(
+            new InsufficientPagePermissionError({
+              message:
+                'You do not have permission to empty trash. Only workspace owners can empty trash.',
+              requiredRole: 'owner' as any,
+            }),
+          ),
+        '500': () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: 'Failed to empty trash',
+            }),
+          ),
+      })
+    }
+
+    return Result.ok(true)
   }
 
   async getPagePermissions(

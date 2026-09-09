@@ -7,7 +7,6 @@ import * as HttpStatusPhrases from "stoker/http-status-phrases";
 export const candidateUsersHandler: AppRouteHandler<
   CandidateUsersRoute
 > = async (c) => {
-  const currentUser = c.var.currentUser;
   const { id: workspaceId } = c.req.valid("param");
   const { q, page, limit } = c.req.valid("query");
 
@@ -17,7 +16,6 @@ export const candidateUsersHandler: AppRouteHandler<
     workspaceId,
     query: q,
     pagination,
-    currentUserId: currentUser.id,
   });
 
   if (result.isErr()) {

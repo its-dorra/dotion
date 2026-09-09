@@ -14,7 +14,7 @@ export type EmbeddingTaskType = NonNullable<
   GoogleEmbeddingModelOptions["taskType"]
 >;
 
-const MAX_EMBED_CHARS = 7500;
+const MAX_EMBED_CHARS = 3200;
 
 function truncateForEmbedding(text: string): string {
   if (text.length <= MAX_EMBED_CHARS) return text;
@@ -96,20 +96,27 @@ export class EmbeddingService {
       const sanitizedTexts = texts.map(truncateForEmbedding);
       const model = this.googleClient.embedding("gemini-embedding-001");
 
-      const { embeddings } = await this.withRetry(() =>
-        embedMany({
-          model,
-          values: sanitizedTexts,
-          providerOptions: {
-            google: {
-              outputDimensionality: 1536,
-              taskType,
-            } satisfies GoogleEmbeddingModelOptions,
-          },
-        }),
-      );
+      const BATCH_CHUNK_SIZE = 30;
+      const allEmbeddings: number[][] = [];
 
-      return Result.ok(embeddings);
+      for (let i = 0; i < sanitizedTexts.length; i += BATCH_CHUNK_SIZE) {
+        const batchSlice = sanitizedTexts.slice(i, i + BATCH_CHUNK_SIZE);
+        const { embeddings } = await this.withRetry(() =>
+          embedMany({
+            model,
+            values: batchSlice,
+            providerOptions: {
+              google: {
+                outputDimensionality: 1536,
+                taskType,
+              } satisfies GoogleEmbeddingModelOptions,
+            },
+          }),
+        );
+        allEmbeddings.push(...embeddings);
+      }
+
+      return Result.ok(allEmbeddings);
     } catch (error) {
       console.error("EmbeddingService.embedBatch error:", error);
       return Result.err(

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { commentsInfiniteQueryOptions } from '../query-options'
 import { CommentsPanelPresenter } from './comments-panel-presenter'
@@ -7,7 +8,7 @@ import { CommentsEmpty } from './comments-empty'
 import type { PagePermissionRole } from '@/features/pages/types'
 import type { PageId } from '@dotion/shared/pages/types'
 import type { WorkspaceId } from '@/features/workspaces/types'
-
+import { m } from '@/paraglide/messages'
 interface CommentsContainerProps {
   workspaceId: WorkspaceId
   pageId: PageId
@@ -25,6 +26,11 @@ export function CommentsContainer({
 
   const canComment = currentUserRole !== 'viewer'
 
+  const comments = useMemo(
+    () => query.data?.pages.flatMap((page) => page.payload) ?? [],
+    [query.data],
+  )
+
   if (query.isPending) {
     return <CommentsLoading />
   }
@@ -38,13 +44,11 @@ export function CommentsContainer({
     )
   }
 
-  const comments = query.data?.pages.flatMap((page) => page.payload) ?? []
-
   if (comments.length === 0) {
     return (
       <div className="flex h-full flex-col">
         <div className="flex h-12 shrink-0 items-center border-b px-4">
-          <h2 className="text-sm font-semibold">Comments</h2>
+          <h2 className="text-sm font-semibold">{m.comments_title()}</h2>
         </div>
         <div className="flex flex-1 items-center justify-center">
           <CommentsEmpty

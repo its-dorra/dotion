@@ -4,14 +4,13 @@ import type {
   CreateNotificationInput,
 } from "@dotion/shared/notifications/types";
 import type { PaginationQuery } from "@dotion/shared/pagination/types";
-import type { AppDB, DBClient } from "@dotion/db";
+import type { AppDB } from "@dotion/db";
 import type { NotificationsRepository } from "@dotion/db/repositories";
 import type { UserEventPublisher } from "./realtime.types";
 
 export class NotificationsService {
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
-    _dbClient?: DBClient,
     private readonly userEventPublisher?: UserEventPublisher,
   ) {}
 

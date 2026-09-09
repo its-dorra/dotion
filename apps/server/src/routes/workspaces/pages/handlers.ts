@@ -11,16 +11,13 @@ import type {
   MoveToTrashRoute,
   RestoreFromTrashRoute,
   DeletePermanentlyRoute,
+  EmptyTrashRoute,
 } from "./routes";
 
 export const listHandler: AppRouteHandler<ListRoute> = async (c) => {
-  const currentUser = c.var.currentUser;
   const workspaceId = c.req.valid("param").id;
 
-  const result = await c.var.services.pages.getPagesTree(
-    workspaceId,
-    currentUser.id,
-  );
+  const result = await c.var.services.pages.getPagesTree(workspaceId);
 
   if (result.isErr()) {
     console.error("Error fetching pages:", result.error);
@@ -37,13 +34,11 @@ export const listHandler: AppRouteHandler<ListRoute> = async (c) => {
 };
 
 export const getByIdHandler: AppRouteHandler<GetByIdRoute> = async (c) => {
-  const currentUser = c.var.currentUser;
   const { id: workspaceId, pageId } = c.req.valid("param");
 
   const result = await c.var.services.pages.getPageWithoutContent(
     workspaceId,
     pageId,
-    currentUser.id,
   );
 
   if (result.isErr()) {
@@ -115,14 +110,9 @@ export const listTrashHandler: AppRouteHandler<ListTrashRoute> = async (c) => {
 export const moveToTrashHandler: AppRouteHandler<MoveToTrashRoute> = async (
   c,
 ) => {
-  const currentUser = c.var.currentUser;
   const { id: workspaceId, pageId } = c.req.valid("param");
 
-  const result = await c.var.services.pages.moveToTrash(
-    { userId: currentUser.id },
-    workspaceId,
-    pageId,
-  );
+  const result = await c.var.services.pages.moveToTrash(workspaceId, pageId);
 
   if (result.isErr()) {
     console.error("Error moving page to trash:", result.error);
@@ -143,11 +133,9 @@ export const moveToTrashHandler: AppRouteHandler<MoveToTrashRoute> = async (
 export const restoreFromTrashHandler: AppRouteHandler<
   RestoreFromTrashRoute
 > = async (c) => {
-  const currentUser = c.var.currentUser;
   const { id: workspaceId, pageId } = c.req.valid("param");
 
   const result = await c.var.services.pages.restoreFromTrash(
-    { userId: currentUser.id },
     workspaceId,
     pageId,
   );
@@ -188,6 +176,27 @@ export const deletePermanentlyHandler: AppRouteHandler<
         ),
       NotFoundError: () =>
         c.json(errorResponseJson("Page not found"), HttpStatusCodes.NOT_FOUND),
+    });
+  }
+
+  return c.json(successResponseJson(result.value), HttpStatusCodes.OK);
+};
+
+export const emptyTrashHandler: AppRouteHandler<EmptyTrashRoute> = async (
+  c,
+) => {
+  const { id: workspaceId } = c.req.valid("param");
+
+  const result = await c.var.services.pages.emptyTrash(workspaceId);
+
+  if (result.isErr()) {
+    console.error("Error emptying trash:", result.error);
+    return result.error.match({
+      DatabaseError: () =>
+        c.json(
+          errorResponseJson("Failed to empty trash"),
+          HttpStatusCodes.INTERNAL_SERVER_ERROR,
+        ),
     });
   }
 

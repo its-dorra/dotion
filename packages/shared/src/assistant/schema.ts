@@ -6,6 +6,7 @@ import {
   assistantMessageId,
   pageId,
 } from "../ids";
+import type { UIMessage } from "ai";
 
 export const assistantCitationSchema = z.object({
   pageId: pageId,
@@ -39,7 +40,10 @@ export const createThreadRequestSchema = z.object({
 });
 
 export const sendAssistantMessageRequestSchema = z.object({
-  content: z.string().min(1, "Message content is required"),
+  messages: z.custom<UIMessage[]>(
+    (val) => Array.isArray(val) && val.length > 0,
+    "Must be a non-empty array of chat messages",
+  ),
 });
 
 export const listPaginationQuerySchema = z.object({
@@ -73,3 +77,5 @@ export type PaginatedThreadsResponse = z.infer<
 export type PaginatedMessagesResponse = z.infer<
   typeof paginatedMessagesResponseSchema
 >;
+
+export * from "./tools";

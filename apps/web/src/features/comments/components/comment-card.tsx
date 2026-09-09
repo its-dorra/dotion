@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Check, MessageSquareReply } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Can } from '@/features/authorization/components/can'
@@ -17,7 +17,7 @@ interface CommentCardProps {
   pageId: PageId
 }
 
-export function CommentCard({
+export const CommentCard = memo(function CommentCard({
   comment,
   canComment,
   workspaceId,
@@ -108,4 +108,4 @@ export function CommentCard({
       )}
     </div>
   )
-}
+})

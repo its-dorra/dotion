@@ -17,17 +17,12 @@ import { DatabaseError, NotFoundError } from "@dotion/db";
 import type { PagesRepository } from "@dotion/db/repositories";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
 import type { UserId } from "@dotion/shared/users/types";
+import type { PageTreeItem } from "@dotion/shared/assistant/tools";
 import { Result } from "better-result";
-import type { NotificationsService } from "./notifications.service";
-import type { WorkspacesService } from "./workspaces.service";
 import type { UsersService } from "./users.service";
+import type { WorkspacesService } from "./workspaces.service";
 import type { OutboxService } from "./outbox.service";
-import type {
-  PermissionCacheInvalidator,
-  WorkspaceEventPublisher,
-  PageEventPublisher,
-  PageCleanupQueue,
-} from "./realtime.types";
+import type { DomainEventDispatcher } from "./event-dispatcher.types";
 import type {
   ResourceData,
   ScopeData,
@@ -38,55 +33,126 @@ export class PagesService {
     private readonly pagesRepository: PagesRepository,
     private readonly workspacesService: WorkspacesService,
     private readonly usersService: UsersService,
-    private readonly notificationsService: NotificationsService,
     private readonly dbClient: DBClient,
-    private readonly cacheInvalidator?: PermissionCacheInvalidator,
-    private readonly workspaceEventPublisher?: WorkspaceEventPublisher,
-    _pageEventPublisher?: PageEventPublisher,
-    private readonly pageCleanupQueue?: PageCleanupQueue,
-    private readonly outboxService?: OutboxService,
+    private readonly eventDispatcher: DomainEventDispatcher,
+    private readonly outboxService: OutboxService,
   ) {}
 
   async getPagesTree(
     workspaceId: WorkspaceId,
-    _userId?: UserId,
   ): Promise<Result<PageTreeNode[], DatabaseError>> {
     return this.pagesRepository.getWorkspacePages(workspaceId);
+  }
+
+  async getPageTreeHierarchy(
+    workspaceId: WorkspaceId,
+    rootPageId?: PageId,
+    maxDepth = 3,
+  ): Promise<Result<PageTreeItem[], DatabaseError>> {
+    const pagesResult =
+      await this.pagesRepository.getWorkspacePages(workspaceId);
+    if (pagesResult.isErr()) return pagesResult;
+
+    const allPages = pagesResult.value;
+    const pageMap = new Map<string, PageTreeNode>();
+    for (const page of allPages) {
+      pageMap.set(page.id, page);
+    }
+
+    const childrenMap = new Map<string | null, PageTreeNode[]>();
+    for (const page of allPages) {
+      const pId =
+        page.parentId && pageMap.has(page.parentId) ? page.parentId : null;
+      const list = childrenMap.get(pId) ?? [];
+      list.push(page);
+      childrenMap.set(pId, list);
+    }
+
+    const buildTree = (
+      parentId: string | null,
+      currentDepth: number,
+    ): PageTreeItem[] => {
+      if (currentDepth > maxDepth) return [];
+      const children = childrenMap.get(parentId) ?? [];
+      const result: PageTreeItem[] = [];
+
+      for (const child of children) {
+        const subChildren = buildTree(child.id, currentDepth + 1);
+        result.push({
+          id: child.id,
+          title: child.title,
+          icon: child.icon ?? null,
+          parentId: child.parentId ?? null,
+          ...(subChildren.length > 0 ? { children: subChildren } : {}),
+        });
+      }
+
+      return result;
+    };
+
+    let tree: PageTreeItem[] = [];
+    if (rootPageId) {
+      const rootPage = pageMap.get(rootPageId);
+      if (rootPage) {
+        const children = buildTree(rootPage.id, 2);
+        tree = [
+          {
+            id: rootPage.id,
+            title: rootPage.title,
+            icon: rootPage.icon ?? null,
+            parentId: rootPage.parentId ?? null,
+            ...(children.length > 0 ? { children: children } : {}),
+          },
+        ];
+      }
+    } else {
+      tree = buildTree(null, 1);
+    }
+
+    return Result.ok(tree);
   }
 
   async createPage(
     { userId }: { userId: UserId },
     input: CreatePageInput,
   ): Promise<Result<Page, DatabaseError>> {
-    const txResult = await this.dbClient.transaction(async (tx) => {
-      return Result.gen(async function* (this: PagesService) {
-        const page = yield* Result.await(
-          this.pagesRepository.createPage(tx, input),
-        );
-        yield* Result.await(
-          this.pagesRepository.createPagePermission(tx, {
-            pageId: page.id,
-            userId,
-            role: "editor",
-            workspaceId: input.workspaceId,
-          }),
-        );
-        return Result.ok(page);
-      }, this).then(
-        Result.tapError(() => {
-          tx.rollback();
+    return Result.gen(async function* (this: PagesService) {
+      const page = yield* Result.await(
+        this.dbClient.transaction(async (tx) => {
+          return Result.gen(async function* (this: PagesService) {
+            const page = yield* Result.await(
+              this.pagesRepository.createPage(tx, input),
+            );
+            yield* Result.await(
+              this.pagesRepository.createPagePermission(tx, {
+                pageId: page.id,
+                userId,
+                role: "editor",
+                workspaceId: input.workspaceId,
+              }),
+            );
+            return Result.ok(page);
+          }, this).then(
+            Result.tapError(() => {
+              tx.rollback();
+            }),
+          );
         }),
       );
-    });
 
-    if (txResult.isOk()) {
-      await this.workspaceEventPublisher?.broadcastPageCreated(
-        input.workspaceId,
-        txResult.value,
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "page.created",
+          aggregateId: page.id,
+          payload: {
+            workspaceId: input.workspaceId,
+            page,
+          },
+        }),
       );
-    }
 
-    return txResult;
+      return Result.ok(page);
+    }, this);
   }
 
   async getPageById(
@@ -104,7 +170,6 @@ export class PagesService {
   async getPageWithoutContent(
     workspaceId: WorkspaceId,
     pageId: PageId,
-    _userId?: UserId,
   ): Promise<Result<Omit<Page, "content">, DatabaseError | NotFoundError>> {
     return this.pagesRepository.getPageWithoutContent(workspaceId, pageId);
   }
@@ -133,19 +198,17 @@ export class PagesService {
         yield* Result.await(
           this.pagesRepository.updatePageContentTx(tx, pageId, content),
         );
-        if (this.outboxService) {
-          yield* Result.await(
-            this.outboxService.upsertEntryTx(tx, {
-              type: "page_indexing",
-              aggregateId: pageId,
-              payload: {
-                workspaceId,
-                pageId,
-                version,
-              },
-            }),
-          );
-        }
+        yield* Result.await(
+          this.outboxService.upsertEntryTx(tx, {
+            type: "page_indexing",
+            aggregateId: pageId,
+            payload: {
+              workspaceId,
+              pageId,
+              version,
+            },
+          }),
+        );
         return Result.ok(true as const);
       }, this).then(
         Result.tapError(() => {
@@ -172,7 +235,7 @@ export class PagesService {
         const page = yield* Result.await(
           this.pagesRepository.updatePageMetadataTx(tx, pageId, data),
         );
-        if (data.title !== undefined && this.outboxService) {
+        if (data.title !== undefined) {
           yield* Result.await(
             this.outboxService.upsertEntryTx(tx, {
               type: "page_indexing",
@@ -260,36 +323,20 @@ export class PagesService {
       const pageTitle = page.title || "a page";
 
       yield* Result.await(
-        this.notificationsService.createNotification({
-          userId: targetUserId,
-          metadata: {
-            type: "permission_change",
-            pageId,
+        this.eventDispatcher.dispatch({
+          type: "page.permission_updated",
+          aggregateId: pageId,
+          payload: {
             workspaceId,
+            pageId,
+            targetUserId,
+            role,
+            updatedByUserId: changedBy.id,
             pageTitle,
-            changedByUserId: changedBy.id,
-            changedByName: changedBy.name,
-            newRole: role as any,
+            updatedByName: changedBy.name,
           },
-          isRead: false,
         }),
       );
-
-      await Promise.all([
-        this.cacheInvalidator?.invalidateUserPermissions(
-          targetUserId,
-          "page",
-          pageId,
-        ),
-        this.workspaceEventPublisher?.broadcastPagePermissionUpdated(
-          workspaceId,
-          {
-            pageId,
-            userId: targetUserId,
-            role,
-          },
-        ),
-      ]);
 
       const pageMemberPermission: PageMemberPermission = {
         id: `${workspaceId}_${targetUserId}`,
@@ -328,28 +375,31 @@ export class PagesService {
 
       const [page, ownerUserId] = yield* Result.await(
         Result.allAsync([
-          this.pagesRepository.getPageById(pageId),
+          this.pagesRepository.getPageWithoutContent(workspaceId, pageId),
           this.workspacesService.getWorkspaceOwnerUserId(workspaceId),
         ]),
       );
 
       const pageTitle = page.title || "a page";
 
-      await this.notificationsService.createNotification({
-        userId: ownerUserId,
-        metadata: {
-          type: "page_access_request",
-          requestId: createdRequest.id,
-          pageId,
-          workspaceId,
-          pageTitle,
-          requestedRole,
-          requestedByUserId: requester.id,
-          requestedByName: requester.name,
-          requestedByEmail: requester.email,
-        },
-        isRead: false,
-      });
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "page.access_requested",
+          aggregateId: createdRequest.id,
+          payload: {
+            workspaceId,
+            pageId,
+            pageTitle,
+            pageIcon: page.icon ?? null,
+            requesterId: requester.id,
+            requesterName: requester.name,
+            requesterEmail: requester.email,
+            recipientUserId: ownerUserId,
+            requestedRole,
+            requestId: createdRequest.id,
+          },
+        }),
+      );
 
       return Result.ok(createdRequest);
     }, this);
@@ -420,35 +470,39 @@ export class PagesService {
       const pageResult = await this.pagesRepository.getPageById(pageId);
       const pageTitle = pageResult.isOk() ? pageResult.value.title : "a page";
 
-      await this.notificationsService.createNotification({
-        userId: requesterId,
-        metadata: {
-          type: "permission_change",
-          pageId,
-          workspaceId,
-          pageTitle,
-          changedByUserId: approver.id,
-          changedByName: approver.name,
-          newRole: grantedRole,
-        },
-        isRead: false,
-      });
-
-      await Promise.all([
-        this.cacheInvalidator?.invalidateUserPermissions(
-          requesterId,
-          "page",
-          pageId,
-        ),
-        this.workspaceEventPublisher?.broadcastPagePermissionUpdated(
-          workspaceId,
+      yield* Result.await(
+        this.eventDispatcher.dispatchBatch([
           {
-            pageId,
-            userId: requesterId,
-            role: grantedRole,
+            type: "page.access_request_resolved",
+            aggregateId: requestId,
+            payload: {
+              workspaceId,
+              pageId,
+              pageTitle,
+              pageIcon: null,
+              requesterId,
+              reviewerId: approver.id,
+              reviewerName: approver.name,
+              status: "approved",
+              role: grantedRole,
+              requestId,
+            },
           },
-        ),
-      ]);
+          {
+            type: "page.permission_updated",
+            aggregateId: pageId,
+            payload: {
+              workspaceId,
+              pageId,
+              targetUserId: requesterId,
+              role: grantedRole,
+              updatedByUserId: approver.id,
+              pageTitle,
+              updatedByName: approver.name,
+            },
+          },
+        ]),
+      );
 
       return Result.ok(request);
     }, this);
@@ -479,29 +533,31 @@ export class PagesService {
       );
 
       const pageResult = await this.pagesRepository.getPageById(pageId);
+
       const pageTitle = pageResult.isOk() ? pageResult.value.title : "a page";
 
-      await this.notificationsService.createNotification({
-        userId: request.userId,
-        metadata: {
-          type: "page_access_request_resolved",
-          requestId,
-          pageId,
-          workspaceId,
-          pageTitle,
-          resolvedByUserId: rejecter.id,
-          resolvedByName: rejecter.name,
-          status: "rejected",
-          role: request.requestedRole,
-        },
-        isRead: false,
-      });
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "page.access_request_resolved",
+          aggregateId: requestId,
+          payload: {
+            workspaceId,
+            pageId,
+            pageTitle,
+            pageIcon: null,
+            requesterId: request.userId,
+            reviewerId: rejecter.id,
+            reviewerName: rejecter.name,
+            status: "rejected",
+            role: request.requestedRole,
+            requestId,
+          },
+        }),
+      );
 
       return Result.ok(updatedRequest);
     }, this);
   }
-
-  // --- Authorization Attribute Loaders ---
 
   async loadPageResourceData({
     pageId,
@@ -638,7 +694,6 @@ export class PagesService {
   }
 
   async moveToTrash(
-    _caller: { userId: UserId },
     workspaceId: WorkspaceId,
     pageId: PageId,
   ): Promise<Result<{ success: true }, DatabaseError | NotFoundError>> {
@@ -656,9 +711,16 @@ export class PagesService {
         this.pagesRepository.moveToTrash(this.dbClient, allPageIdsToTrash),
       );
 
-      await this.workspaceEventPublisher?.broadcastPageMovedToTrash(
-        workspaceId,
-        pageId,
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "page.moved_to_trash",
+          aggregateId: pageId,
+          payload: {
+            workspaceId,
+            pageId,
+            descendantIds: descendants,
+          },
+        }),
       );
 
       return Result.ok({ success: true as const });
@@ -666,7 +728,6 @@ export class PagesService {
   }
 
   async restoreFromTrash(
-    _caller: { userId: UserId },
     workspaceId: WorkspaceId,
     pageId: PageId,
   ): Promise<Result<Page, DatabaseError | NotFoundError>> {
@@ -698,9 +759,16 @@ export class PagesService {
         ),
       );
 
-      await this.workspaceEventPublisher?.broadcastPageRestored(
-        workspaceId,
-        restored,
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "page.restored",
+          aggregateId: pageId,
+          payload: {
+            workspaceId,
+            page: restored,
+            descendantIds: descendants,
+          },
+        }),
       );
 
       return Result.ok(restored);
@@ -724,18 +792,40 @@ export class PagesService {
         ),
       );
 
-      await Promise.all([
-        this.workspaceEventPublisher?.broadcastPageDeletedPermanently(
-          workspaceId,
-          pageId,
-        ),
-        ...allPageIdsToDelete.map((pid) =>
-          this.pageCleanupQueue?.enqueuePageAssetCleanup({
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "page.deleted_permanently",
+          aggregateId: pageId,
+          payload: {
             workspaceId,
-            pageId: pid,
-          }),
-        ),
-      ]);
+            pageId,
+            allPageIds: allPageIdsToDelete,
+          },
+        }),
+      );
+
+      return Result.ok({ success: true as const });
+    }, this);
+  }
+
+  async emptyTrash(
+    workspaceId: WorkspaceId,
+  ): Promise<Result<{ success: true }, DatabaseError>> {
+    return Result.gen(async function* (this: PagesService) {
+      const deletedPageIds = yield* Result.await(
+        this.pagesRepository.emptyTrash(this.dbClient, workspaceId),
+      );
+
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "workspace.trash_emptied",
+          aggregateId: workspaceId,
+          payload: {
+            workspaceId,
+            allPageIds: deletedPageIds,
+          },
+        }),
+      );
 
       return Result.ok({ success: true as const });
     }, this);

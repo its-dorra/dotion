@@ -4,6 +4,7 @@ import type { AppDB, DBClient } from "@dotion/db";
 import type {
   OutboxEntry,
   CreateOutboxEntryInput,
+  DomainEvent,
 } from "@dotion/shared/outbox/types";
 import type { DatabaseError } from "@dotion/db/errors";
 
@@ -12,6 +13,27 @@ export class OutboxService {
     private readonly outboxRepository: OutboxRepository,
     private readonly dbClient: DBClient,
   ) {}
+
+  async emitEventTx(
+    tx: AppDB,
+    event: DomainEvent,
+  ): Promise<Result<OutboxEntry, DatabaseError>> {
+    return this.outboxRepository.upsertEntry(tx, {
+      type: event.type,
+      aggregateId: event.aggregateId,
+      payload: event.payload as Record<string, unknown>,
+    });
+  }
+
+  async emitEvent(
+    event: DomainEvent,
+  ): Promise<Result<OutboxEntry, DatabaseError>> {
+    return this.outboxRepository.upsertEntry(this.dbClient, {
+      type: event.type,
+      aggregateId: event.aggregateId,
+      payload: event.payload as Record<string, unknown>,
+    });
+  }
 
   async upsertEntryTx(
     tx: AppDB,

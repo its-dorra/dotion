@@ -33,12 +33,43 @@ import {
   DurableObjectUserCreditsManager,
   CloudflarePageCleanupQueue,
 } from "./lib/realtime-publishers";
+import {
+  DomainEventRouter,
+  PageCreatedStrategy,
+  PageMovedToTrashStrategy,
+  PageRestoredStrategy,
+  PageDeletedPermanentlyStrategy,
+  TrashEmptiedStrategy,
+  PageContentUpdatedStrategy,
+  PageIndexingLegacyStrategy,
+  PageMetadataUpdatedStrategy,
+  PageAccessRequestedStrategy,
+  PageAccessRequestResolvedStrategy,
+  PagePermissionUpdatedStrategy,
+  WorkspaceInvitationCreatedStrategy,
+  WorkspaceMemberJoinedStrategy,
+  WorkspaceMemberRemovedStrategy,
+  WorkspaceInvitationCancelledStrategy,
+  WorkspaceInvitationDeclinedStrategy,
+  CommentCreatedStrategy,
+  CommentResolvedStrategy,
+  CommentDeletedStrategy,
+  type ExecutionContextLike,
+} from "./events";
 
-export const createAppContext = (env: Env) => {
+export const createAppContext = (
+  env: Env,
+  executionCtx?: ExecutionContextLike,
+) => {
   const db = createDb(env.DATABASE_URL);
 
   const repositories = buildRepositories(db);
-  const services = buildServices(repositories, db, env);
+  const { services, eventRouter } = buildServices(
+    repositories,
+    db,
+    env,
+    executionCtx,
+  );
 
   const auth = createAuth(
     db,
@@ -81,7 +112,7 @@ export const createAppContext = (env: Env) => {
     },
   );
 
-  return { auth, services };
+  return { auth, services, eventRouter };
 };
 
 function buildRepositories(db: DBClient) {
@@ -101,6 +132,7 @@ function buildServices(
   repositories: ReturnType<typeof buildRepositories>,
   db: DBClient,
   env: Env,
+  executionCtx?: ExecutionContextLike,
 ) {
   const kvCache = new KVAuthorizationCache(env.KV);
   const workspacePublisher = new DurableObjectWorkspaceEventPublisher(env);
@@ -113,35 +145,61 @@ function buildServices(
   const users = new UsersService(repositories.users);
   const notifications = new NotificationsService(
     repositories.notifications,
-    db,
     userPublisher,
   );
+
+  const eventRouter = new DomainEventRouter(executionCtx)
+    .register(new PageCreatedStrategy(workspacePublisher))
+    .register(new PageMovedToTrashStrategy(workspacePublisher))
+    .register(new PageRestoredStrategy(workspacePublisher))
+    .register(
+      new PageDeletedPermanentlyStrategy(workspacePublisher, pageCleanupQueue),
+    )
+    .register(new TrashEmptiedStrategy(workspacePublisher, pageCleanupQueue))
+    .register(new PageContentUpdatedStrategy(env.PAGE_INDEXING_QUEUE))
+    .register(new PageIndexingLegacyStrategy(env.PAGE_INDEXING_QUEUE))
+    .register(new PageMetadataUpdatedStrategy(env.PAGE_INDEXING_QUEUE))
+    .register(new PageAccessRequestedStrategy(notifications))
+    .register(new PageAccessRequestResolvedStrategy(notifications))
+    .register(
+      new PagePermissionUpdatedStrategy(
+        kvCache,
+        workspacePublisher,
+        notifications,
+      ),
+    )
+    .register(
+      new WorkspaceInvitationCreatedStrategy(workspacePublisher, notifications),
+    )
+    .register(new WorkspaceMemberJoinedStrategy(workspacePublisher, kvCache))
+    .register(new WorkspaceMemberRemovedStrategy(workspacePublisher, kvCache))
+    .register(new WorkspaceInvitationCancelledStrategy(workspacePublisher))
+    .register(new WorkspaceInvitationDeclinedStrategy(workspacePublisher))
+    .register(new CommentCreatedStrategy(pagePublisher))
+    .register(new CommentResolvedStrategy(pagePublisher))
+    .register(new CommentDeletedStrategy(pagePublisher));
+
   const workspaces = new WorkspacesService(
     repositories.workspaces,
     users,
-    notifications,
     db,
-    kvCache,
-    workspacePublisher,
-    userPublisher,
+    eventRouter,
+    outbox,
   );
   const pages = new PagesService(
     repositories.pages,
     workspaces,
     users,
-    notifications,
     db,
-    kvCache,
-    workspacePublisher,
-    pagePublisher,
-    pageCleanupQueue,
+    eventRouter,
     outbox,
   );
   const comments = new CommentsService(
     repositories.comments,
     pages,
     db,
-    pagePublisher,
+    eventRouter,
+    outbox,
   );
   const storage = new StorageService(env.R2);
 
@@ -156,14 +214,15 @@ function buildServices(
     db,
   );
 
-  const ai = new AIService(env.GEMINI_API_KEY, creditsManager, search);
-
-  const assistant = new AssistantService(
-    repositories.assistant,
+  const ai = new AIService(
+    env.GEMINI_API_KEY,
+    creditsManager,
     search,
-    ai,
-    db,
+    pages,
+    chunking,
   );
+
+  const assistant = new AssistantService(repositories.assistant, ai, db);
 
   const authorization = new AuthorizationService(
     { workspaces, pages, comments, users },
@@ -171,19 +230,22 @@ function buildServices(
   );
 
   return {
-    users,
-    notifications,
-    workspaces,
-    pages,
-    comments,
-    authorization,
-    storage,
-    ai,
-    embedding,
-    chunking,
-    search,
-    assistant,
-    outbox,
+    services: {
+      users,
+      notifications,
+      workspaces,
+      pages,
+      comments,
+      authorization,
+      storage,
+      ai,
+      embedding,
+      chunking,
+      search,
+      assistant,
+      outbox,
+    },
+    eventRouter,
   };
 }
 

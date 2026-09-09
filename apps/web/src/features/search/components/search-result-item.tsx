@@ -7,10 +7,11 @@ import type { SearchResultItem as SearchResultItemType } from '../types'
 
 interface SearchResultItemProps {
   item: SearchResultItemType
+  index: number
   isSelected: boolean
   query: string
   onSelect: (item: SearchResultItemType) => void
-  onMouseEnter: () => void
+  onHover?: (index: number) => void
 }
 
 function highlightMatch(text: string, query: string): React.ReactNode {
@@ -61,19 +62,26 @@ function cleanPreviewMarkdown(content: string): string {
     .trim()
 }
 
-export function SearchResultItem({
+const REMARK_PLUGINS = [remarkGfm]
+
+export const SearchResultItem = React.memo(function SearchResultItem({
   item,
+  index,
   isSelected,
   query,
   onSelect,
-  onMouseEnter,
+  onHover,
 }: SearchResultItemProps) {
+  const cleanContent = React.useMemo(
+    () => cleanPreviewMarkdown(item.content),
+    [item.content],
+  )
   return (
     <div
       role="button"
       tabIndex={0}
       onClick={() => onSelect(item)}
-      onMouseEnter={onMouseEnter}
+      onMouseEnter={() => onHover?.(index)}
       className={cn(
         'group flex flex-col gap-1 rounded-lg p-2.5 text-left text-xs transition-colors cursor-pointer border border-transparent',
         isSelected
@@ -104,7 +112,7 @@ export function SearchResultItem({
 
       <div className="line-clamp-2 text-[11px] text-muted-foreground/90 font-normal leading-relaxed pl-5 [&_p]:inline [&_h1]:inline [&_h2]:inline [&_h3]:inline [&_ul]:inline [&_ol]:inline [&_li]:inline">
         <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
+          remarkPlugins={REMARK_PLUGINS}
           components={{
             p({ children }) {
               return (
@@ -163,9 +171,9 @@ export function SearchResultItem({
             },
           }}
         >
-          {cleanPreviewMarkdown(item.content)}
+          {cleanContent}
         </ReactMarkdown>
       </div>
     </div>
   )
-}
+})

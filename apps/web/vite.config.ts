@@ -1,11 +1,11 @@
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react'
+import viteReact from '@vitejs/plugin-react'
 import { cloudflare } from '@cloudflare/vite-plugin'
 import { defineConfig } from 'vite'
 import { devtools } from '@tanstack/devtools-vite'
-import babel from '@rolldown/plugin-babel'
+
 import { sentryCloudflareVitePlugin } from '@sentry/cloudflare/vite'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 
@@ -48,8 +48,5 @@ export default defineConfig({
     tailwindcss(),
     tanstackStart(),
     viteReact(),
-    babel({
-      presets: [reactCompilerPreset()],
-    }),
   ],
 })

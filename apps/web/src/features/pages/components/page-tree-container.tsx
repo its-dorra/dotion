@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { pageTreeQueryOptions } from '../query-options'
 import { buildPageTree } from '../lib/build-page-tree'
@@ -18,6 +19,11 @@ export function PageTreeContainer({
 }: PageTreeContainerProps) {
   const query = useQuery(pageTreeQueryOptions(workspaceId))
 
+  const tree = useMemo(
+    () => (query.data ? buildPageTree(query.data) : []),
+    [query.data],
+  )
+
   if (query.isPending) {
     return <PageTreeLoading />
   }
@@ -37,7 +43,7 @@ export function PageTreeContainer({
 
   return (
     <PageTreePresenter
-      tree={buildPageTree(query.data)}
+      tree={tree}
       workspaceId={workspaceId}
       activePageId={activePageId}
     />

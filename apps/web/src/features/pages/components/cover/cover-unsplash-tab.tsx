@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useDebouncedValue } from '@tanstack/react-pacer'
 import { Search, Loader2, ImageIcon } from 'lucide-react'
@@ -43,14 +43,20 @@ export function CoverUnsplashTab({ cover, onSelect }: CoverUnsplashTabProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } =
     useInfiniteQuery(unsplashInfiniteQueryOptions(debouncedQuery))
 
-  const photos = data?.pages.flatMap((page) => page) ?? []
+  const photos = useMemo(
+    () => data?.pages.flatMap((page) => page) ?? [],
+    [data],
+  )
 
-  function handlePhotoSelect(photo: UnsplashPhoto) {
-    if (photo.downloadLocation) {
-      void unsplashApi.trackDownload(photo.downloadLocation)
-    }
-    onSelect(photo.url)
-  }
+  const handlePhotoSelect = useCallback(
+    (photo: UnsplashPhoto) => {
+      if (photo.downloadLocation) {
+        void unsplashApi.trackDownload(photo.downloadLocation)
+      }
+      onSelect(photo.url)
+    },
+    [onSelect],
+  )
 
   return (
     <div className="flex flex-col">

@@ -86,6 +86,15 @@ export function SearchContent({
     [workspaceId, navigate, onClose],
   )
 
+  const isSheet = variant === 'sheet'
+
+  const handleHoverResult = React.useCallback(
+    (index: number) => {
+      if (!isSheet) setSelectedIndex(index)
+    },
+    [isSheet],
+  )
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (items.length === 0) return
 
@@ -103,8 +112,6 @@ export function SearchContent({
       }
     }
   }
-
-  const isSheet = variant === 'sheet'
 
   return (
     <div
@@ -202,12 +209,11 @@ export function SearchContent({
               <SearchResultItem
                 key={`${item.pageId}-${item.headingBlockId ?? index}`}
                 item={item}
+                index={index}
                 isSelected={!isSheet && index === selectedIndex}
                 query={debouncedQuery}
                 onSelect={handleSelectResult}
-                onMouseEnter={() => {
-                  if (!isSheet) setSelectedIndex(index)
-                }}
+                onHover={handleHoverResult}
               />
             ))}
 

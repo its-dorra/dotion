@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useParams } from '@tanstack/react-router'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { pagesApi } from '../api'
 import { pagesKeys } from '../query-options'
@@ -8,6 +9,8 @@ import type { DeletePermanentlyInput } from '../types'
 
 export function useDeletePermanently() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const params = useParams({ strict: false }) as { pageId?: string }
 
   return useMutation(
     resultMutationOptions({
@@ -17,7 +20,16 @@ export function useDeletePermanently() {
         queryClient.invalidateQueries({
           queryKey: pagesKeys.trash(variables.workspaceId),
         })
+        queryClient.removeQueries({
+          queryKey: pagesKeys.detail(variables.pageId),
+        })
         toast(m.toast_page_deleted_permanently())
+        if (params.pageId === variables.pageId) {
+          navigate({
+            to: '/app/workspaces/$workspaceId/trash',
+            params: { workspaceId: variables.workspaceId },
+          })
+        }
       },
       onError: (error) => {
         toast.error(error?.message ?? m.toast_page_delete_failed())

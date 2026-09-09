@@ -25,7 +25,7 @@ export default Sentry.withSentry(
     fetch: app.fetch,
     queue: processQueueBatch,
     scheduled: async (_event, env, ctx) => {
-      ctx.waitUntil(handleScheduledOutbox(env));
+      ctx.waitUntil(handleScheduledOutbox(env, ctx));
     },
   } satisfies ExportedHandler<Env>,
 );

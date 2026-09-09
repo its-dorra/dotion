@@ -163,6 +163,7 @@ export class DurableObjectWorkspaceEventPublisher implements WorkspaceEventPubli
   async broadcastPageMovedToTrash(
     workspaceId: WorkspaceId,
     pageId: PageId,
+    pageIds?: PageId[],
   ): Promise<void> {
     try {
       const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
@@ -172,6 +173,7 @@ export class DurableObjectWorkspaceEventPublisher implements WorkspaceEventPubli
         payload: {
           workspaceId,
           pageId,
+          pageIds,
         },
       });
     } catch (error) {
@@ -198,6 +200,7 @@ export class DurableObjectWorkspaceEventPublisher implements WorkspaceEventPubli
   async broadcastPageDeletedPermanently(
     workspaceId: WorkspaceId,
     pageId: PageId,
+    pageIds?: PageId[],
   ): Promise<void> {
     try {
       const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
@@ -207,10 +210,28 @@ export class DurableObjectWorkspaceEventPublisher implements WorkspaceEventPubli
         payload: {
           workspaceId,
           pageId,
+          pageIds,
         },
       });
     } catch (error) {
       console.error("Failed to broadcast page.deleted_permanently:", error);
+    }
+  }
+
+  async broadcastTrashEmptied(
+    workspaceId: WorkspaceId,
+  ): Promise<void> {
+    try {
+      const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
+      const stub = this.env.DOTION_WORKSPACE_DO.get(doId);
+      await stub.broadcastJSONToAll({
+        type: "trash.emptied",
+        payload: {
+          workspaceId,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to broadcast trash.emptied:", error);
     }
   }
 }

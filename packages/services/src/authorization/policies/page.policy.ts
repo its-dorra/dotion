@@ -29,6 +29,13 @@ export const pagePolicy = defineResourcePolicy("page", {
     return isWorkspaceMemberPredicate(scope.userWorkspaceRole);
   },
 
+  emptyTrash: ({ scope }) => {
+    if (!scope?.workspaceId) {
+      return deny("Workspace ID is required to empty trash");
+    }
+    return isWorkspaceOwnerPredicate(scope.userWorkspaceRole);
+  },
+
   view: ({ resource }) =>
     isPageViewerPredicate(resource.userWorkspaceRole, resource.userPageRole),
 

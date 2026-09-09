@@ -42,8 +42,6 @@ export class PageYjsProvider {
     this._setup()
   }
 
-  // public methods required by BlockNote's collaboration extension
-
   get synced(): boolean {
     return this._synced
   }
@@ -85,9 +83,9 @@ export class PageYjsProvider {
 
   private _setup() {
     this.unsubscribeWs = this.wsClient.subscribe(({ payload }) => {
-      if (payload.type === 'yjs') {
-        this._handleBinaryMessage(payload.data)
-      }
+      if (payload.type !== 'yjs') return
+
+      this._handleBinaryMessage(payload.data)
     })
 
     this.unsubscribeStatus = this.wsClient.subscribeStatus(() => {

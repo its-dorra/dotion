@@ -32,7 +32,7 @@ export function PageIconPicker({
   if (readOnly) {
     if (!icon) return null
     return (
-      <div className="flex h-16 w-16 items-center justify-center text-5xl leading-none select-none">
+      <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-muted text-5xl leading-none select-none">
         {icon}
       </div>
     )
@@ -44,7 +44,7 @@ export function PageIconPicker({
         {children ?? (
           <button
             type="button"
-            className="flex h-16 w-16 items-center justify-center rounded-xl text-5xl leading-none transition-transform hover:scale-105 hover:bg-accent/60 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-16 w-16 items-center justify-center rounded-xl bg-muted text-5xl leading-none transition-transform hover:scale-105 hover:bg-muted/80 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={m.page_change_icon()}
           >
             {icon ?? '📄'}

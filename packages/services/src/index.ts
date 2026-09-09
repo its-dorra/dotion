@@ -11,4 +11,5 @@ export * from "#/search.service";
 export * from "#/assistant.service";
 export * from "#/realtime.types";
 export * from "#/outbox.service";
+export * from "#/event-dispatcher.types";
 export * from "./authorization/index";

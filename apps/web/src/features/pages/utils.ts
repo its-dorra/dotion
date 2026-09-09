@@ -35,6 +35,16 @@ export const handlePageMovedToTrashWsMessage = (
   queryClient.invalidateQueries({
     queryKey: pagesKeys.trash(payload.workspaceId),
   })
+  queryClient.invalidateQueries({
+    queryKey: pagesKeys.detail(payload.pageId),
+  })
+  if (payload.pageIds) {
+    for (const pid of payload.pageIds) {
+      queryClient.invalidateQueries({
+        queryKey: pagesKeys.detail(pid),
+      })
+    }
+  }
 }
 
 export const handlePageRestoredWsMessage = (
@@ -47,6 +57,9 @@ export const handlePageRestoredWsMessage = (
   queryClient.invalidateQueries({
     queryKey: pagesKeys.trash(payload.workspaceId),
   })
+  queryClient.invalidateQueries({
+    queryKey: pagesKeys.detail(payload.id),
+  })
 }
 
 export const handlePageDeletedPermanentlyWsMessage = (
@@ -56,6 +69,29 @@ export const handlePageDeletedPermanentlyWsMessage = (
     { type: 'page.deleted_permanently' }
   >['payload'],
 ) => {
+  queryClient.invalidateQueries({
+    queryKey: pagesKeys.tree(payload.workspaceId),
+  })
+  queryClient.invalidateQueries({
+    queryKey: pagesKeys.trash(payload.workspaceId),
+  })
+  queryClient.removeQueries({
+    queryKey: pagesKeys.detail(payload.pageId),
+  })
+  if (payload.pageIds) {
+    for (const pid of payload.pageIds) {
+      queryClient.removeQueries({
+        queryKey: pagesKeys.detail(pid),
+      })
+    }
+  }
+}
+
+export const handleTrashEmptiedWsMessage = (
+  queryClient: QueryClient,
+  payload: Extract<WorkspaceWsMessage, { type: 'trash.emptied' }>['payload'],
+) => {
+  queryClient.setQueryData(pagesKeys.trash(payload.workspaceId), [])
   queryClient.invalidateQueries({
     queryKey: pagesKeys.trash(payload.workspaceId),
   })

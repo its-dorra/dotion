@@ -1,5 +1,11 @@
 import { Result } from "better-result";
-import type { streamText } from "ai";
+import {
+  type streamText,
+  convertToModelMessages,
+  isTextUIPart,
+  type UIMessage,
+  type ModelMessage,
+} from "ai";
 import type {
   AssistantRepository,
   AssistantThreadRecord,
@@ -7,7 +13,6 @@ import type {
   PaginatedList,
 } from "@dotion/db/repositories";
 import type { DBClient } from "@dotion/db";
-import type { SearchService } from "./search.service";
 import type { AIService, AIError, QuotaExceededError } from "./ai.service";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
 import type { UserId } from "@dotion/shared/users/types";
@@ -18,13 +23,12 @@ export interface StreamChatInput {
   threadId: AssistantThreadId;
   workspaceId: WorkspaceId;
   userId: UserId;
-  content: string;
+  messages: UIMessage[];
 }
 
 export class AssistantService {
   constructor(
     private readonly assistantRepository: AssistantRepository,
-    _searchService: SearchService,
     private readonly aiService: AIService,
     private readonly dbClient: DBClient,
   ) {}
@@ -85,23 +89,49 @@ export class AssistantService {
         this.assistantRepository.getThread(input.threadId),
       );
 
+      const priorMessagesResult = await this.assistantRepository.listMessages(
+        input.threadId,
+        { limit: 10 },
+      );
+      const priorMessages = priorMessagesResult.isOk()
+        ? [...priorMessagesResult.value.items].reverse()
+        : [];
+
+      const priorModelMessages: ModelMessage[] = priorMessages.map((msg) => ({
+        role: msg.role === "assistant" ? "assistant" : "user",
+        content: msg.content,
+      }));
+
+      const incomingModelMessages = await convertToModelMessages(
+        input.messages,
+      );
+      const allMessages: ModelMessage[] = [
+        ...priorModelMessages,
+        ...incomingModelMessages,
+      ];
+
+      const lastUserUIMessage = [...input.messages]
+        .reverse()
+        .find((m) => m.role === "user");
+      const userPrompt = lastUserUIMessage
+        ? lastUserUIMessage.parts
+            .filter(isTextUIPart)
+            .map((p) => p.text)
+            .join("\n")
+        : "";
+
       yield* Result.await(
         this.assistantRepository.createMessage(this.dbClient, {
           threadId: input.threadId,
           role: "user",
-          content: input.content,
+          content: userPrompt,
         }),
       );
-
-      const priorMessages = await this.assistantRepository
-        .listMessages(input.threadId, { limit: 10 })
-        .then((res) => (res.isOk() ? res.value.items : []));
 
       return this.aiService.streamRAG({
         userId: input.userId,
         workspaceId: input.workspaceId,
-        history: priorMessages,
-        userPrompt: input.content,
+        messages: allMessages,
         onFinish: async (assistantResponse, usage, citations) => {
           try {
             await this.assistantRepository.createMessage(this.dbClient, {
@@ -117,9 +147,8 @@ export class AssistantService {
               thread.title === "New Chat" ||
               thread.title.trim() === ""
             ) {
-              const summaryTitle = await this.aiService.generateSummaryTitle(
-                input.content,
-              );
+              const summaryTitle =
+                await this.aiService.generateSummaryTitle(userPrompt);
               if (summaryTitle) {
                 await this.assistantRepository.updateThreadTitle(
                   this.dbClient,

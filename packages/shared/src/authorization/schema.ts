@@ -59,6 +59,7 @@ export const PageCollectionActionsSchema = z.enum([
   "create",
   "list",
   "listTrash",
+  "emptyTrash",
 ]);
 export const PageActionsSchema = z.union([
   PageInstanceActionsSchema,
@@ -270,6 +271,7 @@ export const AllActionsSchema = z.enum([
   "create",
   "list",
   "listTrash",
+  "emptyTrash",
   "inviteMember",
   "manageSettings",
   "updateRole",
@@ -278,6 +280,7 @@ export const AllActionsSchema = z.enum([
   "decline",
   "cancel",
   "restore",
+  "deletePermanently",
   "move",
   "managePermissions",
   "share",

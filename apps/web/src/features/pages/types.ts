@@ -40,6 +40,7 @@ export interface PageBreadcrumb {
 
 export interface TrashedPage {
   id: PageId
+  parentId: PageId | null
   title: string
   icon?: string
   deletedAt: string
@@ -64,6 +65,10 @@ export interface RestoreFromTrashInput {
 export interface DeletePermanentlyInput {
   workspaceId: WorkspaceId
   pageId: PageId
+}
+
+export interface EmptyTrashInput {
+  workspaceId: WorkspaceId
 }
 
 export interface UpdatePagePermissionInput {

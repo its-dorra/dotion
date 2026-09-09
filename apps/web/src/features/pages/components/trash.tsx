@@ -1,10 +1,16 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useSuspenseQuery } from '@tanstack/react-query'
+import { Trash2 } from 'lucide-react'
 import { trashedPagesQueryOptions } from '../query-options'
-import { TrashedPageRow } from './trashed-page-row'
+import { TrashedPageTreeItem } from './trashed-page-tree-item'
 import { TrashEmpty } from './trash-empty'
 import { DeletePermanentlyDialog } from './delete-permanently-dialog'
+import { EmptyTrashDialog } from './empty-trash-dialog'
+import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { Can } from '@/features/authorization/components/can'
+import { buildTrashTree } from '../lib/build-page-tree'
+import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import * as m from '@/paraglide/messages'
 
 interface TrashProps {
@@ -17,6 +23,9 @@ export function Trash({ workspaceId }: TrashProps) {
   )
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [isEmptyTrashOpen, setIsEmptyTrashOpen] = useState(false)
+
+  const tree = useMemo(() => buildTrashTree(pages), [pages])
 
   if (pages.length === 0) {
     return <TrashEmpty />
@@ -26,27 +35,46 @@ export function Trash({ workspaceId }: TrashProps) {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-10">
-      <div className="mb-6 flex items-center gap-3">
-        <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground md:hidden" />
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            {m.trash_title()}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {m.trash_description()}
-          </p>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground md:hidden" />
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">
+              {m.trash_title()}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {m.trash_description()}
+            </p>
+          </div>
         </div>
+        <Can
+          resource="page"
+          action="emptyTrash"
+          scope={{ workspaceId: workspaceId as WorkspaceId }}
+        >
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setIsEmptyTrashOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {m.trash_empty_button()}
+          </Button>
+        </Can>
       </div>
-      <div className="divide-y">
-        {pages.map((page) => (
-          <TrashedPageRow
-            key={page.id}
-            page={page}
+
+      <div className="space-y-0.5 rounded-lg border bg-card p-2 shadow-sm">
+        {tree.map((node) => (
+          <TrashedPageTreeItem
+            key={node.id}
+            node={node}
             workspaceId={workspaceId}
+            depth={0}
             onDeletePermanently={setPendingDeleteId}
           />
         ))}
       </div>
+
       <DeletePermanentlyDialog
         open={Boolean(pendingDeleteId)}
         onOpenChange={(open) => {
@@ -54,6 +82,12 @@ export function Trash({ workspaceId }: TrashProps) {
         }}
         pageId={pendingDeleteId}
         pageTitle={pendingDeletePage?.title ?? ''}
+        workspaceId={workspaceId}
+      />
+
+      <EmptyTrashDialog
+        open={isEmptyTrashOpen}
+        onOpenChange={setIsEmptyTrashOpen}
         workspaceId={workspaceId}
       />
     </div>

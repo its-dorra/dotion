@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useCallback, memo } from 'react'
 import type { BlockNoteEditor } from '@blocknote/core'
 import {
   useCreateBlockNote,
@@ -50,7 +50,7 @@ const FormattingToolbarWithAI = () => (
   </FormattingToolbar>
 )
 
-export function PageEditor({
+export const PageEditor = memo(function PageEditor({
   workspaceId,
   pageId,
   readOnly,
@@ -78,7 +78,7 @@ export function PageEditor({
       AIExtension({
         transport: new DefaultChatTransport({
           api: `/api/v1/workspaces/${workspaceId}/pages/${pageId}/ai/streamText`,
-        }),
+        }) as any,
       }),
     ]
   }, [workspaceId, pageId])
@@ -113,10 +113,19 @@ export function PageEditor({
     [workspaceId, pageId],
   )
 
-  const getSlashMenuItems = (editorInstance: BlockNoteEditor) => [
-    ...getDefaultReactSlashMenuItems(editorInstance),
-    ...(readOnly ? [] : getAISlashMenuItems(editorInstance)),
-  ]
+  const getSlashMenuItems = useCallback(
+    (editorInstance: BlockNoteEditor) => [
+      ...getDefaultReactSlashMenuItems(editorInstance),
+      ...(readOnly ? [] : getAISlashMenuItems(editorInstance)),
+    ],
+    [readOnly],
+  )
+
+  const getItems = useCallback(
+    async (query: string) =>
+      filterSuggestionItems(getSlashMenuItems(editor), query),
+    [editor, getSlashMenuItems],
+  )
 
   return (
     <div className="mx-auto max-w-3xl px-12 pb-32 pt-4">
@@ -135,13 +144,11 @@ export function PageEditor({
             />
             <SuggestionMenuController
               triggerCharacter="/"
-              getItems={async (query) =>
-                filterSuggestionItems(getSlashMenuItems(editor), query)
-              }
+              getItems={getItems}
             />
           </>
         )}
       </BlockNoteView>
     </div>
   )
-}
+})

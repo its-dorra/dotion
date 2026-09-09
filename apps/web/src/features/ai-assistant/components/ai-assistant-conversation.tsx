@@ -13,6 +13,7 @@ import type {
   AssistantThreadId,
   AssistantCitation,
   AssistantMessage as AssistantMessageType,
+  ToolPart,
 } from '../types'
 
 interface AiAssistantConversationProps {
@@ -20,6 +21,7 @@ interface AiAssistantConversationProps {
   activeThreadId: AssistantThreadId | null
   isStreaming: boolean
   streamingText: string
+  toolParts?: ToolPart[]
   optimisticUserMessage: string | null
   onSendSuggestion?: (prompt: string) => void
 }
@@ -29,6 +31,7 @@ export function AiAssistantConversation({
   activeThreadId,
   isStreaming,
   streamingText,
+  toolParts,
   optimisticUserMessage,
   onSendSuggestion,
 }: AiAssistantConversationProps) {
@@ -63,13 +66,21 @@ export function AiAssistantConversation({
           pageId: citation.pageId,
         },
       }).then(() => {
-        if (citation.headingBlockId) {
-          setTimeout(() => {
-            const el = document.getElementById(citation.headingBlockId!)
+        if (citation.headingBlockId && citation.headingBlockId !== 'root') {
+          let attempts = 0
+          const interval = setInterval(() => {
+            attempts++
+            const el =
+              document.querySelector(
+                `[data-id="${citation.headingBlockId}"]`,
+              ) || document.getElementById(citation.headingBlockId!)
             if (el) {
               el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              clearInterval(interval)
+            } else if (attempts >= 10) {
+              clearInterval(interval)
             }
-          }, 300)
+          }, 150)
         }
       })
     },
@@ -118,12 +129,14 @@ export function AiAssistantConversation({
 
           {isStreaming && (
             <>
-              {streamingText ? (
+              {streamingText || (toolParts && toolParts.length > 0) ? (
                 <Message
                   id="streaming_assistant"
                   role="assistant"
                   content={streamingText}
+                  toolParts={toolParts}
                   isStreaming={true}
+                  onSelectCitation={handleSelectCitation}
                 />
               ) : (
                 <div className="py-2 pl-2">

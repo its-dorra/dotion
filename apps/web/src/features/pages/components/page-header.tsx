@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { PageCover, AddCoverButton } from './page-cover'
 import { PageIconPicker, AddIconButton } from './page-icon-picker'
 import { PageTitle } from './page-title'
@@ -11,7 +12,7 @@ interface PageHeaderProps {
   readOnly?: boolean
 }
 
-export function PageHeader({
+export const PageHeader = memo(function PageHeader({
   page,
   onTitleChange,
   onIconChange,
@@ -73,4 +74,4 @@ export function PageHeader({
       </div>
     </div>
   )
-}
+})

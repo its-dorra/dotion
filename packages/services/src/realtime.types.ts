@@ -49,11 +49,16 @@ export interface WorkspaceEventPublisher {
   broadcastPageMovedToTrash(
     workspaceId: WorkspaceId,
     pageId: PageId,
+    pageIds?: PageId[],
   ): Promise<void>;
   broadcastPageRestored(workspaceId: WorkspaceId, page: Page): Promise<void>;
   broadcastPageDeletedPermanently(
     workspaceId: WorkspaceId,
     pageId: PageId,
+    pageIds?: PageId[],
+  ): Promise<void>;
+  broadcastTrashEmptied(
+    workspaceId: WorkspaceId,
   ): Promise<void>;
 }
 

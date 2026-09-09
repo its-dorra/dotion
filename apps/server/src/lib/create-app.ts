@@ -25,7 +25,12 @@ export function createApp() {
       cors({
         origin: (origin, c: HonoContext) => c.env.CORS_ORIGIN || origin,
         credentials: true,
-        allowHeaders: ["Content-Type"],
+        allowHeaders: [
+          "Content-Type",
+          "Authorization",
+          "X-File-Name",
+          "X-File-Size",
+        ],
         allowMethods: ["POST", "GET", "PATCH", "DELETE", "OPTIONS"],
         maxAge: 600,
       }),
@@ -35,7 +40,7 @@ export function createApp() {
     .use(secureHeaders())
     .use(serveEmojiFavicon("😁"))
     .use("*", async (c, next) => {
-      const context = createAppContext(c.env);
+      const context = createAppContext(c.env, c.executionCtx);
       c.set("auth", context.auth);
       c.set("services", context.services);
 

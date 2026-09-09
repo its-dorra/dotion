@@ -2,8 +2,6 @@ export * from "./page-indexing.consumer";
 import { processPageIndexingBatch } from "./page-indexing.consumer";
 import { processPageCleanupBatch } from "./page-cleanup.consumer";
 
-export { processPageIndexingBatch, processPageCleanupBatch };
-
 export async function processQueueBatch(
   batch: MessageBatch<unknown>,
   env: Env,

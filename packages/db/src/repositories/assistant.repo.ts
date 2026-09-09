@@ -175,25 +175,6 @@ export class AssistantRepository {
     }
   }
 
-  async touchThread(
-    tx: AppDB,
-    threadId: AssistantThreadId,
-  ): Promise<Result<void, DatabaseError>> {
-    try {
-      await tx
-        .update(assistantThreads)
-        .set({ updatedAt: new Date() })
-        .where(eq(assistantThreads.id, threadId));
-
-      return Result.ok(undefined);
-    } catch (error) {
-      console.error("AssistantRepository.touchThread error:", error);
-      return Result.err(
-        new DatabaseError({ message: "Failed to update thread timestamp" }),
-      );
-    }
-  }
-
   async deleteThread(
     tx: AppDB,
     threadId: AssistantThreadId,

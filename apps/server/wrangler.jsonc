@@ -4,7 +4,6 @@
   "main": "./src/index.ts",
   "compatibility_date": "2026-08-08",
   "compatibility_flags": ["nodejs_compat"],
-  "minify": false,
   "durable_objects": {
     "bindings": [
       {
@@ -53,6 +52,7 @@
     {
       "binding": "KV",
       "id": "a231a35d6141414ca2b72d0d9456288d",
+      "remote": false,
     },
   ],
   "observability": {

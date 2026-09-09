@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 import { NotificationIcon } from './notification-icon'
@@ -43,7 +44,7 @@ interface NotificationRowProps {
   ) => void
 }
 
-export function NotificationRow({
+export const NotificationRow = memo(function NotificationRow({
   notification,
   onWorkspaceInvitationClick,
 }: NotificationRowProps) {
@@ -152,4 +153,4 @@ export function NotificationRow({
       {inner}
     </div>
   )
-}
+})

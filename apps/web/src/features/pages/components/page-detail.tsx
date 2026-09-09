@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { pageDetailQueryOptions } from '../query-options'
 import { workspaceDetailQueryOptions } from '@/features/workspaces/query-options'
 import { canQueryOptions } from '@/features/authorization/query-options'
 import { PageNavbar } from './page-navbar'
+import { PageTrashBanner } from './page-trash-banner'
 import { PageHeader } from './page-header'
 import { PageEditor } from './page-editor'
 import { CommentsSidebar } from '@/features/comments/components/comments-sidebar'
@@ -41,6 +42,10 @@ export function PageDetail({
   const session = useSession()
   const collaborators = usePageAwareness(provider, session.data?.user)
   const [isMobileCommentsOpen, setIsMobileCommentsOpen] = useState(false)
+  const handleOpenComments = useCallback(
+    () => setIsMobileCommentsOpen(true),
+    [],
+  )
 
   const { updateTitle, updateIcon, updateCover } = useUpdatePageMetadata({
     workspaceId,
@@ -65,12 +70,14 @@ export function PageDetail({
   )
   const canComment = commentPerm?.allowed ?? false
 
-  const isReadOnly = readOnly || !isEditor
-  const effectiveCommentRole = isEditor
-    ? 'editor'
-    : canComment
-      ? 'commenter'
-      : 'viewer'
+  const isReadOnly = Boolean(page.inTrash) || readOnly || !isEditor
+  const effectiveCommentRole = page.inTrash
+    ? 'viewer'
+    : isEditor
+      ? 'editor'
+      : canComment
+        ? 'commenter'
+        : 'viewer'
 
   const editorReady = provider && synced
 
@@ -81,8 +88,15 @@ export function PageDetail({
         workspaceName={workspace.name}
         workspaceId={workspaceId}
         collaborators={collaborators}
-        onOpenComments={() => setIsMobileCommentsOpen(true)}
+        onOpenComments={handleOpenComments}
       />
+      {page.inTrash && (
+        <PageTrashBanner
+          workspaceId={workspaceId}
+          pageId={page.id}
+          pageTitle={page.title ?? ''}
+        />
+      )}
       <div className="flex flex-1 overflow-y-auto">
         <div className="flex-1 min-h-full">
           <PageHeader
@@ -94,7 +108,6 @@ export function PageDetail({
           />
           {editorReady ? (
             <PageEditor
-              key={`${page.id}-${provider.doc.guid}`}
               workspaceId={workspaceId}
               pageId={page.id}
               readOnly={isReadOnly}

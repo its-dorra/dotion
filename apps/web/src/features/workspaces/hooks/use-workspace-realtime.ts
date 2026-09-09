@@ -1,9 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useParams } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useSession } from '@/features/auth/hooks/use-session'
 import { useWorkspaceWsContext } from '../components/workspace-ws-context'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import {
   handleDocumentCoverChangedWsMessage,
   handleDocumentIconChangedWsMessage,
@@ -12,9 +12,11 @@ import {
   handlePageMovedToTrashWsMessage,
   handlePageRestoredWsMessage,
   handlePageDeletedPermanentlyWsMessage,
+  handleTrashEmptiedWsMessage,
   updatePagePermissionInCache,
 } from '@/features/pages/utils'
-import type { PagePermissionRole } from '@/features/pages/types'
+import type { Page, PageId } from '@dotion/shared/pages/types'
+import type { PagePermissionRole, TrashedPage } from '@/features/pages/types'
 import {
   handleMemberJoinedWsMessage,
   handleMemberRemovedWsMessage,
@@ -49,6 +51,12 @@ export const useWorkspaceRealtime = () => {
   const currentUserId = session?.user?.id
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const params = useParams({ strict: false }) as { pageId?: string }
+  const activePageIdRef = useRef(params.pageId)
+
+  useEffect(() => {
+    activePageIdRef.current = params.pageId
+  }, [params.pageId])
 
   useEffect(() => {
     const unsubscribe = subscribe(({ payload: data, source }) => {
@@ -62,6 +70,18 @@ export const useWorkspaceRealtime = () => {
         }
         case 'page.moved_to_trash': {
           handlePageMovedToTrashWsMessage(queryClient, data.payload)
+          const activePageId = activePageIdRef.current
+          const isMoved =
+            activePageId &&
+            (activePageId === data.payload.pageId ||
+              data.payload.pageIds?.includes(activePageId as PageId))
+          if (isMoved) {
+            navigate({
+              to: '/app/workspaces/$workspaceId',
+              params: { workspaceId: data.payload.workspaceId },
+            })
+            toast.info(m.toast_page_moved_to_trash())
+          }
           break
         }
         case 'page.restored': {
@@ -70,6 +90,50 @@ export const useWorkspaceRealtime = () => {
         }
         case 'page.deleted_permanently': {
           handlePageDeletedPermanentlyWsMessage(queryClient, data.payload)
+          const activePageId = activePageIdRef.current
+          const isDeleted =
+            activePageId &&
+            (activePageId === data.payload.pageId ||
+              data.payload.pageIds?.includes(activePageId as PageId))
+          if (isDeleted) {
+            navigate({
+              to: '/app/workspaces/$workspaceId/trash',
+              params: { workspaceId: data.payload.workspaceId },
+            })
+            toast.info(m.toast_page_deleted_permanently())
+          }
+          break
+        }
+        case 'trash.emptied': {
+          const activePageId = activePageIdRef.current
+          let isCurrentlyOnTrashedPage = false
+          if (activePageId) {
+            const pageData = queryClient.getQueryData<Page>(
+              pagesKeys.detail(activePageId),
+            )
+            const trashedPages = queryClient.getQueryData<TrashedPage[]>(
+              pagesKeys.trash(data.payload.workspaceId),
+            )
+            if (
+              pageData?.inTrash ||
+              trashedPages?.some((p) => p.id === activePageId)
+            ) {
+              isCurrentlyOnTrashedPage = true
+            }
+          }
+
+          handleTrashEmptiedWsMessage(queryClient, data.payload)
+
+          if (isCurrentlyOnTrashedPage && activePageId) {
+            queryClient.removeQueries({
+              queryKey: pagesKeys.detail(activePageId),
+            })
+            navigate({
+              to: '/app/workspaces/$workspaceId/trash',
+              params: { workspaceId: data.payload.workspaceId },
+            })
+            toast.info(m.toast_trash_emptied())
+          }
           break
         }
         case 'document.title.changed': {

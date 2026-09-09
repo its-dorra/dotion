@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import {
   DropdownMenu,
@@ -20,7 +21,7 @@ interface MemberRowProps {
   canManage: boolean
 }
 
-export function MemberRow({
+export const MemberRow = memo(function MemberRow({
   workspaceId,
   member,
   canManage: _canManage,
@@ -71,4 +72,4 @@ export function MemberRow({
       </Can>
     </div>
   )
-}
+})

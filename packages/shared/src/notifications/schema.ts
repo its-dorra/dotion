@@ -3,7 +3,7 @@ import { notifications } from "@dotion/db/schema";
 import { createInsertSchema, createSelectSchema } from "drizzle-orm/zod";
 import { notificationId, userId, workspaceId, pageId } from "../ids";
 import { createPaginatedDataSchema } from "../pagination/schema";
-import { PagePermissionRoleSchema } from "../pages/schema";
+import { PagePermissionRoleSchema, AllPageRoleSchema } from "../pages/schema";
 
 export { notificationId };
 
@@ -43,7 +43,7 @@ export const PermissionChangeNotificationMetadataSchema = z.object({
   pageTitle: z.string(),
   changedByUserId: userId,
   changedByName: z.string(),
-  newRole: PagePermissionRoleSchema,
+  newRole: AllPageRoleSchema,
 });
 
 export const PageAccessRequestNotificationMetadataSchema = z.object({

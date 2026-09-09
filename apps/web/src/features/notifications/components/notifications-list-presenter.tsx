@@ -74,7 +74,7 @@ export function NotificationsListPresenter({
           <NotificationRow
             key={notification.id}
             notification={notification}
-            onWorkspaceInvitationClick={(n) => setActiveNotification(n)}
+            onWorkspaceInvitationClick={setActiveNotification}
           />
         ))}
       </div>

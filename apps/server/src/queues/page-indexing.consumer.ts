@@ -1,6 +1,7 @@
 import { createAppContext } from "#/context";
 import { pageIndexingQueueMessageSchema } from "@dotion/shared/search/schema";
 import { NotFoundError } from "@dotion/db/errors";
+import { z } from "zod";
 
 export async function processPageIndexingBatch(
   batch: MessageBatch<unknown>,
@@ -13,7 +14,7 @@ export async function processPageIndexingBatch(
     if (!parseResult.success) {
       console.error(
         "PageIndexingConsumer: dropped invalid queue message schema:",
-        parseResult.error.format(),
+        z.treeifyError(parseResult.error),
       );
       msg.ack();
       continue;

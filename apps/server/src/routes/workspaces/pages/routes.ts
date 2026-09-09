@@ -198,6 +198,43 @@ export const listTrashRoute = createAuthorizedRoute({
   },
 });
 
+export const emptyTrashRoute = createAuthorizedRoute({
+  tags,
+  summary: "Empty trash in a workspace",
+  description:
+    "Permanently deletes all pages currently marked as inTrash in the workspace.",
+  method: "delete",
+  path: "/trash",
+  authorization: {
+    resource: "page",
+    action: "emptyTrash",
+    mapScope: ({ params }) => ({ workspaceId: params.id }),
+  },
+  request: {
+    params: z.object({
+      id: workspaceId,
+    }),
+  },
+  responses: {
+    [HttpStatusCodes.OK]: jsonContent(
+      zodSuccessResponse(z.object({ success: z.boolean() })),
+      HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.UNAUTHORIZED]: jsonContent(
+      unauthorizedSchema,
+      HttpStatusPhrases.UNAUTHORIZED,
+    ),
+    [HttpStatusCodes.FORBIDDEN]: jsonContent(
+      forbiddenSchema,
+      HttpStatusPhrases.FORBIDDEN,
+    ),
+    [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
+      internalServerErrorSchema,
+      HttpStatusPhrases.INTERNAL_SERVER_ERROR,
+    ),
+  },
+});
+
 export const moveToTrashRoute = createAuthorizedRoute({
   tags,
   summary: "Move a page to trash",
@@ -338,3 +375,4 @@ export type ListTrashRoute = typeof listTrashRoute;
 export type MoveToTrashRoute = typeof moveToTrashRoute;
 export type RestoreFromTrashRoute = typeof restoreFromTrashRoute;
 export type DeletePermanentlyRoute = typeof deletePermanentlyRoute;
+export type EmptyTrashRoute = typeof emptyTrashRoute;

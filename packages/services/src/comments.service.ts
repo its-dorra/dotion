@@ -9,8 +9,9 @@ import type {
   CommentWithRepliesAndAuthor,
 } from "@dotion/shared/comments/types";
 import type { PaginationQuery } from "@dotion/shared/pagination/types";
+import type { DomainEventDispatcher } from "./event-dispatcher.types";
+import type { OutboxService } from "./outbox.service";
 import type { PagesService } from "./pages.service";
-import type { PageEventPublisher } from "./realtime.types";
 import type {
   ResourceData,
   ScopeData,
@@ -21,7 +22,8 @@ export class CommentsService {
     private readonly commentsRepository: CommentsRepository,
     private readonly pagesService: PagesService,
     private readonly dbClient: DBClient,
-    private readonly pageEventPublisher?: PageEventPublisher,
+    private readonly eventDispatcher: DomainEventDispatcher,
+    _outboxService: OutboxService,
   ) {}
 
   async getPageComments(pageId: PageId, pagination: PaginationQuery) {
@@ -42,50 +44,78 @@ export class CommentsService {
   ): Promise<
     Result<CommentWithRepliesAndAuthor, DatabaseError | NotFoundError>
   > {
-    const result = await this.commentsRepository
-      .createComment(this.dbClient, {
-        pageId: input.pageId,
-        authorId: userId,
-        body: input.body,
-        parentId: input.parentId ?? null,
-      })
-      .then(
-        Result.andThenAsync((comment) => {
-          const rootId = (comment.parentId ?? comment.id) as CommentId;
-          return this.commentsRepository.getCommentById(rootId);
+    return Result.gen(async function* (this: CommentsService) {
+      const comment = yield* Result.await(
+        this.commentsRepository.createComment(this.dbClient, {
+          pageId: input.pageId,
+          authorId: userId,
+          body: input.body,
+          parentId: input.parentId ?? null,
         }),
       );
 
-    if (result.isOk()) {
-      await this.pageEventPublisher?.broadcastCommentCreated(
-        input.pageId,
-        result.value,
+      const rootId = (comment.parentId ?? comment.id) as CommentId;
+      const commentWithReplies = yield* Result.await(
+        this.commentsRepository.getCommentById(rootId),
       );
-    }
 
-    return result;
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "comment.created",
+          aggregateId: commentWithReplies.id,
+          payload: {
+            pageId: input.pageId,
+            comment: commentWithReplies,
+          },
+        }),
+      );
+
+      return Result.ok(commentWithReplies);
+    }, this);
   }
 
   async resolveComment(pageId: PageId, commentId: CommentId) {
-    const result = await this.commentsRepository.resolveComment(commentId);
-    if (result.isOk()) {
-      await this.pageEventPublisher?.broadcastCommentResolved(
-        pageId,
-        commentId,
+    return Result.gen(async function* (this: CommentsService) {
+      const resolved = yield* Result.await(
+        this.commentsRepository.resolveComment(commentId),
       );
-    }
-    return result;
+
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "comment.resolved",
+          aggregateId: commentId,
+          payload: {
+            pageId,
+            commentId,
+          },
+        }),
+      );
+
+      return Result.ok(resolved);
+    }, this);
   }
 
   async deleteComment(pageId: PageId, commentId: CommentId) {
-    const result = await this.commentsRepository.deleteComment(commentId);
-    if (result.isOk()) {
-      await this.pageEventPublisher?.broadcastCommentDeleted(
-        pageId,
-        result.value,
+    return Result.gen(async function* (this: CommentsService) {
+      const deleted = yield* Result.await(
+        this.commentsRepository.deleteComment(commentId),
       );
-    }
-    return result;
+
+      yield* Result.await(
+        this.eventDispatcher.dispatch({
+          type: "comment.deleted",
+          aggregateId: commentId,
+          payload: {
+            pageId,
+            commentId,
+            parentId: deleted.parentId,
+            isRoot: deleted.isRoot,
+          },
+        }),
+      );
+
+      return Result.ok(deleted);
+    }, this);
   }
 
   // --- Authorization Attribute Loaders ---
@@ -137,22 +167,18 @@ export class CommentsService {
     pageId?: PageId;
     userId: UserId;
   }): Promise<Result<ScopeData<"comment"> | null, DatabaseError>> {
-    if (!pageId) {
-      return Result.ok({
-        pageId: "" as PageId,
-        workspaceId: "" as any,
-        userWorkspaceRole: null,
-        userPageRole: null,
-      });
-    }
+    if (!pageId) return Result.ok(null);
 
     return this.pagesService.loadPageResourceData({ pageId, userId }).then(
-      Result.map((pageData) => ({
-        pageId,
-        workspaceId: pageData?.workspaceId ?? ("" as any),
-        userWorkspaceRole: pageData?.userWorkspaceRole ?? null,
-        userPageRole: pageData?.userPageRole ?? null,
-      })),
+      Result.map((pageData) => {
+        if (!pageData) return null;
+        return {
+          pageId,
+          workspaceId: pageData.workspaceId,
+          userWorkspaceRole: pageData.userWorkspaceRole,
+          userPageRole: pageData.userPageRole,
+        };
+      }),
     );
   }
 }

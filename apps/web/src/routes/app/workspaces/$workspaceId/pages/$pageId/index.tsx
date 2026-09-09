@@ -66,6 +66,7 @@ export const Route = createFileRoute(
   errorComponent: PageDetailError,
   notFoundComponent: PageNotFound,
   pendingComponent: PageDetailLoading,
+  pendingMinMs: 500,
 })
 
 function PagePage() {

@@ -1,5 +1,6 @@
-import { Check, ExternalLink } from "lucide-react"
-import type { UnsplashPhoto } from "../../unsplash/types"
+import { memo } from 'react'
+import { Check, ExternalLink } from 'lucide-react'
+import type { UnsplashPhoto } from '../../unsplash/types'
 
 interface CoverUnsplashPhotoCardProps {
   photo: UnsplashPhoto
@@ -7,7 +8,7 @@ interface CoverUnsplashPhotoCardProps {
   onSelect: (photo: UnsplashPhoto) => void
 }
 
-export function CoverUnsplashPhotoCard({
+export const CoverUnsplashPhotoCard = memo(function CoverUnsplashPhotoCard({
   photo,
   isSelected,
   onSelect,
@@ -21,7 +22,7 @@ export function CoverUnsplashPhotoCard({
       >
         <img
           src={photo.thumbUrl}
-          alt={photo.description ?? "Unsplash cover"}
+          alt={photo.description ?? 'Unsplash cover'}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
@@ -51,4 +52,4 @@ export function CoverUnsplashPhotoCard({
       )}
     </div>
   )
-}
+})

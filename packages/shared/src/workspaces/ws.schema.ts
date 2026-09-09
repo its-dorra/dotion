@@ -90,6 +90,7 @@ export const WorkspaceWsMessageSchema = z.discriminatedUnion("type", [
     payload: z.object({
       workspaceId,
       pageId,
+      pageIds: z.array(pageId).optional(),
     }),
   }),
   z.object({
@@ -107,6 +108,13 @@ export const WorkspaceWsMessageSchema = z.discriminatedUnion("type", [
     payload: z.object({
       workspaceId,
       pageId,
+      pageIds: z.array(pageId).optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal("trash.emptied"),
+    payload: z.object({
+      workspaceId,
     }),
   }),
 ]);
