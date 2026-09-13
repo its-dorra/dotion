@@ -20,7 +20,7 @@ import type {
   InstanceLevelAction,
 } from "@dotion/shared/authorization/types";
 
-export type JsonRequestBody<TSchema extends z.ZodSchema = z.ZodSchema> = {
+export type JsonRequestBody<TSchema extends z.ZodType = z.ZodType> = {
   content: {
     "application/json": {
       schema: TSchema;
@@ -30,7 +30,7 @@ export type JsonRequestBody<TSchema extends z.ZodSchema = z.ZodSchema> = {
   required?: boolean;
 };
 
-export type FormDataRequestBody<TSchema extends z.ZodSchema = z.ZodSchema> = {
+export type FormDataRequestBody<TSchema extends z.ZodType = z.ZodType> = {
   content: {
     "multipart/form-data": {
       schema: TSchema;
@@ -40,7 +40,7 @@ export type FormDataRequestBody<TSchema extends z.ZodSchema = z.ZodSchema> = {
   required?: boolean;
 };
 
-export type BinaryRequestBody<TSchema extends z.ZodSchema = z.ZodSchema> = {
+export type BinaryRequestBody<TSchema extends z.ZodType = z.ZodType> = {
   content: {
     "application/octet-stream": {
       schema: TSchema;
@@ -50,7 +50,7 @@ export type BinaryRequestBody<TSchema extends z.ZodSchema = z.ZodSchema> = {
   required?: boolean;
 };
 
-export type AnyRequestBody<TSchema extends z.ZodSchema = z.ZodSchema> =
+export type AnyRequestBody<TSchema extends z.ZodType = z.ZodType> =
   | JsonRequestBody<TSchema>
   | FormDataRequestBody<TSchema>
   | BinaryRequestBody<TSchema>;
@@ -61,11 +61,11 @@ export type AuthorizedRouteConfig<
   P extends string,
   TMethod extends RouteConfig["method"],
   TResponses extends RouteConfig["responses"],
-  TParams extends z.ZodSchema | undefined = undefined,
-  TQuery extends z.ZodSchema | undefined = undefined,
-  TBodySchema extends z.ZodSchema | undefined = undefined,
-  TBody extends AnyRequestBody<z.ZodSchema> | undefined =
-    TBodySchema extends z.ZodSchema ? JsonRequestBody<TBodySchema> : undefined,
+  TParams extends z.ZodType | undefined = undefined,
+  TQuery extends z.ZodType | undefined = undefined,
+  TBodySchema extends z.ZodType | undefined = undefined,
+  TBody extends AnyRequestBody<z.ZodType> | undefined =
+    TBodySchema extends z.ZodType ? JsonRequestBody<TBodySchema> : undefined,
 > = {
   path: P;
   method: TMethod;
@@ -81,8 +81,8 @@ export type AuthorizedRouteConfig<
   request?: {
     params?: TParams;
     query?: TQuery;
-    headers?: z.ZodSchema | z.ZodSchema[];
-    cookies?: z.ZodSchema;
+    headers?: z.ZodType | z.ZodType[];
+    cookies?: z.ZodType;
     body?: TBody;
   };
   authorization: A extends CollectionLevelAction<R>
@@ -90,10 +90,10 @@ export type AuthorizedRouteConfig<
         resource: R;
         action: A;
         mapScope?: (context: {
-          params: TParams extends z.ZodSchema
+          params: TParams extends z.ZodType
             ? z.infer<TParams>
             : Record<string, string>;
-          query: TQuery extends z.ZodSchema
+          query: TQuery extends z.ZodType
             ? z.infer<TQuery>
             : Record<string, string>;
           c: HonoContext;
@@ -103,15 +103,13 @@ export type AuthorizedRouteConfig<
         resource: R;
         action: A;
         mapInput: (context: {
-          params: TParams extends z.ZodSchema
+          params: TParams extends z.ZodType
             ? z.infer<TParams>
             : Record<string, string>;
-          query: TQuery extends z.ZodSchema
+          query: TQuery extends z.ZodType
             ? z.infer<TQuery>
             : Record<string, string>;
-          body: TBodySchema extends z.ZodSchema
-            ? z.infer<TBodySchema>
-            : unknown;
+          body: TBodySchema extends z.ZodType ? z.infer<TBodySchema> : unknown;
           c: HonoContext;
         }) => ResourceInput<R> | Promise<ResourceInput<R>>;
       };
@@ -121,18 +119,18 @@ export type AuthorizedRouteConfig<
 export type ConstructedRoute<
   P extends string,
   TMethod extends RouteConfig["method"],
-  TParams extends z.ZodSchema | undefined,
-  TQuery extends z.ZodSchema | undefined,
-  TBodySchema extends z.ZodSchema | undefined,
+  TParams extends z.ZodType | undefined,
+  TQuery extends z.ZodType | undefined,
+  TBodySchema extends z.ZodType | undefined,
   TResponses extends RouteConfig["responses"],
-  TBody extends AnyRequestBody<z.ZodSchema> | undefined =
-    TBodySchema extends z.ZodSchema ? JsonRequestBody<TBodySchema> : undefined,
+  TBody extends AnyRequestBody<z.ZodType> | undefined =
+    TBodySchema extends z.ZodType ? JsonRequestBody<TBodySchema> : undefined,
 > = {
   path: P;
   method: TMethod;
-  request: (TParams extends z.ZodSchema ? { params: TParams } : {}) &
-    (TQuery extends z.ZodSchema ? { query: TQuery } : {}) &
-    (TBody extends AnyRequestBody<z.ZodSchema> ? { body: TBody } : {});
+  request: (TParams extends z.ZodType ? { params: TParams } : {}) &
+    (TQuery extends z.ZodType ? { query: TQuery } : {}) &
+    (TBody extends AnyRequestBody<z.ZodType> ? { body: TBody } : {});
   responses: TResponses;
 };
 
@@ -142,11 +140,11 @@ export function createAuthorizedRoute<
   P extends string,
   TMethod extends RouteConfig["method"],
   TResponses extends RouteConfig["responses"],
-  TParams extends z.ZodSchema | undefined = undefined,
-  TQuery extends z.ZodSchema | undefined = undefined,
-  TBodySchema extends z.ZodSchema | undefined = undefined,
-  TBody extends AnyRequestBody<z.ZodSchema> | undefined =
-    TBodySchema extends z.ZodSchema ? JsonRequestBody<TBodySchema> : undefined,
+  TParams extends z.ZodType | undefined = undefined,
+  TQuery extends z.ZodType | undefined = undefined,
+  TBodySchema extends z.ZodType | undefined = undefined,
+  TBody extends AnyRequestBody<z.ZodType> | undefined =
+    TBodySchema extends z.ZodType ? JsonRequestBody<TBodySchema> : undefined,
 >(
   config: AuthorizedRouteConfig<
     R,
@@ -179,7 +177,7 @@ export function createAuthorizedRoute<
       mapInput: authorization.mapInput as InstanceAuthorizeOptions<
         R,
         Extract<A, InstanceLevelAction<R>>,
-        TParams extends z.ZodSchema ? z.infer<TParams> : Record<string, string>
+        TParams extends z.ZodType ? z.infer<TParams> : Record<string, string>
       >["mapInput"],
     });
   } else {
@@ -189,13 +187,13 @@ export function createAuthorizedRoute<
       mapScope: authorization.mapScope as CollectionAuthorizeOptions<
         R,
         Extract<A, CollectionLevelAction<R>>,
-        TParams extends z.ZodSchema ? z.infer<TParams> : Record<string, string>
+        TParams extends z.ZodType ? z.infer<TParams> : Record<string, string>
       >["mapScope"],
     });
   }
 
   return createOpenApiRoute({
-    ...(restConfig as unknown as RouteConfig),
+    ...(restConfig as RouteConfig),
     middleware: [currentUserMiddleware, authMiddleware, ...middleware],
   }) as unknown as ConstructedRoute<
     P,

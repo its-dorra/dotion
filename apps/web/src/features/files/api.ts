@@ -103,7 +103,6 @@ export class FilesApi {
       return url
     }
 
-    // Relative endpoint path (e.g. /api/v1/...)
     if (url.startsWith('/')) {
       return typeof window !== 'undefined'
         ? `${window.location.origin}${url}`

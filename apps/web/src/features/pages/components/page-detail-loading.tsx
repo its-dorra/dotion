@@ -2,7 +2,6 @@ import { useParams } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SidebarTrigger } from '@/components/ui/sidebar'
-import { CommentsLoading } from '@/features/comments/components/comments-loading'
 import { pagesKeys } from '../query-options'
 import type { Page, PageTreeNode } from '../types'
 
@@ -115,13 +114,6 @@ export function PageDetailLoading() {
             </div>
           </div>
         </div>
-
-        <aside className="hidden w-80 shrink-0 border-l lg:block">
-          <div className="flex h-12 shrink-0 items-center border-b px-4">
-            <Skeleton className="h-4 w-20" />
-          </div>
-          <CommentsLoading />
-        </aside>
       </div>
     </div>
   )

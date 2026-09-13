@@ -9,6 +9,7 @@ import type {
   AssistantMessageId,
   PageId,
 } from "@dotion/shared/ids";
+import type { ToolPart } from "@dotion/shared/assistant/types";
 
 export interface AssistantCitation {
   pageId: PageId;
@@ -54,6 +55,7 @@ export const assistantMessages = snakeCase.table(
     role: text({ enum: ["user", "assistant", "system"] }).notNull(),
     content: text().notNull(),
     citations: jsonb().$type<AssistantCitation[]>(),
+    toolCalls: jsonb().$type<ToolPart[]>(),
     tokensUsed: integer().default(0).notNull(),
     createdAt,
     updatedAt,

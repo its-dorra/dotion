@@ -1,6 +1,12 @@
 import * as React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import remarkBreaks from 'remark-breaks'
+import remarkEmoji from 'remark-emoji'
+import rehypeKatex from 'rehype-katex'
+import rehypeSlug from 'rehype-slug'
+import rehypeExternalLinks from 'rehype-external-links'
 import { Sparkles, Copy, Check } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { CodeBlock } from './code-block'
@@ -24,7 +30,12 @@ export interface MessageProps {
   className?: string
 }
 
-const REMARK_PLUGINS = [remarkGfm]
+const REMARK_PLUGINS = [remarkGfm, remarkMath, remarkBreaks, remarkEmoji]
+const REHYPE_PLUGINS = [
+  rehypeKatex,
+  rehypeSlug,
+  [rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }],
+] as React.ComponentProps<typeof ReactMarkdown>['rehypePlugins']
 
 export const Message = React.memo(function Message({
   role,
@@ -45,7 +56,6 @@ export const Message = React.memo(function Message({
     setTimeout(() => setHasCopied(false), 2000)
   }, [content])
 
-  // Pre-process citations like [1], [2] to reference links so ReactMarkdown renders them as interactive buttons
   const processedContent = React.useMemo(() => {
     return content.replace(/(?<=\s|^|[(])\[(\d+)\]/g, '[$1](#citation-$1)')
   }, [content])
@@ -113,6 +123,7 @@ export const Message = React.memo(function Message({
           {content ? (
             <ReactMarkdown
               remarkPlugins={REMARK_PLUGINS}
+              rehypePlugins={REHYPE_PLUGINS}
               components={{
                 code({ className: codeClassName, children, ...props }) {
                   const match = /language-(\w+)/.exec(codeClassName || '')

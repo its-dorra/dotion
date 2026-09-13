@@ -41,12 +41,10 @@ export const createThreadHandler: AppRouteHandler<CreateThreadRoute> = async (
 ) => {
   const currentUser = c.var.currentUser;
   const { id: workspaceId } = c.req.valid("param");
-  const { title } = c.req.valid("json");
 
   const result = await c.var.services.assistant.createThread(
     workspaceId,
     currentUser.id,
-    title,
   );
 
   if (result.isErr()) {
@@ -115,6 +113,7 @@ export const streamAssistantChatHandler: AppRouteHandler<
     threadId,
     userId: currentUser.id,
     messages,
+    onBackgroundWork: (promise) => c.executionCtx.waitUntil(promise),
   });
 
   if (result.isErr()) {

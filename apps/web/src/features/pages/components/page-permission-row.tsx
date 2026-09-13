@@ -41,8 +41,11 @@ export function PagePermissionRow({
   canManage,
 }: PagePermissionRowProps) {
   const updatePermission = useUpdatePagePermission()
+  const isOwner = permission.workspaceRole === 'owner'
 
   async function handleChangeRole(role: PagePermissionRole) {
+    if (isOwner) return
+
     await updatePermission.mutateAsync({
       workspaceId,
       pageId,
@@ -64,7 +67,7 @@ export function PagePermissionRow({
           {permission.email}
         </p>
       </div>
-      {canManage ? (
+      {canManage && !isOwner ? (
         <Select
           value={permission.role}
           disabled={updatePermission.isPending}
@@ -83,7 +86,9 @@ export function PagePermissionRow({
         </Select>
       ) : (
         <span className="text-xs capitalize text-muted-foreground">
-          {getTranslatedRole(permission.role)}
+          {isOwner
+            ? m.workspace_role_owner()
+            : getTranslatedRole(permission.role)}
         </span>
       )}
     </div>

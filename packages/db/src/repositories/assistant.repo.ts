@@ -1,41 +1,22 @@
 import type { AppDB, DBClient } from "../index";
-import {
-  assistantThreads,
-  assistantMessages,
-  type AssistantCitation,
-} from "../schema";
+import { assistantThreads, assistantMessages } from "../schema";
 import { and, desc, eq, lt } from "drizzle-orm";
 import { Result } from "better-result";
 import { DatabaseError, NotFoundError } from "../errors";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
 import type { UserId } from "@dotion/shared/users/types";
-import type { AssistantThreadId, AssistantMessageId } from "@dotion/shared/ids";
+import type { AssistantThreadId } from "@dotion/shared/ids";
+import type {
+  AssistantThread,
+  AssistantMessage,
+  AssistantCitation,
+  ToolPart,
+  PaginatedThreadsResponse,
+  PaginatedMessagesResponse,
+} from "@dotion/shared/assistant/types";
 
-export interface AssistantThreadRecord {
-  id: AssistantThreadId;
-  workspaceId: WorkspaceId;
-  userId: UserId;
-  title: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface AssistantMessageRecord {
-  id: AssistantMessageId;
-  threadId: AssistantThreadId;
-  role: "user" | "assistant" | "system";
-  content: string;
-  citations: AssistantCitation[] | null;
-  tokensUsed: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface PaginatedList<T> {
-  items: T[];
-  nextCursor: string | null;
-  hasMore: boolean;
-}
+export type AssistantThreadRecord = AssistantThread;
+export type AssistantMessageRecord = AssistantMessage;
 
 export class AssistantRepository {
   constructor(private readonly db: DBClient) {}
@@ -44,7 +25,7 @@ export class AssistantRepository {
     workspaceId: WorkspaceId,
     userId: UserId,
     pagination: { cursor?: string; limit?: number } = {},
-  ): Promise<Result<PaginatedList<AssistantThreadRecord>, DatabaseError>> {
+  ): Promise<Result<PaginatedThreadsResponse, DatabaseError>> {
     try {
       const limit = Math.min(pagination.limit ?? 20, 50);
       const cursorDate = pagination.cursor
@@ -72,7 +53,7 @@ export class AssistantRepository {
       const hasMore = rows.length > limit;
       const items = (
         hasMore ? rows.slice(0, limit) : rows
-      ) as AssistantThreadRecord[];
+      ) as AssistantThread[];
       const lastItem = items[items.length - 1];
       const nextCursor =
         hasMore && lastItem ? lastItem.updatedAt.toISOString() : null;
@@ -92,7 +73,7 @@ export class AssistantRepository {
 
   async getThread(
     threadId: AssistantThreadId,
-  ): Promise<Result<AssistantThreadRecord, DatabaseError | NotFoundError>> {
+  ): Promise<Result<AssistantThread, DatabaseError | NotFoundError>> {
     try {
       const [row] = await this.db
         .select()
@@ -106,7 +87,7 @@ export class AssistantRepository {
         );
       }
 
-      return Result.ok(row as AssistantThreadRecord);
+      return Result.ok(row as AssistantThread);
     } catch (error) {
       console.error("AssistantRepository.getThread error:", error);
       return Result.err(
@@ -122,7 +103,7 @@ export class AssistantRepository {
       userId: UserId;
       title?: string;
     },
-  ): Promise<Result<AssistantThreadRecord, DatabaseError>> {
+  ): Promise<Result<AssistantThread, DatabaseError>> {
     try {
       const [row] = await tx
         .insert(assistantThreads)
@@ -139,7 +120,7 @@ export class AssistantRepository {
         );
       }
 
-      return Result.ok(row as AssistantThreadRecord);
+      return Result.ok(row as AssistantThread);
     } catch (error) {
       console.error("AssistantRepository.createThread error:", error);
       return Result.err(
@@ -152,7 +133,7 @@ export class AssistantRepository {
     tx: AppDB,
     threadId: AssistantThreadId,
     title: string,
-  ): Promise<Result<AssistantThreadRecord, DatabaseError | NotFoundError>> {
+  ): Promise<Result<AssistantThread, DatabaseError | NotFoundError>> {
     try {
       const [row] = await tx
         .update(assistantThreads)
@@ -166,7 +147,7 @@ export class AssistantRepository {
         );
       }
 
-      return Result.ok(row as AssistantThreadRecord);
+      return Result.ok(row as AssistantThread);
     } catch (error) {
       console.error("AssistantRepository.updateThreadTitle error:", error);
       return Result.err(
@@ -195,7 +176,7 @@ export class AssistantRepository {
   async listMessages(
     threadId: AssistantThreadId,
     pagination: { cursor?: string; limit?: number } = {},
-  ): Promise<Result<PaginatedList<AssistantMessageRecord>, DatabaseError>> {
+  ): Promise<Result<PaginatedMessagesResponse, DatabaseError>> {
     try {
       const limit = Math.min(pagination.limit ?? 30, 100);
       const cursorDate = pagination.cursor
@@ -217,15 +198,12 @@ export class AssistantRepository {
         .limit(limit + 1);
 
       const hasMore = rows.length > limit;
-      const rawItems = (
+      const items = (
         hasMore ? rows.slice(0, limit) : rows
-      ) as AssistantMessageRecord[];
-      const lastRaw = rawItems[rawItems.length - 1];
+      ) as AssistantMessage[];
+      const lastItem = items[items.length - 1];
       const nextCursor =
-        hasMore && lastRaw ? lastRaw.createdAt.toISOString() : null;
-
-      // Reverse so items are in chronological ascending order for UI rendering
-      const items = [...rawItems].reverse();
+        hasMore && lastItem ? lastItem.createdAt.toISOString() : null;
 
       return Result.ok({
         items,
@@ -247,9 +225,10 @@ export class AssistantRepository {
       role: "user" | "assistant" | "system";
       content: string;
       citations?: AssistantCitation[];
+      toolCalls?: ToolPart[];
       tokensUsed?: number;
     },
-  ): Promise<Result<AssistantMessageRecord, DatabaseError>> {
+  ): Promise<Result<AssistantMessage, DatabaseError>> {
     try {
       const [row] = await tx
         .insert(assistantMessages)
@@ -258,6 +237,7 @@ export class AssistantRepository {
           role: input.role,
           content: input.content,
           citations: input.citations ?? null,
+          toolCalls: input.toolCalls ?? null,
           tokensUsed: input.tokensUsed ?? 0,
         })
         .returning();
@@ -273,7 +253,7 @@ export class AssistantRepository {
         .set({ updatedAt: new Date() })
         .where(eq(assistantThreads.id, input.threadId));
 
-      return Result.ok(row as AssistantMessageRecord);
+      return Result.ok(row as AssistantMessage);
     } catch (error) {
       console.error("AssistantRepository.createMessage error:", error);
       return Result.err(

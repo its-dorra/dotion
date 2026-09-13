@@ -1,4 +1,6 @@
-import { z } from "zod";
+import { z } from "@hono/zod-openapi";
+import { assistantThreads, assistantMessages } from "@dotion/db/schema";
+import { createInsertSchema, createSelectSchema } from "drizzle-orm/zod";
 import {
   workspaceId,
   userId,
@@ -8,6 +10,8 @@ import {
 } from "../ids";
 import type { UIMessage } from "ai";
 
+export { assistantThreadId, assistantMessageId };
+
 export const assistantCitationSchema = z.object({
   pageId: pageId,
   pageTitle: z.string(),
@@ -15,35 +19,68 @@ export const assistantCitationSchema = z.object({
   headingBlockId: z.string(),
 });
 
-export const assistantThreadSchema = z.object({
+export const assistantToolCallSchema = z.object({
+  type: z.string(),
+  toolCallId: z.string(),
+  state: z.string(),
+  input: z.unknown().optional(),
+  output: z.unknown().optional(),
+  errorText: z.string().optional(),
+});
+
+export const assistantThreadSchema = createSelectSchema(assistantThreads, {
   id: assistantThreadId,
-  workspaceId: workspaceId,
-  userId: userId,
-  title: z.string(),
+  workspaceId,
+  userId,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-export const assistantMessageSchema = z.object({
+export const createThreadRequestSchema = createInsertSchema(assistantThreads, {
+  title: z.string().optional(),
+}).pick({
+  title: true,
+});
+
+export const assistantMessageSchema = createSelectSchema(assistantMessages, {
   id: assistantMessageId,
   threadId: assistantThreadId,
   role: z.enum(["user", "assistant", "system"]),
   content: z.string(),
   citations: z.array(assistantCitationSchema).nullable(),
+  toolCalls: z.array(assistantToolCallSchema).nullable().optional(),
   tokensUsed: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-export const createThreadRequestSchema = z.object({
-  title: z.string().optional(),
+export const createAssistantMessageSchema = createInsertSchema(
+  assistantMessages,
+  {
+    threadId: assistantThreadId,
+    role: z.enum(["user", "assistant", "system"]),
+    citations: z.array(assistantCitationSchema).optional(),
+    toolCalls: z.array(assistantToolCallSchema).optional(),
+  },
+).pick({
+  threadId: true,
+  role: true,
+  content: true,
+  citations: true,
+  toolCalls: true,
+  tokensUsed: true,
 });
 
 export const sendAssistantMessageRequestSchema = z.object({
-  messages: z.custom<UIMessage[]>(
-    (val) => Array.isArray(val) && val.length > 0,
-    "Must be a non-empty array of chat messages",
-  ),
+  messages: z
+    .custom<UIMessage[]>(
+      (val) => Array.isArray(val) && val.length > 0,
+      "Must be a non-empty array of chat messages",
+    )
+    .openapi({
+      type: "array",
+      description: "An array of chat messages to send to the assistant",
+    }),
 });
 
 export const listPaginationQuerySchema = z.object({
@@ -62,20 +99,3 @@ export const paginatedMessagesResponseSchema = z.object({
   nextCursor: z.string().nullable(),
   hasMore: z.boolean(),
 });
-
-export type AssistantCitation = z.infer<typeof assistantCitationSchema>;
-export type AssistantThread = z.infer<typeof assistantThreadSchema>;
-export type AssistantMessage = z.infer<typeof assistantMessageSchema>;
-export type CreateThreadRequest = z.infer<typeof createThreadRequestSchema>;
-export type SendAssistantMessageRequest = z.infer<
-  typeof sendAssistantMessageRequestSchema
->;
-export type ListPaginationQuery = z.infer<typeof listPaginationQuerySchema>;
-export type PaginatedThreadsResponse = z.infer<
-  typeof paginatedThreadsResponseSchema
->;
-export type PaginatedMessagesResponse = z.infer<
-  typeof paginatedMessagesResponseSchema
->;
-
-export * from "./tools";

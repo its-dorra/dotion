@@ -1,18 +1,13 @@
-import { Result, TaggedError } from "better-result";
+import { Result } from "better-result";
 import {
   createGoogleGenerativeAI,
   type GoogleEmbeddingModelOptions,
 } from "@ai-sdk/google";
 import { embed, embedMany } from "ai";
 
-export class EmbeddingError extends TaggedError("EmbeddingError")<{
-  message: string;
-  cause?: Error;
-}> {}
-
-export type EmbeddingTaskType = NonNullable<
-  GoogleEmbeddingModelOptions["taskType"]
->;
+import { EmbeddingError } from "@dotion/shared/ai/errors";
+import type { EmbeddingTaskType } from "@dotion/shared/ai/types";
+export type { EmbeddingError, EmbeddingTaskType };
 
 const MAX_EMBED_CHARS = 3200;
 

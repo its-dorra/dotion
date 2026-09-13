@@ -203,7 +203,6 @@ function buildServices(
   );
   const storage = new StorageService(env.R2);
 
-  // Search & Embedding Services
   const embedding = new EmbeddingService(env.GEMINI_API_KEY);
   const chunking = new ChunkingService();
   const search = new SearchService(

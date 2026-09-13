@@ -47,3 +47,48 @@ export type PageAccessRequestStatusResponse = z.infer<
 export type PageCleanupQueueMessage = z.infer<
   typeof PageCleanupQueueMessageSchema
 >;
+
+export interface BlockNoteInlineContent {
+  type: string;
+  text?: string;
+  href?: string;
+  content?: BlockNoteInlineContent[] | string;
+  styles?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface BlockNoteTableCell {
+  text?: string;
+  content?: BlockNoteInlineContent[] | string;
+  [key: string]: unknown;
+}
+
+export interface BlockNoteBlock {
+  id?: string;
+  type?: string;
+  props?: {
+    level?: number;
+    checked?: boolean | string;
+    language?: string;
+    icon?: string;
+    textAlignment?: string;
+    textColor?: string;
+    backgroundColor?: string;
+    [key: string]: unknown;
+  };
+  content?:
+    | BlockNoteInlineContent[]
+    | string
+    | { type: string; rows: { cells: BlockNoteTableCell[] }[] };
+  children?: BlockNoteBlock[];
+  [key: string]: unknown;
+}
+
+export interface ParsedSection {
+  sectionIndex: number;
+  sectionTitle: string;
+  headingBlockId: string;
+  blockIds: string[];
+  content: string;
+  contentHash: string;
+}

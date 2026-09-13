@@ -12,4 +12,5 @@ export * from "#/assistant.service";
 export * from "#/realtime.types";
 export * from "#/outbox.service";
 export * from "#/event-dispatcher.types";
+export * from "#/workspace-tools.factory";
 export * from "./authorization/index";

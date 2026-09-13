@@ -2,7 +2,10 @@ import { pagePermissions, pages } from "@dotion/db/schema";
 import { createInsertSchema, createSelectSchema } from "drizzle-orm/zod";
 import { pageId, workspaceId, userId } from "../ids";
 import { PAGE_PERMISSION_ROLES, ALL_PAGE_ROLES } from "./constants";
-import { WorkspaceMemberDetailSchema } from "../workspaces/schema";
+import {
+  WorkspaceMemberDetailSchema,
+  WorkspaceMemberRoleSchema,
+} from "../workspaces/schema";
 import { createPaginatedDataSchema } from "../pagination/schema";
 import z from "zod";
 
@@ -56,6 +59,7 @@ export const PageMemberPermissionSchema = WorkspaceMemberDetailSchema.omit({
   role: true,
 }).extend({
   role: AllPageRoleSchema,
+  workspaceRole: WorkspaceMemberRoleSchema.optional(),
 });
 
 export const PaginatedPageMemberPermissionsSchema = createPaginatedDataSchema(

@@ -9,4 +9,11 @@ export class UnauthorizedError extends TaggedError("UnauthorizedError")<{
   message: string;
 }> {}
 
-export type AuthorizationError = ForbiddenError | UnauthorizedError;
+export class ValidationError extends TaggedError("ValidationError")<{
+  message: string;
+}> {}
+
+export type AuthorizationError =
+  | ForbiddenError
+  | UnauthorizedError
+  | ValidationError;

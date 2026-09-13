@@ -1,25 +1,20 @@
-import * as React from "react"
-import { useInfiniteQuery } from "@tanstack/react-query"
-import {
-  Plus,
-  Trash2,
-  ChevronDown,
-  MessageSquare,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
+import * as React from 'react'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { Plus, Trash2, ChevronDown, MessageSquare } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { assistantThreadsInfiniteQueryOptions } from "../query-options"
-import { useCreateAssistantThread } from "../hooks/use-create-assistant-thread"
-import { useDeleteAssistantThread } from "../hooks/use-delete-assistant-thread"
-import * as m from "@/paraglide/messages"
-import type { WorkspaceId } from "@dotion/shared/workspaces/types"
-import type { AssistantThreadId } from "../types"
+} from '@/components/ui/dropdown-menu'
+import { assistantThreadsInfiniteQueryOptions } from '../query-options'
+import { useCreateAssistantThread } from '../hooks/use-create-assistant-thread'
+import { useDeleteAssistantThread } from '../hooks/use-delete-assistant-thread'
+import * as m from '@/paraglide/messages'
+import type { WorkspaceId } from '@dotion/shared/workspaces/types'
+import type { AssistantThreadId } from '../types'
 
 interface AiAssistantThreadSelectorProps {
   workspaceId: WorkspaceId
@@ -44,16 +39,15 @@ export function AiAssistantThreadSelector({
     return threadsQuery.data?.pages.flatMap((page) => page.items) ?? []
   }, [threadsQuery.data])
 
-  const effectiveActiveThreadId = activeThreadId ?? (threads[0]?.id as AssistantThreadId | undefined)
+  const effectiveActiveThreadId =
+    activeThreadId ?? (threads[0]?.id as AssistantThreadId | undefined)
 
   const activeThread = React.useMemo(() => {
     return threads.find((t) => t.id === effectiveActiveThreadId)
   }, [threads, effectiveActiveThreadId])
 
   const handleCreateNewThread = async () => {
-    const thread = await createThreadMutation.mutateAsync({
-      title: m.ai_assistant_new_conversation(),
-    })
+    const thread = await createThreadMutation.mutateAsync({})
     onSelectThread(thread.id as AssistantThreadId)
   }
 
@@ -76,13 +70,10 @@ export function AiAssistantThreadSelector({
           <Button
             variant="outline"
             size="sm"
-            className="h-7 text-xs gap-1.5 max-w-[140px] px-2 font-normal"
+            className="h-7 text-xs gap-1.5 max-w-35 px-2 font-normal"
           >
             <MessageSquare className="size-3 text-muted-foreground shrink-0" />
-            <span
-              key={activeThread?.title || "conversations"}
-              className="truncate animate-in fade-in slide-in-from-top-1 duration-300"
-            >
+            <span className="truncate animate-in fade-in slide-in-from-top-1 duration-300">
               {activeThread?.title || m.ai_assistant_conversations()}
             </span>
             <ChevronDown className="size-3 opacity-50 shrink-0" />
@@ -115,11 +106,13 @@ export function AiAssistantThreadSelector({
                 onClick={() => onSelectThread(t.id as AssistantThreadId)}
                 className={`flex items-center justify-between group cursor-pointer ${
                   t.id === effectiveActiveThreadId
-                    ? "bg-accent text-accent-foreground font-medium"
-                    : ""
+                    ? 'bg-accent text-accent-foreground font-medium'
+                    : ''
                 }`}
               >
-                <span className="truncate pr-2">{t.title}</span>
+                <span className="truncate pr-2">
+                  {t.title || m.ai_assistant_new_conversation()}
+                </span>
                 <button
                   onClick={(e) =>
                     handleDeleteThread(e, t.id as AssistantThreadId)

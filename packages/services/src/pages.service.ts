@@ -113,31 +113,11 @@ export class PagesService {
   }
 
   async createPage(
-    { userId }: { userId: UserId },
     input: CreatePageInput,
   ): Promise<Result<Page, DatabaseError>> {
     return Result.gen(async function* (this: PagesService) {
       const page = yield* Result.await(
-        this.dbClient.transaction(async (tx) => {
-          return Result.gen(async function* (this: PagesService) {
-            const page = yield* Result.await(
-              this.pagesRepository.createPage(tx, input),
-            );
-            yield* Result.await(
-              this.pagesRepository.createPagePermission(tx, {
-                pageId: page.id,
-                userId,
-                role: "editor",
-                workspaceId: input.workspaceId,
-              }),
-            );
-            return Result.ok(page);
-          }, this).then(
-            Result.tapError(() => {
-              tx.rollback();
-            }),
-          );
-        }),
+        this.pagesRepository.createPage(this.dbClient, input),
       );
 
       yield* Result.await(
@@ -278,7 +258,11 @@ export class PagesService {
           name: member.name,
           email: member.email,
           avatarUrl: member.avatarUrl,
-          role: permMap.get(member.userId) ?? "viewer",
+          role:
+            member.role === "owner"
+              ? "editor"
+              : (permMap.get(member.userId) ?? "viewer"),
+          workspaceRole: member.role,
           joinedAt: member.joinedAt,
         }),
       );
@@ -614,12 +598,16 @@ export class PagesService {
       );
       if (!page) return Result.ok(null);
 
-      const [targetRole, callerWsScope] = yield* Result.await(
+      const [targetRole, callerWsScope, targetWsScope] = yield* Result.await(
         Result.allAsync([
           this.pagesRepository.getPagePermissionForUser(pageId, targetUserId),
           this.workspacesService.loadWorkspaceScopeData({
             workspaceId: page.workspaceId,
             userId: callerUserId,
+          }),
+          this.workspacesService.loadWorkspaceScopeData({
+            workspaceId: page.workspaceId,
+            userId: targetUserId,
           }),
         ]),
       );
@@ -629,6 +617,7 @@ export class PagesService {
         workspaceId: page.workspaceId,
         targetUserId,
         targetRole,
+        targetUserWorkspaceRole: targetWsScope?.userRole ?? null,
         userWorkspaceRole: callerWsScope?.userRole ?? null,
       });
     }, this);

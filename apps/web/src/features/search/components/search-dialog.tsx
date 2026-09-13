@@ -48,5 +48,3 @@ export function SearchDialog(props: SearchDialogProps) {
     <SearchDesktopDialog {...props} />
   )
 }
-
-export { SearchDialog as SearchModal }

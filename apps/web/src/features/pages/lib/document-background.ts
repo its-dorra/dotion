@@ -80,7 +80,6 @@ function createSvgDataUri(
 }
 
 export const DOCUMENT_BACKGROUND_PRESETS: BackgroundPresetConfig[] = [
-  // --- MINIMAL ---
   {
     id: 'none',
     category: 'minimal',
@@ -148,7 +147,6 @@ export const DOCUMENT_BACKGROUND_PRESETS: BackgroundPresetConfig[] = [
     ),
   },
 
-  // --- PLAYFUL & CUTE ---
   {
     id: 'hearts',
     category: 'playful',
@@ -220,7 +218,6 @@ export const DOCUMENT_BACKGROUND_PRESETS: BackgroundPresetConfig[] = [
     ),
   },
 
-  // --- NATURE & ZEN ---
   {
     id: 'botanical',
     category: 'nature',
@@ -292,7 +289,6 @@ export const DOCUMENT_BACKGROUND_PRESETS: BackgroundPresetConfig[] = [
     ),
   },
 
-  // --- COSMIC ---
   {
     id: 'constellations',
     category: 'cosmic',
@@ -336,7 +332,6 @@ export const DOCUMENT_BACKGROUND_PRESETS: BackgroundPresetConfig[] = [
     ),
   },
 
-  // --- GEOMETRIC ---
   {
     id: 'isometric-cubes',
     category: 'geometric',

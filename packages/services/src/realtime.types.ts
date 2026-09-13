@@ -57,9 +57,7 @@ export interface WorkspaceEventPublisher {
     pageId: PageId,
     pageIds?: PageId[],
   ): Promise<void>;
-  broadcastTrashEmptied(
-    workspaceId: WorkspaceId,
-  ): Promise<void>;
+  broadcastTrashEmptied(workspaceId: WorkspaceId): Promise<void>;
 }
 
 export interface PageCleanupQueue {

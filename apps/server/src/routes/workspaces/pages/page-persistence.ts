@@ -78,7 +78,6 @@ export class PagePersistence {
       this.firstUnpersistedContentEditTime = now;
     }
 
-    // Tier 1: Immediately persist latest state to local DO storage
     try {
       const state = document.encodeState();
       await this.storage.put(STORAGE_YJS_STATE, state);
@@ -359,7 +358,6 @@ export class PagePersistence {
 
     if (forceFlushAll) {
       if (hasError) {
-        // Schedule retry alarm if flush had errors
         await this.storage.setAlarm(Date.now() + 5_000);
       } else {
         await this.storage.deleteAlarm();

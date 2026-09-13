@@ -58,7 +58,6 @@ export function AiAssistantConversation({
 
   const handleSelectCitation = React.useCallback(
     (citation: AssistantCitation) => {
-      if (!workspaceId) return
       navigate({
         to: '/app/workspaces/$workspaceId/pages/$pageId',
         params: {
@@ -113,6 +112,11 @@ export function AiAssistantConversation({
               role={msg.role as 'user' | 'assistant'}
               content={msg.content}
               citations={msg.citations ?? undefined}
+              toolParts={
+                msg.toolCalls && msg.toolCalls.length > 0
+                  ? (msg.toolCalls as unknown as ToolPart[])
+                  : undefined
+              }
               tokensUsed={msg.tokensUsed ?? undefined}
               createdAt={msg.createdAt}
               onSelectCitation={handleSelectCitation}

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { AiAssistantHeader } from './ai-assistant-header'
 import { AiAssistantConversation } from './ai-assistant-conversation'
 import { AiAssistantInput } from './ai-assistant-input'
@@ -24,6 +24,7 @@ export function AiAssistantDrawerPresenter({
   const chat = useAssistantChat({
     workspaceId,
     activeThreadId,
+    onThreadCreated: setActiveThreadId,
   })
 
   return (
@@ -31,12 +32,15 @@ export function AiAssistantDrawerPresenter({
       <SheetContent
         side="right"
         className="w-full sm:max-w-md p-0 flex flex-col h-full bg-background border-l shadow-2xl z-50"
+        showCloseButton={false}
       >
-        <AiAssistantHeader
-          workspaceId={workspaceId}
-          activeThreadId={activeThreadId}
-          onSelectThread={setActiveThreadId}
-        />
+        <SheetHeader>
+          <AiAssistantHeader
+            workspaceId={workspaceId}
+            activeThreadId={activeThreadId}
+            onSelectThread={setActiveThreadId}
+          />
+        </SheetHeader>
 
         <AiAssistantConversation
           workspaceId={workspaceId}
@@ -48,9 +52,6 @@ export function AiAssistantDrawerPresenter({
         />
 
         <AiAssistantInput
-          workspaceId={workspaceId}
-          activeThreadId={activeThreadId}
-          onThreadCreated={setActiveThreadId}
           onSendMessage={chat.sendMessage}
           onStop={chat.stop}
           isStreaming={chat.isStreaming}

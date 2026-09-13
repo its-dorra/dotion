@@ -3,15 +3,14 @@ import {
   type streamText,
   convertToModelMessages,
   isTextUIPart,
-  type UIMessage,
   type ModelMessage,
 } from "ai";
+import type { AssistantRepository } from "@dotion/db/repositories";
 import type {
-  AssistantRepository,
-  AssistantThreadRecord,
-  AssistantMessageRecord,
-  PaginatedList,
-} from "@dotion/db/repositories";
+  AssistantThread,
+  PaginatedThreadsResponse,
+  PaginatedMessagesResponse,
+} from "@dotion/shared/assistant/types";
 import type { DBClient } from "@dotion/db";
 import type { AIService, AIError, QuotaExceededError } from "./ai.service";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
@@ -19,12 +18,8 @@ import type { UserId } from "@dotion/shared/users/types";
 import type { AssistantThreadId } from "@dotion/shared/ids";
 import type { DatabaseError, NotFoundError } from "@dotion/db/errors";
 
-export interface StreamChatInput {
-  threadId: AssistantThreadId;
-  workspaceId: WorkspaceId;
-  userId: UserId;
-  messages: UIMessage[];
-}
+import type { StreamChatInput } from "@dotion/shared/assistant/types";
+export type { StreamChatInput };
 
 export class AssistantService {
   constructor(
@@ -37,7 +32,7 @@ export class AssistantService {
     workspaceId: WorkspaceId,
     userId: UserId,
     pagination: { cursor?: string; limit?: number } = {},
-  ): Promise<Result<PaginatedList<AssistantThreadRecord>, DatabaseError>> {
+  ): Promise<Result<PaginatedThreadsResponse, DatabaseError>> {
     return this.assistantRepository.listThreads(
       workspaceId,
       userId,
@@ -47,7 +42,7 @@ export class AssistantService {
 
   async getThread(
     threadId: AssistantThreadId,
-  ): Promise<Result<AssistantThreadRecord, DatabaseError | NotFoundError>> {
+  ): Promise<Result<AssistantThread, DatabaseError | NotFoundError>> {
     return this.assistantRepository.getThread(threadId);
   }
 
@@ -55,11 +50,11 @@ export class AssistantService {
     workspaceId: WorkspaceId,
     userId: UserId,
     title?: string,
-  ): Promise<Result<AssistantThreadRecord, DatabaseError>> {
+  ): Promise<Result<AssistantThread, DatabaseError>> {
     return this.assistantRepository.createThread(this.dbClient, {
       workspaceId,
       userId,
-      title,
+      title: title?.trim() || "",
     });
   }
 
@@ -72,7 +67,7 @@ export class AssistantService {
   async listMessages(
     threadId: AssistantThreadId,
     pagination: { cursor?: string; limit?: number } = {},
-  ): Promise<Result<PaginatedList<AssistantMessageRecord>, DatabaseError>> {
+  ): Promise<Result<PaginatedMessagesResponse, DatabaseError>> {
     return this.assistantRepository.listMessages(threadId, pagination);
   }
 
@@ -132,37 +127,41 @@ export class AssistantService {
         userId: input.userId,
         workspaceId: input.workspaceId,
         messages: allMessages,
-        onFinish: async (assistantResponse, usage, citations) => {
-          try {
-            await this.assistantRepository.createMessage(this.dbClient, {
-              threadId: input.threadId,
-              role: "assistant",
-              content: assistantResponse,
-              citations: citations.length > 0 ? citations : undefined,
-              tokensUsed: usage.totalTokens,
-            });
+        onFinish: (assistantResponse, usage, citations, toolCalls) => {
+          const finishWork = (async () => {
+            try {
+              await this.assistantRepository.createMessage(this.dbClient, {
+                threadId: input.threadId,
+                role: "assistant",
+                content: assistantResponse,
+                citations: citations.length > 0 ? citations : undefined,
+                toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+                tokensUsed: usage.totalTokens,
+              });
 
-            if (
-              !thread.title ||
-              thread.title === "New Chat" ||
-              thread.title.trim() === ""
-            ) {
-              const summaryTitle =
-                await this.aiService.generateSummaryTitle(userPrompt);
-              if (summaryTitle) {
-                await this.assistantRepository.updateThreadTitle(
-                  this.dbClient,
-                  input.threadId,
-                  summaryTitle,
-                );
+              if (!thread.title) {
+                const summaryTitle =
+                  await this.aiService.generateSummaryTitle(userPrompt);
+                if (summaryTitle) {
+                  await this.assistantRepository.updateThreadTitle(
+                    this.dbClient,
+                    input.threadId,
+                    summaryTitle,
+                  );
+                }
               }
+            } catch (error) {
+              console.error(
+                "AssistantService.streamChat onFinish persistence error:",
+                error,
+              );
             }
-          } catch (error) {
-            console.error(
-              "AssistantService.streamChat onFinish persistence error:",
-              error,
-            );
+          })();
+
+          if (input.onBackgroundWork) {
+            input.onBackgroundWork(finishWork);
           }
+          return finishWork;
         },
       });
     }, this);

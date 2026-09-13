@@ -1,4 +1,4 @@
-import { Result, TaggedError } from "better-result";
+import { Result } from "better-result";
 import { ForbiddenError } from "@dotion/shared/authorization/errors";
 import { DatabaseError } from "@dotion/db";
 import { deny, type Decision } from "@dotion/shared/authorization/decisions";
@@ -26,9 +26,8 @@ import { pagePermissionPolicy } from "./policies/page-permission.policy";
 import { commentPolicy } from "./policies/comment.policy";
 import { userPolicy } from "./policies/user.policy";
 
-export class ValidationError extends TaggedError("ValidationError")<{
-  message: string;
-}> {}
+import { ValidationError } from "@dotion/shared/authorization/errors";
+export type { ValidationError };
 
 export type AuthorizeParams<
   R extends ResourceType,

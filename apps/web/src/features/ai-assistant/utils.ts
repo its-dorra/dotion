@@ -9,6 +9,7 @@ import type {
   AssistantThreadId,
   PaginatedMessagesResponse,
   WorkspaceId,
+  ToolPart,
 } from './types'
 
 export function getUIMessageText(msg?: ChatMessage): string {
@@ -62,6 +63,9 @@ export function optimisticallyUpdateThreadMessagesCache({
   const userText = getUIMessageText(userMessage)
   const assistantText = getUIMessageText(assistantMessage)
   const citations = extractCitationsFromUIMessage(assistantMessage)
+  const toolParts = (assistantMessage.parts?.filter((part): part is ToolPart =>
+    part.type.startsWith('tool-'),
+  ) ?? []) as ToolPart[]
   const now = new Date()
 
   const optimisticUserMsg: AssistantMessage = {
@@ -70,6 +74,7 @@ export function optimisticallyUpdateThreadMessagesCache({
     role: 'user',
     content: userText,
     citations: null,
+    toolCalls: null,
     tokensUsed: 0,
     createdAt: new Date(now.getTime() - 1000),
     updatedAt: new Date(now.getTime() - 1000),
@@ -81,6 +86,7 @@ export function optimisticallyUpdateThreadMessagesCache({
     role: 'assistant',
     content: assistantText,
     citations: citations.length > 0 ? citations : null,
+    toolCalls: toolParts.length > 0 ? toolParts : null,
     tokensUsed: 0,
     createdAt: now,
     updatedAt: now,
@@ -105,11 +111,7 @@ export function optimisticallyUpdateThreadMessagesCache({
       const firstPage = oldData.pages[0]!
       const updatedFirstPage = {
         ...firstPage,
-        items: [
-          optimisticAssistantMsg,
-          optimisticUserMsg,
-          ...firstPage.items,
-        ],
+        items: [optimisticAssistantMsg, optimisticUserMsg, ...firstPage.items],
       }
 
       return {

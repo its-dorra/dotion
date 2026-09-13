@@ -11,13 +11,13 @@ import type { UserEventPublisher } from "./realtime.types";
 export class NotificationsService {
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
-    private readonly userEventPublisher?: UserEventPublisher,
+    private readonly userEventPublisher: UserEventPublisher,
   ) {}
 
   async createNotification(input: CreateNotificationInput) {
     const result = await this.notificationsRepository.createNotification(input);
     if (result.isOk()) {
-      await this.userEventPublisher?.broadcastNotification(
+      await this.userEventPublisher.broadcastNotification(
         input.userId,
         result.value,
       );
@@ -39,7 +39,7 @@ export class NotificationsService {
       notificationId,
     );
     if (result.isOk()) {
-      await this.userEventPublisher?.broadcastNotificationRead(
+      await this.userEventPublisher.broadcastNotificationRead(
         userId,
         notificationId,
       );

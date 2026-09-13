@@ -96,7 +96,6 @@ export const getHandler: AppRouteHandler<GetRoute> = async (c) => {
   headers.set("x-content-type-options", "nosniff");
   headers.set("cache-control", "public, max-age=31536000, immutable");
 
-  // Handle conditional request (304 Not Modified)
   if ("body" in object === false || !object.body) {
     return new Response(null, {
       status: HttpStatusCodes.NOT_MODIFIED,
@@ -104,7 +103,6 @@ export const getHandler: AppRouteHandler<GetRoute> = async (c) => {
     });
   }
 
-  // Handle Range Requests (206 Partial Content)
   if (object.range) {
     if (
       "offset" in object.range &&

@@ -2,7 +2,6 @@ import { createAuthorizedRoute } from "#/lib/create-authorized-route";
 import { workspaceId, assistantThreadId } from "@dotion/shared/ids";
 import {
   assistantThreadSchema,
-  createThreadRequestSchema,
   sendAssistantMessageRequestSchema,
   listPaginationQuerySchema,
   paginatedThreadsResponseSchema,
@@ -79,7 +78,6 @@ export const createThreadRoute = createAuthorizedRoute({
     params: z.object({
       id: workspaceId,
     }),
-    body: jsonContent(createThreadRequestSchema, "Thread creation payload"),
   },
   responses: {
     [HttpStatusCodes.CREATED]: jsonContent(

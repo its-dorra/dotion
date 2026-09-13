@@ -1,21 +1,10 @@
-import { Result, TaggedError } from "better-result";
+import { Result } from "better-result";
 import type { WorkspaceId, PageId } from "@dotion/shared/ids";
 import type { FileUploadResponse } from "@dotion/shared/files/types";
 
-export class StorageError extends TaggedError("StorageError")<{
-  message: string;
-  cause?: unknown;
-}> {}
-
-export interface StorageUploadStreamInput {
-  workspaceId: WorkspaceId;
-  pageId: PageId;
-  stream: ReadableStream<Uint8Array>;
-  filename: string;
-  mimeType: string;
-  size?: number;
-  maxBytes?: number;
-}
+import { StorageError } from "@dotion/shared/files/errors";
+import type { StorageUploadStreamInput } from "@dotion/shared/files/types";
+export type { StorageError, StorageUploadStreamInput };
 
 export class StorageService {
   constructor(private readonly r2: R2Bucket) {}

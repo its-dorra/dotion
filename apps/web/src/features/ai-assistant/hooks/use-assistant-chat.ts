@@ -4,37 +4,68 @@ import { DefaultChatTransport } from 'ai'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
-import type {
-  AssistantThreadId,
-  ChatMessage,
-  ToolPart,
-} from '../types'
+import type { AssistantThreadId, ChatMessage, ToolPart } from '../types'
+import { assistantKeys } from '../query-options'
 import {
   getUIMessageText,
   optimisticallyUpdateThreadMessagesCache,
 } from '../utils'
+import { useCreateAssistantThread } from './use-create-assistant-thread'
 
 export interface UseAssistantChatOptions {
   workspaceId: WorkspaceId
   activeThreadId: AssistantThreadId | null
+  onThreadCreated?: (threadId: AssistantThreadId) => void
 }
 
 export function useAssistantChat({
   workspaceId,
   activeThreadId,
+  onThreadCreated,
 }: UseAssistantChatOptions) {
   const queryClient = useQueryClient()
-  const activeThreadIdRef = React.useRef(activeThreadId)
+  const createThreadMutation = useCreateAssistantThread(workspaceId)
+
+  const activeThreadIdRef = React.useRef<AssistantThreadId | null>(
+    activeThreadId,
+  )
   activeThreadIdRef.current = activeThreadId
+
+  const onThreadCreatedRef = React.useRef(onThreadCreated)
+  onThreadCreatedRef.current = onThreadCreated
 
   const transport = React.useMemo(() => {
     return new DefaultChatTransport({
-      api: activeThreadId
-        ? `/api/v1/workspaces/${workspaceId}/assistant/threads/${activeThreadId}/chat`
-        : `/api/v1/workspaces/${workspaceId}/assistant/threads/temp/chat`,
+      api: `/api/v1/workspaces/${workspaceId}/assistant/threads/placeholder/chat`,
       credentials: 'include',
+      prepareSendMessagesRequest: ({
+        messages,
+        body,
+        headers,
+        credentials,
+        id,
+        trigger,
+        messageId,
+      }) => {
+        const currentThreadId = activeThreadIdRef.current
+        if (!currentThreadId) {
+          throw new Error('Cannot send message without an active thread')
+        }
+        return {
+          api: `/api/v1/workspaces/${workspaceId}/assistant/threads/${currentThreadId}/chat`,
+          body: {
+            ...body,
+            id,
+            messages,
+            trigger,
+            messageId,
+          },
+          headers,
+          credentials,
+        }
+      },
     })
-  }, [workspaceId, activeThreadId])
+  }, [workspaceId])
 
   const chat = useChat<ChatMessage>({
     transport,
@@ -56,6 +87,13 @@ export function useAssistantChat({
       })
 
       chat.setMessages([])
+
+      setTimeout(() => {
+        void queryClient.invalidateQueries({
+          queryKey: assistantKeys.threads(workspaceId),
+          refetchType: 'active',
+        })
+      }, 1500)
     },
     onError: (error) => {
       console.error('useAssistantChat error:', error)
@@ -71,8 +109,8 @@ export function useAssistantChat({
 
   const activeToolParts: ToolPart[] = React.useMemo(() => {
     if (!currentAssistantMessage?.parts) return []
-    return currentAssistantMessage.parts.filter(
-      (part): part is ToolPart => part.type.startsWith('tool-'),
+    return currentAssistantMessage.parts.filter((part): part is ToolPart =>
+      part.type.startsWith('tool-'),
     )
   }, [currentAssistantMessage])
 
@@ -81,6 +119,7 @@ export function useAssistantChat({
   const userMessage = [...chat.messages]
     .reverse()
     .find((m) => m.role === 'user')
+
   const optimisticUserText = isStreaming ? getUIMessageText(userMessage) : null
 
   return {
@@ -93,6 +132,14 @@ export function useAssistantChat({
         ? optimisticUserText
         : null,
     sendMessage: async (content: string) => {
+      let currentThreadId = activeThreadIdRef.current
+      if (!currentThreadId) {
+        const newThread = await createThreadMutation.mutateAsync({})
+        currentThreadId = newThread.id
+        activeThreadIdRef.current = currentThreadId
+        onThreadCreatedRef.current?.(currentThreadId)
+      }
+
       await chat.sendMessage({
         text: content,
       })

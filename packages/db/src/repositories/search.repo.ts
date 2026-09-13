@@ -228,7 +228,6 @@ export class SearchRepository {
         );
       }
 
-      // Use cosineDistance ASC to enable HNSW index scan using vector_cosine_ops (<=>)
       const rows = await this.db
         .select({
           sectionId: pageSections.id,

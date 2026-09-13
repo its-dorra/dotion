@@ -499,8 +499,6 @@ export class WebSocketClient<TMessage> {
           type: 'socket.open',
         } satisfies CrossTabMessage<TMessage>)
 
-        // Assign the persistent message handler now that the socket is open.
-        // (Messages cannot arrive before the open event per the WebSocket spec.)
         socket.onmessage = (event) => {
           this.handleSocketMessage(event.data as WebSocketData)
         }
@@ -517,7 +515,6 @@ export class WebSocketClient<TMessage> {
       }
 
       socket.onclose = () => {
-        // Only clear this.socket if it still points at this instance.
         if (this.socket === socket) {
           this.socket = null
         }
@@ -528,7 +525,6 @@ export class WebSocketClient<TMessage> {
 
         this.rejectAllPending(new Error('WebSocket closed'))
 
-        // Resolve (not reject) — runLeader decides whether to reconnect.
         settle(resolve)
       }
     })
@@ -580,13 +576,11 @@ export class WebSocketClient<TMessage> {
       return
     }
 
-    // Relay to follower tabs.
     this.channel.postMessage({
       type: 'socket.message',
       data,
     } satisfies CrossTabMessage<TMessage>)
 
-    // Notify the leader's own listeners (source = 'websocket').
     this.notifyMessageListeners(data, 'websocket')
   }
 
@@ -616,22 +610,17 @@ export class WebSocketClient<TMessage> {
           return
         }
 
-        // ACK the originating follower.
+
         this.channel.postMessage({
           type: 'client.send.ack',
           requestId: message.requestId,
         } satisfies CrossTabMessage<TMessage>)
 
-        // Use message.payload directly — no decode round-trip needed.
-        // This also means a decode failure can never strand the sender's
-        // optimistic update, since we never call decodeMessage here.
         this.channel.postMessage({
           type: 'client.message',
           data: message.payload,
         } satisfies CrossTabMessage<TMessage>)
 
-        // Notify leader's own listeners (source = 'local').
-        // The originating follower receives client.message via BroadcastChannel.
         this.notifyMessageListeners(message.payload, 'local')
 
         return
@@ -666,26 +655,18 @@ export class WebSocketClient<TMessage> {
       }
 
       case 'client.message': {
-        // client.message is an outgoing message that was successfully sent.
-        // Notify listeners so they can update local state (source = 'local').
-        //
-        // The leader already notified its own listeners in the client.send
-        // handler above, so skip here to avoid double-notification.
+
         if (this.leader) {
           return
         }
 
-        // All follower tabs receive this — including the originating follower —
-        // which is the intended behavior so it can update its own state.
         this.notifyMessageListeners(message.data, 'local')
 
         return
       }
 
       case 'socket.message': {
-        // socket.message is strictly for data received from the server.
-        // Only follower tabs receive this path; the leader notified its own
-        // listeners directly in handleSocketMessage (source = 'websocket').
+
         if (this.leader) {
           return
         }
@@ -719,8 +700,7 @@ export class WebSocketClient<TMessage> {
       }
 
       case 'client.hello': {
-        // A new follower has joined and is asking for current status.
-        // Only the leader replies.
+
         if (!this.leader) {
           return
         }
@@ -732,9 +712,7 @@ export class WebSocketClient<TMessage> {
       }
 
       case 'leader.state': {
-        // The leader has broadcast its current status — apply it.
-        // setStatus is idempotent (no-op if status unchanged), so this is safe
-        // even if client.hello arrived while the leader was still connecting.
+
         if (this.leader) {
           return
         }
@@ -784,24 +762,16 @@ export class WebSocketClient<TMessage> {
     if (leader) {
       this.stopLeaderElection()
 
-      // Reject any pending follower sends that were queued while this tab was
-      // acquiring leadership, clearing their timeouts immediately.
       this.rejectAllPending(
         new Error('Became leader before send was acknowledged'),
       )
     } else {
       this.closeSocket()
 
-      // at-most-once — reject all pending sends when leadership is lost.
-      // Callers may retry explicitly if desired.
+
       this.rejectAllPending(new Error('Lost WebSocket leadership'))
 
-      // This branch fires when the browser revokes the Web Lock while the
-      // client still intends to be connected — e.g. tab discarded via bfcache
-      // or a browser-initiated lock steal. In that case setLeader(false) is
-      // called from acquireLeadershipViaLock's finally block and we should
-      // restart leader election to either re-acquire leadership or become a
-      // follower of the new leader.
+
       if (this.shouldReconnect && this.status !== 'disconnected') {
         this.setStatus('reconnecting')
 
@@ -810,18 +780,6 @@ export class WebSocketClient<TMessage> {
     }
   }
 
-  /**
-   * Closes the WebSocket and removes most event handlers.
-   *
-   * Nulls `this.socket` but preserves the `onclose` handler so that:
-   *   1. The `openSocket()` promise always settles (via `settle(resolve)`),
-   *   2. Followers receive the `socket.close` broadcast, and
-   *   3. Pending sends are rejected.
-   *
-   * The `onerror`, `onmessage`, and `onopen` handlers are nulled to prevent
-   * unwanted side effects during intentional close (e.g. spurious `connected`
-   * status or message processing).
-   */
   private closeSocket(): void {
     const socket = this.socket
 
@@ -831,7 +789,6 @@ export class WebSocketClient<TMessage> {
 
     this.socket = null
 
-    // Preserve onclose — it must fire for promise settlement & follower notification.
     socket.onerror = null
     socket.onmessage = null
     socket.onopen = null

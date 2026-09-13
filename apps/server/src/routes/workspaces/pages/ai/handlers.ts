@@ -16,6 +16,7 @@ export const streamTextHandler: AppRouteHandler<StreamTextRoute> = async (
     workspaceId,
     messages,
     toolDefinitions,
+    onBackgroundWork: c.executionCtx.waitUntil,
   });
 
   if (result.isErr()) {

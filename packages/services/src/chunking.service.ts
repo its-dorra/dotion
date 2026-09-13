@@ -1,49 +1,17 @@
 import * as Y from "yjs";
 
-export interface BlockNoteInlineContent {
-  type: string;
-  text?: string;
-  href?: string;
-  content?: BlockNoteInlineContent[] | string;
-  styles?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-export interface BlockNoteTableCell {
-  text?: string;
-  content?: BlockNoteInlineContent[] | string;
-  [key: string]: unknown;
-}
-
-export interface BlockNoteBlock {
-  id?: string;
-  type?: string;
-  props?: {
-    level?: number;
-    checked?: boolean | string;
-    language?: string;
-    icon?: string;
-    textAlignment?: string;
-    textColor?: string;
-    backgroundColor?: string;
-    [key: string]: unknown;
-  };
-  content?:
-    | BlockNoteInlineContent[]
-    | string
-    | { type: string; rows: { cells: BlockNoteTableCell[] }[] };
-  children?: BlockNoteBlock[];
-  [key: string]: unknown;
-}
-
-export interface ParsedSection {
-  sectionIndex: number;
-  sectionTitle: string;
-  headingBlockId: string;
-  blockIds: string[];
-  content: string;
-  contentHash: string;
-}
+import type {
+  BlockNoteInlineContent,
+  BlockNoteTableCell,
+  BlockNoteBlock,
+  ParsedSection,
+} from "@dotion/shared/pages/types";
+export type {
+  BlockNoteInlineContent,
+  BlockNoteTableCell,
+  BlockNoteBlock,
+  ParsedSection,
+};
 
 const MEDIA_BLOCK_TYPES = new Set(["image", "video", "audio", "file", "embed"]);
 const MAX_SECTION_CHARS = 3000;
@@ -59,7 +27,6 @@ export class ChunkingService {
           if (typeof item === "string") return item;
           if (!item) return "";
 
-          // Inline link support: [text](href)
           if (
             item.type === "link" &&
             item.href &&
@@ -203,7 +170,6 @@ export class ChunkingService {
 
       const nodeName = node.nodeName;
 
-      // Handle standard BlockNote blockContainer
       if (nodeName === "blockContainer") {
         const id = node.getAttribute("id") ?? undefined;
         let type = "paragraph";
@@ -254,7 +220,6 @@ export class ChunkingService {
         };
       }
 
-      // Handle direct <block> element
       if (nodeName === "block") {
         const id = node.getAttribute("id") ?? undefined;
         const type = node.getAttribute("type") ?? "paragraph";
@@ -292,7 +257,6 @@ export class ChunkingService {
         };
       }
 
-      // Generic container node (blockGroup or fragment root)
       const children: BlockNoteBlock[] = [];
       node.forEach((child) => {
         const parsed = parseNode(child);
@@ -415,7 +379,6 @@ export class ChunkingService {
       ];
     }
 
-    // Sub-split oversized sections by paragraph boundaries
     const normalizedSections: Array<{
       sectionTitle: string;
       headingBlockId: string;
@@ -433,7 +396,6 @@ export class ChunkingService {
           content: fullText || sec.sectionTitle,
         });
       } else {
-        // Sub-split lines
         let currentChunkLines: string[] = [];
         let currentChunkLen = 0;
         let partIndex = 1;
@@ -472,7 +434,6 @@ export class ChunkingService {
       }
     }
 
-    // Compute content hashes on clean content (prevents cascading re-embeddings)
     const result: ParsedSection[] = [];
 
     for (let i = 0; i < normalizedSections.length; i++) {

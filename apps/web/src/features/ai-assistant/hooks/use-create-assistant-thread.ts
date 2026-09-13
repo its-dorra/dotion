@@ -5,15 +5,13 @@ import { assistantKeys } from '../query-options'
 import { toast } from 'sonner'
 import * as m from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
-import type { CreateThreadRequest } from '../types'
 
 export function useCreateAssistantThread(workspaceId: WorkspaceId) {
   const queryClient = useQueryClient()
 
   return useMutation(
     resultMutationOptions({
-      mutationFn: (input: CreateThreadRequest = {}) =>
-        aiAssistantApi.createThread(workspaceId, input),
+      mutationFn: () => aiAssistantApi.createThread(workspaceId),
       onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: assistantKeys.threads(workspaceId),

@@ -218,9 +218,7 @@ export class DurableObjectWorkspaceEventPublisher implements WorkspaceEventPubli
     }
   }
 
-  async broadcastTrashEmptied(
-    workspaceId: WorkspaceId,
-  ): Promise<void> {
+  async broadcastTrashEmptied(workspaceId: WorkspaceId): Promise<void> {
     try {
       const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
       const stub = this.env.DOTION_WORKSPACE_DO.get(doId);

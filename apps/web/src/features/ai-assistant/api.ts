@@ -7,7 +7,6 @@ import type {
   AssistantThread,
   PaginatedThreadsResponse,
   PaginatedMessagesResponse,
-  CreateThreadRequest,
   WorkspaceId,
   AssistantThreadId,
 } from './types'
@@ -77,7 +76,6 @@ export class AiAssistantApi {
 
   async createThread(
     workspaceId: WorkspaceId,
-    input: CreateThreadRequest = {},
   ): Promise<
     Result<
       AssistantThread,
@@ -90,7 +88,6 @@ export class AiAssistantApi {
         ':id'
       ].assistant.threads.$post({
         param: { id: workspaceId },
-        json: input,
       })
 
       if (!response.ok) {

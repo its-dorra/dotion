@@ -588,8 +588,6 @@ export class WorkspacesService {
     }, this);
   }
 
-  // --- Authorization Attribute Loaders ---
-
   async loadWorkspaceResourceData({
     workspaceId,
     userId,

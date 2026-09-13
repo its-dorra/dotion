@@ -2,7 +2,6 @@ import { z } from "zod";
 import { pageId } from "../ids";
 import type { InferUITools, Tool, UIMessage } from "ai";
 
-// 1. searchWorkspace
 export const searchWorkspaceInputSchema = z.object({
   query: z
     .string()
@@ -37,7 +36,6 @@ export const searchWorkspaceOutputSchema = z.object({
   items: z.array(searchWorkspaceHitSchema),
 });
 
-// 2. readFullPage
 export const readFullPageInputSchema = z.object({
   pageId: pageId.describe("The ID of the page to read"),
 });
@@ -50,7 +48,6 @@ export const readFullPageOutputSchema = z.object({
   truncated: z.boolean(),
 });
 
-// 3. getPageTree
 export const getPageTreeInputSchema = z.object({
   rootPageId: pageId
     .optional()
@@ -88,7 +85,6 @@ export const getPageTreeOutputSchema = z.object({
   items: z.array(pageTreeItemSchema),
 });
 
-// 4. fetchAdjacentSections
 export const fetchAdjacentSectionsInputSchema = z.object({
   pageId: pageId.describe("The ID of the page"),
   sectionIndex: z
@@ -125,7 +121,6 @@ export const fetchAdjacentSectionsOutputSchema = z.object({
   items: z.array(adjacentSectionHitSchema),
 });
 
-// 5. getPageBlocks
 export const getPageBlocksInputSchema = z.object({
   pageId: pageId.describe("The ID of the page"),
   headingBlockId: z
@@ -152,17 +147,6 @@ export const getPageBlocksOutputSchema = z.object({
   pageId: pageId,
   blocks: z.array(structuredBlockSchema),
 });
-
-// Tool Names & Unions
-export const assistantToolNames = [
-  "searchWorkspace",
-  "readFullPage",
-  "getPageTree",
-  "fetchAdjacentSections",
-  "getPageBlocks",
-] as const;
-
-export type AssistantToolName = (typeof assistantToolNames)[number];
 
 export type SearchWorkspaceInput = z.infer<typeof searchWorkspaceInputSchema>;
 export type SearchWorkspaceHit = z.infer<typeof searchWorkspaceHitSchema>;

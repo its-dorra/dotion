@@ -58,17 +58,13 @@ export const getByIdHandler: AppRouteHandler<GetByIdRoute> = async (c) => {
 };
 
 export const createHandler: AppRouteHandler<CreateRoute> = async (c) => {
-  const currentUser = c.var.currentUser;
   const { id } = c.req.valid("param");
   const input = c.req.valid("json");
 
-  const result = await c.var.services.pages.createPage(
-    { userId: currentUser.id },
-    {
-      ...input,
-      workspaceId: id,
-    },
-  );
+  const result = await c.var.services.pages.createPage({
+    ...input,
+    workspaceId: id,
+  });
 
   if (result.isErr()) {
     return result.error.match({

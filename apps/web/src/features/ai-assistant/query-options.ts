@@ -11,7 +11,7 @@ export const assistantKeys = {
     [...assistantKeys.workspace(workspaceId), 'threads'] as const,
   messages: (workspaceId: string, threadId: string) =>
     [
-      ...assistantKeys.threads(workspaceId),
+      ...assistantKeys.workspace(workspaceId),
       'thread',
       threadId,
       'messages',

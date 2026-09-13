@@ -5,6 +5,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { CommentsContainer } from './comments-container'
+import * as m from '@/paraglide/messages'
 import type { WorkspaceId } from '@/features/workspaces/types'
 import type { PageId } from '@dotion/shared/pages/types'
 import type { PagePermissionRole } from '@/features/pages/types'
@@ -28,7 +29,7 @@ export function CommentsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full p-0 sm:max-w-md">
         <SheetHeader className="sr-only">
-          <SheetTitle>Comments</SheetTitle>
+          <SheetTitle>{m.comments_title()}</SheetTitle>
         </SheetHeader>
         <div className="h-full">
           <CommentsContainer

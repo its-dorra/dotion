@@ -1,6 +1,11 @@
 import * as React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import remarkBreaks from 'remark-breaks'
+import remarkEmoji from 'remark-emoji'
+import rehypeKatex from 'rehype-katex'
+import rehypeSlug from 'rehype-slug'
 import { CornerDownLeft, FileText, Hash } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SearchResultItem as SearchResultItemType } from '../types'
@@ -57,12 +62,13 @@ function highlightInNode(
 
 function cleanPreviewMarkdown(content: string): string {
   return content
-    .replace(/^\[Context:[\\s\\S]*?\]\n---\n/g, '')
-    .replace(/^#{1,6}\\s+/gm, '')
+    .replace(/^\[Context:[\s\S]*?\]\n---\n/g, '')
+    .replace(/^#{1,6}\s+/gm, '')
     .trim()
 }
 
-const REMARK_PLUGINS = [remarkGfm]
+const REMARK_PLUGINS = [remarkGfm, remarkMath, remarkBreaks, remarkEmoji]
+const REHYPE_PLUGINS = [rehypeKatex, rehypeSlug]
 
 export const SearchResultItem = React.memo(function SearchResultItem({
   item,
@@ -113,6 +119,7 @@ export const SearchResultItem = React.memo(function SearchResultItem({
       <div className="line-clamp-2 text-[11px] text-muted-foreground/90 font-normal leading-relaxed pl-5 [&_p]:inline [&_h1]:inline [&_h2]:inline [&_h3]:inline [&_ul]:inline [&_ol]:inline [&_li]:inline">
         <ReactMarkdown
           remarkPlugins={REMARK_PLUGINS}
+          rehypePlugins={REHYPE_PLUGINS}
           components={{
             p({ children }) {
               return (

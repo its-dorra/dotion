@@ -118,8 +118,6 @@ export class CommentsService {
     }, this);
   }
 
-  // --- Authorization Attribute Loaders ---
-
   async loadCommentResourceData({
     commentId,
     userId,

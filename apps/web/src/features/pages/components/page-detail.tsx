@@ -7,7 +7,6 @@ import { PageNavbar } from './page-navbar'
 import { PageTrashBanner } from './page-trash-banner'
 import { PageHeader } from './page-header'
 import { PageEditor } from './page-editor'
-import { CommentsSidebar } from '@/features/comments/components/comments-sidebar'
 import { CommentsSheet } from '@/features/comments/components/comments-sheet'
 import { Spinner } from '@/components/ui/spinner'
 import { useSession } from '@/features/auth/hooks/use-session'
@@ -41,11 +40,8 @@ export function PageDetail({
 
   const session = useSession()
   const collaborators = usePageAwareness(provider, session.data?.user)
-  const [isMobileCommentsOpen, setIsMobileCommentsOpen] = useState(false)
-  const handleOpenComments = useCallback(
-    () => setIsMobileCommentsOpen(true),
-    [],
-  )
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false)
+  const handleOpenComments = useCallback(() => setIsCommentsOpen(true), [])
 
   const { updateTitle, updateIcon, updateCover } = useUpdatePageMetadata({
     workspaceId,
@@ -119,14 +115,9 @@ export function PageDetail({
             </div>
           )}
         </div>
-        <CommentsSidebar
-          workspaceId={workspaceId}
-          pageId={page.id}
-          currentUserRole={effectiveCommentRole}
-        />
         <CommentsSheet
-          open={isMobileCommentsOpen}
-          onOpenChange={setIsMobileCommentsOpen}
+          open={isCommentsOpen}
+          onOpenChange={setIsCommentsOpen}
           workspaceId={workspaceId}
           pageId={page.id}
           currentUserRole={effectiveCommentRole}

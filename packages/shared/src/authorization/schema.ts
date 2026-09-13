@@ -210,6 +210,7 @@ export const resourceSchemas = {
       workspaceId,
       targetUserId: userId,
       targetRole: PagePermissionRoleSchema.nullable(),
+      targetUserWorkspaceRole: WorkspaceMemberRoleSchema.nullable(),
       userWorkspaceRole: WorkspaceMemberRoleSchema.nullable(),
     }),
     scope: z.object({

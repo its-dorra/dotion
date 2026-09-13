@@ -1,5 +1,4 @@
-// Dotion Custom Progressive Web App Service Worker
-const CACHE_VERSION = 'v1.0.1'
+const CACHE_VERSION = 'v1.0.2'
 const STATIC_CACHE = `dotion-static-${CACHE_VERSION}`
 const FONTS_CACHE = `dotion-fonts-${CACHE_VERSION}`
 const IMAGES_CACHE = `dotion-images-${CACHE_VERSION}`
@@ -17,22 +16,18 @@ const PRECACHE_ASSETS = [
   '/pwa-maskable-512x512.png',
 ]
 
-// --- 1. Install Event: Precache App Shell ---
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(STATIC_CACHE)
       .then((cache) => cache.addAll(PRECACHE_ASSETS))
-      .then(() => {
-        // Do not force skipWaiting automatically so that users can finish ongoing edits
-      })
+
       .catch((error) => {
         console.error('[SW] Precache failed:', error)
       }),
   )
 })
 
-// --- 2. Activate Event: Clean up stale caches and claim clients ---
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
@@ -54,19 +49,16 @@ self.addEventListener('activate', (event) => {
   )
 })
 
-// --- 3. Message Event: Skip Waiting on user request ---
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting()
   }
 })
 
-// --- Helper: Check if request should be bypassed / ignored ---
 function shouldIgnoreRequest(url, request) {
   if (url.pathname.startsWith('/api')) return true
   if (url.pathname.includes('/ws')) return true
   if (request.headers.get('upgrade') === 'websocket') return true
-  // Vite dev server virtual and internal endpoints
   if (
     url.pathname.startsWith('/@') ||
     url.pathname.includes('/@vite/') ||
@@ -81,7 +73,6 @@ function shouldIgnoreRequest(url, request) {
   return false
 }
 
-// --- Helper: Cache First Strategy ---
 async function cacheFirst(request, cacheName) {
   const cached = await caches.match(request)
   if (cached) return cached
@@ -98,7 +89,6 @@ async function cacheFirst(request, cacheName) {
   }
 }
 
-// --- Helper: Stale While Revalidate Strategy ---
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName)
   const cached = await cache.match(request)
@@ -111,14 +101,12 @@ async function staleWhileRevalidate(request, cacheName) {
       return networkResponse
     })
     .catch((err) => {
-      // Network failure; if cached response is available it will be used
       return null
     })
 
   return cached || (await fetchPromise) || fetch(request)
 }
 
-// --- Helper: Network First for HTML Navigation ---
 async function networkFirstNavigation(request) {
   try {
     const networkResponse = await fetch(request)
@@ -128,7 +116,6 @@ async function networkFirstNavigation(request) {
     }
     return networkResponse
   } catch (error) {
-    // Try exact page match, or fallback to cached root app shell
     const cachedResponse =
       (await caches.match(request)) || (await caches.match('/'))
     if (cachedResponse) {
@@ -138,25 +125,20 @@ async function networkFirstNavigation(request) {
   }
 }
 
-// --- 4. Fetch Event ---
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Ignore non-GET and unsupported schemes
   if (request.method !== 'GET') return
   if (!url.protocol.startsWith('http')) return
 
-  // Never intercept API, WebSocket, or Vite dev internal requests
   if (shouldIgnoreRequest(url, request)) return
 
-  // 1. Navigation requests (HTML pages) -> Network First with cached fallback
   if (request.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(request))
     return
   }
 
-  // 2. Web Fonts -> Cache First
   if (
     url.pathname.match(/\.(woff|woff2|ttf|eot)$/) ||
     url.hostname.includes('fonts.gstatic.com') ||
@@ -166,7 +148,6 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // 3. Images and Icons -> Stale While Revalidate
   if (
     url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|gif)$/) ||
     url.hostname.includes('images.unsplash.com')
@@ -175,7 +156,6 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // 4. Hashed JS/CSS Assets -> Stale While Revalidate / Cache First
   if (
     url.pathname.startsWith('/assets/') &&
     url.pathname.match(/\.(js|css)$/)
@@ -184,7 +164,6 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // 5. Default: Stale While Revalidate for static resources
   if (request.destination === 'script' || request.destination === 'style') {
     event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE))
     return

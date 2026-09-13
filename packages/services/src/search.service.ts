@@ -82,9 +82,13 @@ export class SearchService {
           );
         }
 
-        for (const update of input.toUpdate) {
+        if (input.toUpdate.length > 0) {
           yield* Result.await(
-            this.searchRepository.updatePageSection(tx, update.id, update),
+            Result.allAsync(
+              input.toUpdate.map((update) =>
+                this.searchRepository.updatePageSection(tx, update.id, update),
+              ),
+            ),
           );
         }
 
@@ -121,10 +125,12 @@ export class SearchService {
       );
 
       const existingMapByHeading = new Map<string, PageSectionMeta>();
-      const existingMapByHash = new Map<string, PageSectionMeta>();
+      const existingMapByHashList = new Map<string, PageSectionMeta[]>();
       for (const meta of existingMeta) {
         existingMapByHeading.set(meta.headingBlockId, meta);
-        existingMapByHash.set(meta.contentHash, meta);
+        const list = existingMapByHashList.get(meta.contentHash) ?? [];
+        list.push(meta);
+        existingMapByHashList.set(meta.contentHash, list);
       }
 
       const seenExistingIds = new Set<PageSectionId>();
@@ -141,11 +147,9 @@ export class SearchService {
         const sectionText = `${page.title} > ${s.sectionTitle}\n${s.content}`;
 
         let existing = existingMapByHeading.get(s.headingBlockId);
-        if (!existing && existingMapByHash.has(s.contentHash)) {
-          const candidate = existingMapByHash.get(s.contentHash)!;
-          if (!seenExistingIds.has(candidate.id)) {
-            existing = candidate;
-          }
+        if (!existing && existingMapByHashList.has(s.contentHash)) {
+          const candidates = existingMapByHashList.get(s.contentHash)!;
+          existing = candidates.find((c) => !seenExistingIds.has(c.id));
         }
 
         if (!existing) {

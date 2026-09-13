@@ -21,6 +21,7 @@ node_modules/
 .env.production
 .dev.vars
 .env.prod
+.env.development
 .env.local
 
 # logs
