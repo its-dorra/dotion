@@ -54,7 +54,9 @@ export class PagePersistence {
       return storedState;
     }
 
-    const result = await this.pagesService.getPageContent(this.pageId);
+    const result = await this.pagesService.getPageContent({
+      pageId: this.pageId,
+    });
 
     if (!result.isOk()) {
       throw result.error;
@@ -175,7 +177,9 @@ export class PagePersistence {
 
         if (pendingMetadata.title !== undefined) {
           if (!targetWorkspaceId) {
-            const pageLookup = await this.pagesService.getPageById(this.pageId);
+            const pageLookup = await this.pagesService.getPageById({
+              pageId: this.pageId,
+            });
             if (pageLookup.isOk()) {
               targetWorkspaceId = pageLookup.value.workspaceId;
             }
@@ -183,22 +187,22 @@ export class PagePersistence {
 
           if (targetWorkspaceId) {
             metadataResult =
-              await this.pagesService.updatePageMetadataWithOutbox(
-                this.pageId,
-                pendingMetadata,
-                targetWorkspaceId,
-              );
+              await this.pagesService.updatePageMetadataWithOutbox({
+                pageId: this.pageId,
+                data: pendingMetadata,
+                workspaceId: targetWorkspaceId,
+              });
           } else {
-            metadataResult = await this.pagesService.updatePageMetadata(
-              this.pageId,
-              pendingMetadata,
-            );
+            metadataResult = await this.pagesService.updatePageMetadata({
+              pageId: this.pageId,
+              data: pendingMetadata,
+            });
           }
         } else {
-          metadataResult = await this.pagesService.updatePageMetadata(
-            this.pageId,
-            pendingMetadata,
-          );
+          metadataResult = await this.pagesService.updatePageMetadata({
+            pageId: this.pageId,
+            data: pendingMetadata,
+          });
         }
 
         if (!metadataResult.isOk()) {
@@ -296,20 +300,25 @@ export class PagePersistence {
 
         let targetWorkspaceId = this.workspaceId;
         if (!targetWorkspaceId) {
-          const pageLookup = await this.pagesService.getPageById(this.pageId);
+          const pageLookup = await this.pagesService.getPageById({
+            pageId: this.pageId,
+          });
           if (pageLookup.isOk()) {
             targetWorkspaceId = pageLookup.value.workspaceId;
           }
         }
 
         const updateResult = targetWorkspaceId
-          ? await this.pagesService.updatePageContentWithOutbox(
-              this.pageId,
-              state,
-              targetWorkspaceId,
-              revision,
-            )
-          : await this.pagesService.updatePageContent(this.pageId, state);
+          ? await this.pagesService.updatePageContentWithOutbox({
+              pageId: this.pageId,
+              content: state,
+              workspaceId: targetWorkspaceId,
+              version: revision,
+            })
+          : await this.pagesService.updatePageContent({
+              pageId: this.pageId,
+              content: state,
+            });
 
         if (!updateResult.isOk()) {
           console.error(

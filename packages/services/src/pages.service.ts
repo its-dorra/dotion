@@ -38,19 +38,26 @@ export class PagesService {
     private readonly outboxService: OutboxService,
   ) {}
 
-  async getPagesTree(
-    workspaceId: WorkspaceId,
-  ): Promise<Result<PageTreeNode[], DatabaseError>> {
-    return this.pagesRepository.getWorkspacePages(workspaceId);
+  async getPagesTree({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<PageTreeNode[], DatabaseError>> {
+    return this.pagesRepository.getWorkspacePages({ workspaceId });
   }
 
-  async getPageTreeHierarchy(
-    workspaceId: WorkspaceId,
-    rootPageId?: PageId,
+  async getPageTreeHierarchy({
+    workspaceId,
+    rootPageId,
     maxDepth = 3,
-  ): Promise<Result<PageTreeItem[], DatabaseError>> {
-    const pagesResult =
-      await this.pagesRepository.getWorkspacePages(workspaceId);
+  }: {
+    workspaceId: WorkspaceId;
+    rootPageId?: PageId;
+    maxDepth?: number;
+  }): Promise<Result<PageTreeItem[], DatabaseError>> {
+    const pagesResult = await this.pagesRepository.getWorkspacePages({
+      workspaceId,
+    });
     if (pagesResult.isErr()) return pagesResult;
 
     const allPages = pagesResult.value;
@@ -117,7 +124,7 @@ export class PagesService {
   ): Promise<Result<Page, DatabaseError>> {
     return Result.gen(async function* (this: PagesService) {
       const page = yield* Result.await(
-        this.pagesRepository.createPage(this.dbClient, input),
+        this.pagesRepository.createPage({ input }),
       );
 
       yield* Result.await(
@@ -135,57 +142,77 @@ export class PagesService {
     }, this);
   }
 
-  async getPageById(
-    pageId: PageId,
-  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
-    return this.pagesRepository.getPageById(pageId);
+  async getPageById({
+    pageId,
+  }: {
+    pageId: PageId;
+  }): Promise<Result<Page, DatabaseError | NotFoundError>> {
+    return this.pagesRepository.getPageById({ pageId });
   }
 
-  async getPagesByIds(
-    pageIds: PageId[],
-  ): Promise<Result<Page[], DatabaseError>> {
-    return this.pagesRepository.getPagesByIds(pageIds);
+  async getPagesByIds({
+    pageIds,
+  }: {
+    pageIds: PageId[];
+  }): Promise<Result<Page[], DatabaseError>> {
+    return this.pagesRepository.getPagesByIds({ pageIds });
   }
 
-  async getPageWithoutContent(
-    workspaceId: WorkspaceId,
-    pageId: PageId,
-  ): Promise<Result<Omit<Page, "content">, DatabaseError | NotFoundError>> {
-    return this.pagesRepository.getPageWithoutContent(workspaceId, pageId);
+  async getPageWithoutContent({
+    workspaceId,
+    pageId,
+  }: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+  }): Promise<Result<Omit<Page, "content">, DatabaseError | NotFoundError>> {
+    return this.pagesRepository.getPageWithoutContent({ workspaceId, pageId });
   }
 
-  async getPageContent(
-    pageId: PageId,
-  ): Promise<Result<Uint8Array | null, DatabaseError>> {
-    return this.pagesRepository.getPageContent(pageId);
+  async getPageContent({
+    pageId,
+  }: {
+    pageId: PageId;
+  }): Promise<Result<Uint8Array | null, DatabaseError>> {
+    return this.pagesRepository.getPageContent({ pageId });
   }
 
-  async updatePageContent(
-    pageId: PageId,
-    content: Uint8Array,
-  ): Promise<Result<true, DatabaseError>> {
-    return this.pagesRepository.updatePageContent(pageId, content);
+  async updatePageContent({
+    pageId,
+    content,
+  }: {
+    pageId: PageId;
+    content: Uint8Array;
+  }): Promise<Result<true, DatabaseError>> {
+    return this.pagesRepository.updatePageContent({ pageId, content });
   }
 
-  async updatePageContentWithOutbox(
-    pageId: PageId,
-    content: Uint8Array,
-    workspaceId: WorkspaceId,
-    version?: number,
-  ): Promise<Result<true, DatabaseError>> {
+  async updatePageContentWithOutbox({
+    pageId,
+    content,
+    workspaceId,
+    version,
+  }: {
+    pageId: PageId;
+    content: Uint8Array;
+    workspaceId: WorkspaceId;
+    version?: number;
+  }): Promise<Result<true, DatabaseError>> {
     return this.dbClient.transaction(async (tx) => {
       return Result.gen(async function* (this: PagesService) {
         yield* Result.await(
-          this.pagesRepository.updatePageContentTx(tx, pageId, content),
+          this.pagesRepository.updatePageContentTx({ tx, pageId, content }),
         );
         yield* Result.await(
-          this.outboxService.upsertEntryTx(tx, {
-            type: "page_indexing",
-            aggregateId: pageId,
-            payload: {
-              workspaceId,
-              pageId,
-              version,
+          this.outboxService.upsertEntryTx({
+            tx,
+            input: {
+              type: "page_indexing",
+              aggregateId: pageId,
+              payload: {
+                workspaceId,
+                pageId,
+                version,
+              },
             },
           }),
         );
@@ -198,31 +225,41 @@ export class PagesService {
     });
   }
 
-  async updatePageMetadata(
-    pageId: PageId,
-    data: UpdatePageMetadataInput,
-  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
-    return this.pagesRepository.updatePageMetadata(pageId, data);
+  async updatePageMetadata({
+    pageId,
+    data,
+  }: {
+    pageId: PageId;
+    data: UpdatePageMetadataInput;
+  }): Promise<Result<Page, DatabaseError | NotFoundError>> {
+    return this.pagesRepository.updatePageMetadata({ pageId, data });
   }
 
-  async updatePageMetadataWithOutbox(
-    pageId: PageId,
-    data: UpdatePageMetadataInput,
-    workspaceId: WorkspaceId,
-  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
+  async updatePageMetadataWithOutbox({
+    pageId,
+    data,
+    workspaceId,
+  }: {
+    pageId: PageId;
+    data: UpdatePageMetadataInput;
+    workspaceId: WorkspaceId;
+  }): Promise<Result<Page, DatabaseError | NotFoundError>> {
     return this.dbClient.transaction(async (tx) => {
       return Result.gen(async function* (this: PagesService) {
         const page = yield* Result.await(
-          this.pagesRepository.updatePageMetadataTx(tx, pageId, data),
+          this.pagesRepository.updatePageMetadataTx({ tx, pageId, data }),
         );
         if (data.title !== undefined) {
           yield* Result.await(
-            this.outboxService.upsertEntryTx(tx, {
-              type: "page_indexing",
-              aggregateId: pageId,
-              payload: {
-                workspaceId,
-                pageId,
+            this.outboxService.upsertEntryTx({
+              tx,
+              input: {
+                type: "page_indexing",
+                aggregateId: pageId,
+                payload: {
+                  workspaceId,
+                  pageId,
+                },
               },
             }),
           );
@@ -236,16 +273,20 @@ export class PagesService {
     });
   }
 
-  async getPagePermissions(
-    workspaceId: WorkspaceId,
-    pageId: PageId,
-    pagination: PaginationQuery,
-  ): Promise<Result<PaginatedData<PageMemberPermission>, DatabaseError>> {
+  async getPagePermissions({
+    workspaceId,
+    pageId,
+    pagination,
+  }: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+    pagination: PaginationQuery;
+  }): Promise<Result<PaginatedData<PageMemberPermission>, DatabaseError>> {
     return Result.gen(async function* (this: PagesService) {
       const [permRows, membersPaginated] = yield* Result.await(
         Result.allAsync([
-          this.pagesRepository.getPagePermissions(pageId),
-          this.workspacesService.getMembers(workspaceId, pagination),
+          this.pagesRepository.getPagePermissions({ pageId }),
+          this.workspacesService.getMembers({ workspaceId, pagination }),
         ]),
       );
 
@@ -289,7 +330,7 @@ export class PagesService {
   }): Promise<Result<PageMemberPermission, DatabaseError | NotFoundError>> {
     return Result.gen(async function* (this: PagesService) {
       yield* Result.await(
-        this.pagesRepository.setPagePermission(this.dbClient, {
+        this.pagesRepository.setPagePermission({
           workspaceId,
           pageId,
           userId: targetUserId,
@@ -299,8 +340,8 @@ export class PagesService {
 
       const [page, user] = yield* Result.await(
         Result.allAsync([
-          this.pagesRepository.getPageById(pageId),
-          this.usersService.getUserById(targetUserId),
+          this.pagesRepository.getPageById({ pageId }),
+          this.usersService.getUserById({ userId: targetUserId }),
         ]),
       );
 
@@ -349,7 +390,7 @@ export class PagesService {
   }) {
     return Result.gen(async function* (this: PagesService) {
       const createdRequest = yield* Result.await(
-        this.pagesRepository.createAccessRequest(this.dbClient, {
+        this.pagesRepository.createAccessRequest({
           workspaceId,
           pageId,
           userId: requester.id,
@@ -359,8 +400,8 @@ export class PagesService {
 
       const [page, ownerUserId] = yield* Result.await(
         Result.allAsync([
-          this.pagesRepository.getPageWithoutContent(workspaceId, pageId),
-          this.workspacesService.getWorkspaceOwnerUserId(workspaceId),
+          this.pagesRepository.getPageWithoutContent({ workspaceId, pageId }),
+          this.workspacesService.getWorkspaceOwnerUserId({ workspaceId }),
         ]),
       );
 
@@ -389,9 +430,15 @@ export class PagesService {
     }, this);
   }
 
-  async getAccessRequestStatus(pageId: PageId, userId: UserId) {
+  async getAccessRequestStatus({
+    pageId,
+    userId,
+  }: {
+    pageId: PageId;
+    userId: UserId;
+  }) {
     return this.pagesRepository
-      .getPendingAccessRequestForUser(pageId, userId)
+      .getPendingAccessRequestForUser({ pageId, userId })
       .then(
         Result.map((request) => ({
           hasPendingRequest: Boolean(request),
@@ -416,11 +463,12 @@ export class PagesService {
         this.dbClient.transaction(async (tx) => {
           return Result.gen(async function* (this: PagesService) {
             const request = yield* Result.await(
-              this.pagesRepository.getAccessRequestById(requestId),
+              this.pagesRepository.getAccessRequestById({ requestId }),
             );
 
             yield* Result.await(
-              this.pagesRepository.setPagePermission(tx, {
+              this.pagesRepository.setPagePermissionTx({
+                tx,
                 workspaceId,
                 pageId,
                 userId: request.userId,
@@ -429,11 +477,11 @@ export class PagesService {
             );
 
             const updateReqResult = yield* Result.await(
-              this.pagesRepository.updateAccessRequestStatus(
+              this.pagesRepository.updateAccessRequestStatusTx({
                 tx,
                 requestId,
-                "approved",
-              ),
+                status: "approved",
+              }),
             );
 
             return Result.ok({
@@ -451,7 +499,7 @@ export class PagesService {
 
       const { request, userId: requesterId, role: grantedRole } = dbResult;
 
-      const pageResult = await this.pagesRepository.getPageById(pageId);
+      const pageResult = await this.pagesRepository.getPageById({ pageId });
       const pageTitle = pageResult.isOk() ? pageResult.value.title : "a page";
 
       yield* Result.await(
@@ -505,18 +553,17 @@ export class PagesService {
   }) {
     return Result.gen(async function* (this: PagesService) {
       const request = yield* Result.await(
-        this.pagesRepository.getAccessRequestById(requestId),
+        this.pagesRepository.getAccessRequestById({ requestId }),
       );
 
       const updatedRequest = yield* Result.await(
-        this.pagesRepository.updateAccessRequestStatus(
-          this.dbClient,
+        this.pagesRepository.updateAccessRequestStatus({
           requestId,
-          "rejected",
-        ),
+          status: "rejected",
+        }),
       );
 
-      const pageResult = await this.pagesRepository.getPageById(pageId);
+      const pageResult = await this.pagesRepository.getPageById({ pageId });
 
       const pageTitle = pageResult.isOk() ? pageResult.value.title : "a page";
 
@@ -552,7 +599,7 @@ export class PagesService {
   }): Promise<Result<ResourceData<"page"> | null, DatabaseError>> {
     return Result.gen(async function* (this: PagesService) {
       const page = yield* Result.await(
-        this.pagesRepository.getPageById(pageId).then((res) => {
+        this.pagesRepository.getPageById({ pageId }).then((res) => {
           if (res.isOk()) return Result.ok(res.value);
           if (NotFoundError.is(res.error)) return Result.ok(null);
           return Result.err(res.error);
@@ -566,7 +613,7 @@ export class PagesService {
             workspaceId: page.workspaceId,
             userId,
           }),
-          this.pagesRepository.getPagePermissionForUser(pageId, userId),
+          this.pagesRepository.getPagePermissionForUser({ pageId, userId }),
         ]),
       );
 
@@ -590,7 +637,7 @@ export class PagesService {
   }): Promise<Result<ResourceData<"pagePermission"> | null, DatabaseError>> {
     return Result.gen(async function* (this: PagesService) {
       const page = yield* Result.await(
-        this.pagesRepository.getPageById(pageId).then((res) => {
+        this.pagesRepository.getPageById({ pageId }).then((res) => {
           if (res.isOk()) return Result.ok(res.value);
           if (NotFoundError.is(res.error)) return Result.ok(null);
           return Result.err(res.error);
@@ -600,7 +647,10 @@ export class PagesService {
 
       const [targetRole, callerWsScope, targetWsScope] = yield* Result.await(
         Result.allAsync([
-          this.pagesRepository.getPagePermissionForUser(pageId, targetUserId),
+          this.pagesRepository.getPagePermissionForUser({
+            pageId,
+            userId: targetUserId,
+          }),
           this.workspacesService.loadWorkspaceScopeData({
             workspaceId: page.workspaceId,
             userId: callerUserId,
@@ -653,7 +703,7 @@ export class PagesService {
 
     return Result.gen(async function* (this: PagesService) {
       const page = yield* Result.await(
-        this.pagesRepository.getPageById(pageId).then((res) => {
+        this.pagesRepository.getPageById({ pageId }).then((res) => {
           if (res.isOk()) return Result.ok(res.value);
           if (NotFoundError.is(res.error)) return Result.ok(null);
           return Result.err(res.error);
@@ -676,28 +726,33 @@ export class PagesService {
     }, this);
   }
 
-  async getTrashedPages(
-    workspaceId: WorkspaceId,
-  ): Promise<Result<Page[], DatabaseError>> {
-    return this.pagesRepository.getTrashedPages(workspaceId);
+  async getTrashedPages({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<Page[], DatabaseError>> {
+    return this.pagesRepository.getTrashedPages({ workspaceId });
   }
 
-  async moveToTrash(
-    workspaceId: WorkspaceId,
-    pageId: PageId,
-  ): Promise<Result<{ success: true }, DatabaseError | NotFoundError>> {
+  async moveToTrash({
+    workspaceId,
+    pageId,
+  }: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+  }): Promise<Result<{ success: true }, DatabaseError | NotFoundError>> {
     return Result.gen(async function* (this: PagesService) {
       const page = yield* Result.await(
-        this.pagesRepository.getPageWithoutContent(workspaceId, pageId),
+        this.pagesRepository.getPageWithoutContent({ workspaceId, pageId }),
       );
 
       const descendants = yield* Result.await(
-        this.pagesRepository.getDescendantPageIds(workspaceId, pageId),
+        this.pagesRepository.getDescendantPageIds({ workspaceId, pageId }),
       );
       const allPageIdsToTrash = [page.id, ...descendants];
 
       yield* Result.await(
-        this.pagesRepository.moveToTrash(this.dbClient, allPageIdsToTrash),
+        this.pagesRepository.moveToTrash({ pageIds: allPageIdsToTrash }),
       );
 
       yield* Result.await(
@@ -716,36 +771,38 @@ export class PagesService {
     }, this);
   }
 
-  async restoreFromTrash(
-    workspaceId: WorkspaceId,
-    pageId: PageId,
-  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
+  async restoreFromTrash({
+    workspaceId,
+    pageId,
+  }: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+  }): Promise<Result<Page, DatabaseError | NotFoundError>> {
     return Result.gen(async function* (this: PagesService) {
       const [page, descendants] = yield* Result.await(
         Result.allAsync([
-          this.pagesRepository.getPageWithoutContent(workspaceId, pageId),
-          this.pagesRepository.getDescendantPageIds(workspaceId, pageId),
+          this.pagesRepository.getPageWithoutContent({ workspaceId, pageId }),
+          this.pagesRepository.getDescendantPageIds({ workspaceId, pageId }),
         ]),
       );
 
       let targetParentId = page.parentId;
       if (targetParentId) {
-        const parentRes = await this.pagesRepository.getPageWithoutContent(
+        const parentRes = await this.pagesRepository.getPageWithoutContent({
           workspaceId,
-          targetParentId,
-        );
+          pageId: targetParentId,
+        });
         if (parentRes.isErr() || parentRes.value.inTrash) {
           targetParentId = null;
         }
       }
 
       const restored = yield* Result.await(
-        this.pagesRepository.restoreFromTrash(
-          this.dbClient,
+        this.pagesRepository.restoreFromTrash({
           pageId,
-          targetParentId,
-          descendants,
-        ),
+          parentId: targetParentId,
+          descendantIds: descendants,
+        }),
       );
 
       yield* Result.await(
@@ -764,21 +821,23 @@ export class PagesService {
     }, this);
   }
 
-  async deletePermanently(
-    workspaceId: WorkspaceId,
-    pageId: PageId,
-  ): Promise<Result<{ success: true }, DatabaseError | NotFoundError>> {
+  async deletePermanently({
+    workspaceId,
+    pageId,
+  }: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+  }): Promise<Result<{ success: true }, DatabaseError | NotFoundError>> {
     return Result.gen(async function* (this: PagesService) {
       const descendants = yield* Result.await(
-        this.pagesRepository.getDescendantPageIds(workspaceId, pageId),
+        this.pagesRepository.getDescendantPageIds({ workspaceId, pageId }),
       );
       const allPageIdsToDelete = [pageId, ...descendants];
 
       yield* Result.await(
-        this.pagesRepository.deletePermanently(
-          this.dbClient,
-          allPageIdsToDelete,
-        ),
+        this.pagesRepository.deletePermanently({
+          pageIds: allPageIdsToDelete,
+        }),
       );
 
       yield* Result.await(
@@ -797,12 +856,14 @@ export class PagesService {
     }, this);
   }
 
-  async emptyTrash(
-    workspaceId: WorkspaceId,
-  ): Promise<Result<{ success: true }, DatabaseError>> {
+  async emptyTrash({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<{ success: true }, DatabaseError>> {
     return Result.gen(async function* (this: PagesService) {
       const deletedPageIds = yield* Result.await(
-        this.pagesRepository.emptyTrash(this.dbClient, workspaceId),
+        this.pagesRepository.emptyTrash({ workspaceId }),
       );
 
       yield* Result.await(

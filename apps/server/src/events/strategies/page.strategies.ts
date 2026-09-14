@@ -273,19 +273,21 @@ export class PageAccessRequestedStrategy implements DomainEventStrategy<"page.ac
   ): Promise<Result<void, EventHandlingError>> {
     try {
       await this.notificationsService.createNotification({
-        userId: event.payload.recipientUserId,
-        metadata: {
-          type: "page_access_request",
-          requestId: event.payload.requestId,
-          pageId: event.payload.pageId,
-          workspaceId: event.payload.workspaceId,
-          pageTitle: event.payload.pageTitle,
-          requestedRole: event.payload.requestedRole ?? "editor",
-          requestedByUserId: event.payload.requesterId,
-          requestedByName: event.payload.requesterName,
-          requestedByEmail: event.payload.requesterEmail,
+        input: {
+          userId: event.payload.recipientUserId,
+          metadata: {
+            type: "page_access_request",
+            requestId: event.payload.requestId,
+            pageId: event.payload.pageId,
+            workspaceId: event.payload.workspaceId,
+            pageTitle: event.payload.pageTitle,
+            requestedRole: event.payload.requestedRole ?? "editor",
+            requestedByUserId: event.payload.requesterId,
+            requestedByName: event.payload.requesterName,
+            requestedByEmail: event.payload.requesterEmail,
+          },
+          isRead: false,
         },
-        isRead: false,
       });
       return Result.ok(undefined);
     } catch (error) {
@@ -314,19 +316,21 @@ export class PageAccessRequestResolvedStrategy implements DomainEventStrategy<"p
   ): Promise<Result<void, EventHandlingError>> {
     try {
       await this.notificationsService.createNotification({
-        userId: event.payload.requesterId,
-        metadata: {
-          type: "page_access_request_resolved",
-          requestId: event.payload.requestId,
-          pageId: event.payload.pageId,
-          workspaceId: event.payload.workspaceId,
-          pageTitle: event.payload.pageTitle,
-          resolvedByUserId: event.payload.reviewerId,
-          resolvedByName: event.payload.reviewerName,
-          status: event.payload.status,
-          role: event.payload.role ?? "editor",
+        input: {
+          userId: event.payload.requesterId,
+          metadata: {
+            type: "page_access_request_resolved",
+            requestId: event.payload.requestId,
+            pageId: event.payload.pageId,
+            workspaceId: event.payload.workspaceId,
+            pageTitle: event.payload.pageTitle,
+            resolvedByUserId: event.payload.reviewerId,
+            resolvedByName: event.payload.reviewerName,
+            status: event.payload.status,
+            role: event.payload.role ?? "editor",
+          },
+          isRead: false,
         },
-        isRead: false,
       });
       return Result.ok(undefined);
     } catch (error) {
@@ -359,11 +363,11 @@ export class PagePermissionUpdatedStrategy implements DomainEventStrategy<"page.
   ): Promise<Result<void, EventHandlingError>> {
     try {
       const tasks: Promise<unknown>[] = [
-        this.cacheInvalidator.invalidateUserPermissions(
-          event.payload.targetUserId,
-          "page",
-          event.payload.pageId,
-        ),
+        this.cacheInvalidator.invalidateUserPermissions({
+          userId: event.payload.targetUserId,
+          resourceType: "page",
+          id: event.payload.pageId,
+        }),
         this.workspacePublisher.broadcastPagePermissionUpdated(
           event.payload.workspaceId,
           {
@@ -377,17 +381,19 @@ export class PagePermissionUpdatedStrategy implements DomainEventStrategy<"page.
       if (event.payload.pageTitle && event.payload.updatedByName) {
         tasks.push(
           this.notificationsService.createNotification({
-            userId: event.payload.targetUserId,
-            metadata: {
-              type: "permission_change",
-              pageId: event.payload.pageId,
-              workspaceId: event.payload.workspaceId,
-              pageTitle: event.payload.pageTitle,
-              changedByUserId: event.payload.updatedByUserId,
-              changedByName: event.payload.updatedByName,
-              newRole: event.payload.role,
+            input: {
+              userId: event.payload.targetUserId,
+              metadata: {
+                type: "permission_change",
+                pageId: event.payload.pageId,
+                workspaceId: event.payload.workspaceId,
+                pageTitle: event.payload.pageTitle,
+                changedByUserId: event.payload.updatedByUserId,
+                changedByName: event.payload.updatedByName,
+                newRole: event.payload.role,
+              },
+              isRead: false,
             },
-            isRead: false,
           }),
         );
       }

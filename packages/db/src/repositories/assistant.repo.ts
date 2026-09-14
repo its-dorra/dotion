@@ -1,4 +1,4 @@
-import type { AppDB, DBClient } from "../index";
+import type { DBClient } from "../index";
 import { assistantThreads, assistantMessages } from "../schema";
 import { and, desc, eq, lt } from "drizzle-orm";
 import { Result } from "better-result";
@@ -21,11 +21,15 @@ export type AssistantMessageRecord = AssistantMessage;
 export class AssistantRepository {
   constructor(private readonly db: DBClient) {}
 
-  async listThreads(
-    workspaceId: WorkspaceId,
-    userId: UserId,
-    pagination: { cursor?: string; limit?: number } = {},
-  ): Promise<Result<PaginatedThreadsResponse, DatabaseError>> {
+  async listThreads({
+    workspaceId,
+    userId,
+    pagination = {},
+  }: {
+    workspaceId: WorkspaceId;
+    userId: UserId;
+    pagination?: { cursor?: string; limit?: number };
+  }): Promise<Result<PaginatedThreadsResponse, DatabaseError>> {
     try {
       const limit = Math.min(pagination.limit ?? 20, 50);
       const cursorDate = pagination.cursor
@@ -71,9 +75,11 @@ export class AssistantRepository {
     }
   }
 
-  async getThread(
-    threadId: AssistantThreadId,
-  ): Promise<Result<AssistantThread, DatabaseError | NotFoundError>> {
+  async getThread({
+    threadId,
+  }: {
+    threadId: AssistantThreadId;
+  }): Promise<Result<AssistantThread, DatabaseError | NotFoundError>> {
     try {
       const [row] = await this.db
         .select()
@@ -96,21 +102,22 @@ export class AssistantRepository {
     }
   }
 
-  async createThread(
-    tx: AppDB,
-    input: {
-      workspaceId: WorkspaceId;
-      userId: UserId;
-      title?: string;
-    },
-  ): Promise<Result<AssistantThread, DatabaseError>> {
+  async createThread({
+    workspaceId,
+    userId,
+    title,
+  }: {
+    workspaceId: WorkspaceId;
+    userId: UserId;
+    title?: string;
+  }): Promise<Result<AssistantThread, DatabaseError>> {
     try {
-      const [row] = await tx
+      const [row] = await this.db
         .insert(assistantThreads)
         .values({
-          workspaceId: input.workspaceId,
-          userId: input.userId,
-          title: input.title ?? "New Chat",
+          workspaceId,
+          userId,
+          title: title ?? "New Chat",
         })
         .returning();
 
@@ -129,13 +136,15 @@ export class AssistantRepository {
     }
   }
 
-  async updateThreadTitle(
-    tx: AppDB,
-    threadId: AssistantThreadId,
-    title: string,
-  ): Promise<Result<AssistantThread, DatabaseError | NotFoundError>> {
+  async updateThreadTitle({
+    threadId,
+    title,
+  }: {
+    threadId: AssistantThreadId;
+    title: string;
+  }): Promise<Result<AssistantThread, DatabaseError | NotFoundError>> {
     try {
-      const [row] = await tx
+      const [row] = await this.db
         .update(assistantThreads)
         .set({ title, updatedAt: new Date() })
         .where(eq(assistantThreads.id, threadId))
@@ -156,12 +165,13 @@ export class AssistantRepository {
     }
   }
 
-  async deleteThread(
-    tx: AppDB,
-    threadId: AssistantThreadId,
-  ): Promise<Result<void, DatabaseError>> {
+  async deleteThread({
+    threadId,
+  }: {
+    threadId: AssistantThreadId;
+  }): Promise<Result<void, DatabaseError>> {
     try {
-      await tx
+      await this.db
         .delete(assistantThreads)
         .where(eq(assistantThreads.id, threadId));
       return Result.ok(undefined);
@@ -173,10 +183,13 @@ export class AssistantRepository {
     }
   }
 
-  async listMessages(
-    threadId: AssistantThreadId,
-    pagination: { cursor?: string; limit?: number } = {},
-  ): Promise<Result<PaginatedMessagesResponse, DatabaseError>> {
+  async listMessages({
+    threadId,
+    pagination = {},
+  }: {
+    threadId: AssistantThreadId;
+    pagination?: { cursor?: string; limit?: number };
+  }): Promise<Result<PaginatedMessagesResponse, DatabaseError>> {
     try {
       const limit = Math.min(pagination.limit ?? 30, 100);
       const cursorDate = pagination.cursor
@@ -218,27 +231,31 @@ export class AssistantRepository {
     }
   }
 
-  async createMessage(
-    tx: AppDB,
-    input: {
-      threadId: AssistantThreadId;
-      role: "user" | "assistant" | "system";
-      content: string;
-      citations?: AssistantCitation[];
-      toolCalls?: ToolPart[];
-      tokensUsed?: number;
-    },
-  ): Promise<Result<AssistantMessage, DatabaseError>> {
+  async createMessage({
+    threadId,
+    role,
+    content,
+    citations,
+    toolCalls,
+    tokensUsed,
+  }: {
+    threadId: AssistantThreadId;
+    role: "user" | "assistant" | "system";
+    content: string;
+    citations?: AssistantCitation[];
+    toolCalls?: ToolPart[];
+    tokensUsed?: number;
+  }): Promise<Result<AssistantMessage, DatabaseError>> {
     try {
-      const [row] = await tx
+      const [row] = await this.db
         .insert(assistantMessages)
         .values({
-          threadId: input.threadId,
-          role: input.role,
-          content: input.content,
-          citations: input.citations ?? null,
-          toolCalls: input.toolCalls ?? null,
-          tokensUsed: input.tokensUsed ?? 0,
+          threadId,
+          role,
+          content,
+          citations: citations ?? null,
+          toolCalls: toolCalls ?? null,
+          tokensUsed: tokensUsed ?? 0,
         })
         .returning();
 
@@ -248,10 +265,10 @@ export class AssistantRepository {
         );
       }
 
-      await tx
+      await this.db
         .update(assistantThreads)
         .set({ updatedAt: new Date() })
-        .where(eq(assistantThreads.id, input.threadId));
+        .where(eq(assistantThreads.id, threadId));
 
       return Result.ok(row as AssistantMessage);
     } catch (error) {

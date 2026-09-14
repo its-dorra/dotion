@@ -104,9 +104,11 @@ export class UsersRepository {
     }
   }
 
-  async getUserById(
-    userId: UserId,
-  ): Promise<Result<User, DatabaseError | NotFoundError>> {
+  async getUserById({
+    userId,
+  }: {
+    userId: UserId;
+  }): Promise<Result<User, DatabaseError | NotFoundError>> {
     try {
       const [user] = await this.db
         .select({
@@ -132,9 +134,11 @@ export class UsersRepository {
     }
   }
 
-  async getUserByEmail(
-    email: string,
-  ): Promise<Result<User, DatabaseError | NotFoundError>> {
+  async getUserByEmail({
+    email,
+  }: {
+    email: string;
+  }): Promise<Result<User, DatabaseError | NotFoundError>> {
     try {
       const [user] = await this.db
         .select({
@@ -162,9 +166,11 @@ export class UsersRepository {
     }
   }
 
-  async getUsersByIds(
-    userIds: UserId[],
-  ): Promise<Result<User[], DatabaseError>> {
+  async getUsersByIds({
+    userIds,
+  }: {
+    userIds: UserId[];
+  }): Promise<Result<User[], DatabaseError>> {
     try {
       if (userIds.length === 0) {
         return Result.ok([]);

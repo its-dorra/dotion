@@ -22,8 +22,8 @@ function truncateForEmbedding(text: string): string {
 export class EmbeddingService {
   private readonly googleClient: ReturnType<typeof createGoogleGenerativeAI>;
 
-  constructor(apiKey: string) {
-    this.googleClient = createGoogleGenerativeAI({ apiKey });
+  constructor() {
+    this.googleClient = createGoogleGenerativeAI();
   }
 
   private async withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
@@ -43,10 +43,13 @@ export class EmbeddingService {
     throw new Error("Unreachable");
   }
 
-  async embedText(
-    text: string,
-    taskType: EmbeddingTaskType = "RETRIEVAL_QUERY",
-  ): Promise<Result<number[], EmbeddingError>> {
+  async embedText({
+    text,
+    taskType = "RETRIEVAL_QUERY",
+  }: {
+    text: string;
+    taskType?: EmbeddingTaskType;
+  }): Promise<Result<number[], EmbeddingError>> {
     try {
       const sanitizedText = truncateForEmbedding(text);
       const model = this.googleClient.embedding("gemini-embedding-001");
@@ -79,10 +82,13 @@ export class EmbeddingService {
     }
   }
 
-  async embedBatch(
-    texts: string[],
-    taskType: EmbeddingTaskType = "RETRIEVAL_DOCUMENT",
-  ): Promise<Result<number[][], EmbeddingError>> {
+  async embedBatch({
+    texts,
+    taskType = "RETRIEVAL_DOCUMENT",
+  }: {
+    texts: string[];
+    taskType?: EmbeddingTaskType;
+  }): Promise<Result<number[][], EmbeddingError>> {
     try {
       if (texts.length === 0) {
         return Result.ok([]);

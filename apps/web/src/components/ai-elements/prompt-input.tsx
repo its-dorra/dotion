@@ -85,7 +85,7 @@ export function PromptInput({
             type="button"
             size="icon"
             onClick={onStop}
-            className="size-7 rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-2xs transition-transform active:scale-95"
+            className="size-7 rounded-lg bg-destructive hover:bg-destructive/90 shadow-2xs transition-transform active:scale-95"
             title={m.ai_prompt_stop()}
           >
             <Square className="size-3 fill-current" />

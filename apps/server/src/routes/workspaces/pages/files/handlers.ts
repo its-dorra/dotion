@@ -61,15 +61,15 @@ export const uploadHandler: AppRouteHandler<UploadRoute> = async (c) => {
 export const getHandler: AppRouteHandler<GetRoute> = async (c) => {
   const { id: workspaceId, pageId, fileKey } = c.req.valid("param");
 
-  const result = await c.var.services.storage.getPageFile(
+  const result = await c.var.services.storage.getPageFile({
     workspaceId,
     pageId,
     fileKey,
-    {
+    options: {
       range: c.req.raw.headers,
       onlyIf: c.req.raw.headers,
     },
-  );
+  });
 
   if (result.isErr()) {
     return result.error.match({

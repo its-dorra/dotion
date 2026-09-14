@@ -40,9 +40,11 @@ export interface SearchHit {
 export class SearchRepository {
   constructor(private readonly db: DBClient) {}
 
-  async getPageSectionsMeta(
-    pageId: PageId,
-  ): Promise<Result<PageSectionMeta[], DatabaseError>> {
+  async getPageSectionsMeta({
+    pageId,
+  }: {
+    pageId: PageId;
+  }): Promise<Result<PageSectionMeta[], DatabaseError>> {
     try {
       const rows = await this.db
         .select({
@@ -65,9 +67,11 @@ export class SearchRepository {
     }
   }
 
-  async getSectionsByPage(
-    pageId: PageId,
-  ): Promise<Result<PageSection[], DatabaseError>> {
+  async getSectionsByPage({
+    pageId,
+  }: {
+    pageId: PageId;
+  }): Promise<Result<PageSection[], DatabaseError>> {
     try {
       const rows = await this.db
         .select()
@@ -84,10 +88,21 @@ export class SearchRepository {
     }
   }
 
-  async insertPageSections(
-    tx: AppDB,
-    sections: CreatePageSectionInput[],
-  ): Promise<Result<void, DatabaseError>> {
+  async insertPageSections({
+    sections,
+  }: {
+    sections: CreatePageSectionInput[];
+  }): Promise<Result<void, DatabaseError>> {
+    return this.insertPageSectionsTx({ tx: this.db, sections });
+  }
+
+  async insertPageSectionsTx({
+    tx,
+    sections,
+  }: {
+    tx: AppDB;
+    sections: CreatePageSectionInput[];
+  }): Promise<Result<void, DatabaseError>> {
     if (sections.length === 0) return Result.ok(undefined);
     try {
       await tx.insert(pageSections).values(sections);
@@ -100,11 +115,25 @@ export class SearchRepository {
     }
   }
 
-  async updatePageSection(
-    tx: AppDB,
-    id: PageSectionId,
-    data: Partial<UpdatePageSectionInput>,
-  ): Promise<Result<void, DatabaseError>> {
+  async updatePageSection({
+    id,
+    data,
+  }: {
+    id: PageSectionId;
+    data: Partial<UpdatePageSectionInput>;
+  }): Promise<Result<void, DatabaseError>> {
+    return this.updatePageSectionTx({ tx: this.db, id, data });
+  }
+
+  async updatePageSectionTx({
+    tx,
+    id,
+    data,
+  }: {
+    tx: AppDB;
+    id: PageSectionId;
+    data: Partial<UpdatePageSectionInput>;
+  }): Promise<Result<void, DatabaseError>> {
     try {
       const updateValues: Partial<typeof pageSections.$inferInsert> = {
         updatedAt: new Date(),
@@ -143,10 +172,21 @@ export class SearchRepository {
     }
   }
 
-  async deletePageSections(
-    tx: AppDB,
-    ids: PageSectionId[],
-  ): Promise<Result<void, DatabaseError>> {
+  async deletePageSections({
+    ids,
+  }: {
+    ids: PageSectionId[];
+  }): Promise<Result<void, DatabaseError>> {
+    return this.deletePageSectionsTx({ tx: this.db, ids });
+  }
+
+  async deletePageSectionsTx({
+    tx,
+    ids,
+  }: {
+    tx: AppDB;
+    ids: PageSectionId[];
+  }): Promise<Result<void, DatabaseError>> {
     if (ids.length === 0) return Result.ok(undefined);
     try {
       await tx.delete(pageSections).where(inArray(pageSections.id, ids));
@@ -159,12 +199,17 @@ export class SearchRepository {
     }
   }
 
-  async searchBM25(
-    workspaceId: WorkspaceId,
-    query: string,
-    limit: number = 20,
-    options?: { excludedPageIds?: PageId[] },
-  ): Promise<Result<SearchHit[], DatabaseError>> {
+  async searchBM25({
+    workspaceId,
+    query,
+    limit = 20,
+    options,
+  }: {
+    workspaceId: WorkspaceId;
+    query: string;
+    limit?: number;
+    options?: { excludedPageIds?: PageId[]; minScore?: number };
+  }): Promise<Result<SearchHit[], DatabaseError>> {
     try {
       const trimmedQuery = query.trim();
       if (!trimmedQuery) return Result.ok([]);
@@ -175,7 +220,15 @@ export class SearchRepository {
         .trim();
       if (!sanitizedQuery) return Result.ok([]);
 
-      const whereConditions = [eq(pageSections.workspaceId, workspaceId)];
+      const minScore = options?.minScore ?? 1.0;
+
+      const whereConditions = [
+        eq(pageSections.workspaceId, workspaceId),
+        gt(
+          sql<number>`-1 * (${pageSections.textVector} <@> to_bm25query(to_tsvector('simple', ${sanitizedQuery}), 'idx_page_sections_bm25'))`,
+          minScore,
+        ),
+      ];
       if (options?.excludedPageIds && options.excludedPageIds.length > 0) {
         whereConditions.push(
           notInArray(pageSections.pageId, options.excludedPageIds),
@@ -210,17 +263,26 @@ export class SearchRepository {
     }
   }
 
-  async searchVector(
-    workspaceId: WorkspaceId,
-    queryEmbedding: number[],
-    limit: number = 20,
-    minSimilarity: number = 0.25,
-    options?: { excludedPageIds?: PageId[] },
-  ): Promise<Result<SearchHit[], DatabaseError>> {
+  async searchVector({
+    workspaceId,
+    queryEmbedding,
+    limit = 20,
+    minSimilarity = 0.5,
+    options,
+  }: {
+    workspaceId: WorkspaceId;
+    queryEmbedding: number[];
+    limit?: number;
+    minSimilarity?: number;
+    options?: { excludedPageIds?: PageId[] };
+  }): Promise<Result<SearchHit[], DatabaseError>> {
     try {
       const whereConditions = [
         eq(pageSections.workspaceId, workspaceId),
-        sql`1 - (${cosineDistance(pageSections.embedding, queryEmbedding)}) > ${minSimilarity}`,
+        gt(
+          sql`1 - (${cosineDistance(pageSections.embedding, queryEmbedding)})`,
+          minSimilarity,
+        ),
       ];
       if (options?.excludedPageIds && options.excludedPageIds.length > 0) {
         whereConditions.push(
@@ -238,11 +300,14 @@ export class SearchRepository {
           headingBlockId: pageSections.headingBlockId,
           blockIds: pageSections.blockIds,
           content: pageSections.content,
-          score: sql<number>`1 - (${cosineDistance(pageSections.embedding, queryEmbedding)})`,
+          score:
+            sql<number>`1 - (${cosineDistance(pageSections.embedding, queryEmbedding)})`.as(
+              "score",
+            ),
         })
         .from(pageSections)
         .where(and(...whereConditions))
-        .orderBy(cosineDistance(pageSections.embedding, queryEmbedding))
+        .orderBy(sql`score DESC`)
         .limit(limit);
 
       return Result.ok(rows as SearchHit[]);
@@ -254,12 +319,17 @@ export class SearchRepository {
     }
   }
 
-  async getAdjacentSections(
-    pageId: PageId,
-    sectionIndex: number,
-    count: number = 1,
-    direction: "prev" | "next" | "both" = "both",
-  ): Promise<Result<SearchHit[], DatabaseError>> {
+  async getAdjacentSections({
+    pageId,
+    sectionIndex,
+    count = 1,
+    direction = "both",
+  }: {
+    pageId: PageId;
+    sectionIndex: number;
+    count?: number;
+    direction?: "prev" | "next" | "both";
+  }): Promise<Result<SearchHit[], DatabaseError>> {
     try {
       let condition;
       if (direction === "prev") {

@@ -1,4 +1,4 @@
-import type { AppDB, DBClient } from "../index";
+import type { DBClient } from "../index";
 import { comments } from "../schema";
 import { and, count, eq, isNull } from "drizzle-orm";
 import { Result } from "better-result";
@@ -18,10 +18,13 @@ import type {
 export class CommentsRepository {
   constructor(private readonly db: DBClient) {}
 
-  async getPageComments(
-    pageId: PageId,
-    pagination: PaginationQuery,
-  ): Promise<
+  async getPageComments({
+    pageId,
+    pagination,
+  }: {
+    pageId: PageId;
+    pagination: PaginationQuery;
+  }): Promise<
     Result<PaginatedData<CommentWithRepliesAndAuthor>, DatabaseError>
   > {
     try {
@@ -102,9 +105,11 @@ export class CommentsRepository {
     }
   }
 
-  async getCommentById(
-    commentId: CommentId,
-  ): Promise<
+  async getCommentById({
+    commentId,
+  }: {
+    commentId: CommentId;
+  }): Promise<
     Result<CommentWithRepliesAndAuthor, DatabaseError | NotFoundError>
   > {
     try {
@@ -152,17 +157,18 @@ export class CommentsRepository {
     }
   }
 
-  async createComment(
-    tx: AppDB,
+  async createComment({
+    input,
+  }: {
     input: {
       pageId: PageId;
       authorId: UserId;
       body: string;
       parentId?: CommentId | null;
-    },
-  ): Promise<Result<Comment, DatabaseError>> {
+    };
+  }): Promise<Result<Comment, DatabaseError>> {
     try {
-      const [data] = await tx.insert(comments).values(input).returning({
+      const [data] = await this.db.insert(comments).values(input).returning({
         id: comments.id,
         pageId: comments.pageId,
         authorId: comments.authorId,
@@ -186,12 +192,13 @@ export class CommentsRepository {
     }
   }
 
-  async resolveComment(
-    commentId: CommentId,
-    tx: AppDB = this.db as unknown as AppDB,
-  ): Promise<Result<boolean, DatabaseError>> {
+  async resolveComment({
+    commentId,
+  }: {
+    commentId: CommentId;
+  }): Promise<Result<boolean, DatabaseError>> {
     try {
-      await tx
+      await this.db
         .update(comments)
         .set({ isResolved: true })
         .where(eq(comments.id, commentId));
@@ -204,17 +211,18 @@ export class CommentsRepository {
     }
   }
 
-  async deleteComment(
-    commentId: CommentId,
-    tx: AppDB = this.db as unknown as AppDB,
-  ): Promise<
+  async deleteComment({
+    commentId,
+  }: {
+    commentId: CommentId;
+  }): Promise<
     Result<
       { commentId: CommentId; parentId: CommentId | null; isRoot: boolean },
       DatabaseError | NotFoundError
     >
   > {
     try {
-      const [comment] = await tx
+      const [comment] = await this.db
         .delete(comments)
         .where(eq(comments.id, commentId))
         .returning({

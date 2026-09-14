@@ -64,11 +64,15 @@ export class KVAuthorizationCache implements AuthorizationCache {
     }
   }
 
-  async invalidateUserPermissions(
-    userId: string,
-    resourceType?: ResourceType,
-    id?: string,
-  ): Promise<void> {
+  async invalidateUserPermissions({
+    userId,
+    resourceType,
+    id,
+  }: {
+    userId: string;
+    resourceType?: ResourceType;
+    id?: string;
+  }): Promise<void> {
     const prefix = resourceType
       ? `authz:${userId}:${resourceType}:`
       : `authz:${userId}:`;
@@ -128,11 +132,15 @@ export class MemoryAuthorizationCache implements AuthorizationCache {
     }
   }
 
-  async invalidateUserPermissions(
-    userId: string,
-    resourceType?: ResourceType,
-    id?: string,
-  ): Promise<void> {
+  async invalidateUserPermissions({
+    userId,
+    resourceType,
+    id,
+  }: {
+    userId: string;
+    resourceType?: ResourceType;
+    id?: string;
+  }): Promise<void> {
     const prefix = resourceType
       ? `authz:${userId}:${resourceType}:`
       : `authz:${userId}:`;

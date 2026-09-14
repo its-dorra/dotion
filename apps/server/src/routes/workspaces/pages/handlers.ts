@@ -17,7 +17,7 @@ import type {
 export const listHandler: AppRouteHandler<ListRoute> = async (c) => {
   const workspaceId = c.req.valid("param").id;
 
-  const result = await c.var.services.pages.getPagesTree(workspaceId);
+  const result = await c.var.services.pages.getPagesTree({ workspaceId });
 
   if (result.isErr()) {
     console.error("Error fetching pages:", result.error);
@@ -36,10 +36,10 @@ export const listHandler: AppRouteHandler<ListRoute> = async (c) => {
 export const getByIdHandler: AppRouteHandler<GetByIdRoute> = async (c) => {
   const { id: workspaceId, pageId } = c.req.valid("param");
 
-  const result = await c.var.services.pages.getPageWithoutContent(
+  const result = await c.var.services.pages.getPageWithoutContent({
     workspaceId,
     pageId,
-  );
+  });
 
   if (result.isErr()) {
     console.error("Error fetching page:", result.error);
@@ -87,7 +87,7 @@ export const createHandler: AppRouteHandler<CreateRoute> = async (c) => {
 export const listTrashHandler: AppRouteHandler<ListTrashRoute> = async (c) => {
   const { id: workspaceId } = c.req.valid("param");
 
-  const result = await c.var.services.pages.getTrashedPages(workspaceId);
+  const result = await c.var.services.pages.getTrashedPages({ workspaceId });
 
   if (result.isErr()) {
     console.error("Error fetching trashed pages:", result.error);
@@ -108,7 +108,10 @@ export const moveToTrashHandler: AppRouteHandler<MoveToTrashRoute> = async (
 ) => {
   const { id: workspaceId, pageId } = c.req.valid("param");
 
-  const result = await c.var.services.pages.moveToTrash(workspaceId, pageId);
+  const result = await c.var.services.pages.moveToTrash({
+    workspaceId,
+    pageId,
+  });
 
   if (result.isErr()) {
     console.error("Error moving page to trash:", result.error);
@@ -131,10 +134,10 @@ export const restoreFromTrashHandler: AppRouteHandler<
 > = async (c) => {
   const { id: workspaceId, pageId } = c.req.valid("param");
 
-  const result = await c.var.services.pages.restoreFromTrash(
+  const result = await c.var.services.pages.restoreFromTrash({
     workspaceId,
     pageId,
-  );
+  });
 
   if (result.isErr()) {
     console.error("Error restoring page from trash:", result.error);
@@ -157,10 +160,10 @@ export const deletePermanentlyHandler: AppRouteHandler<
 > = async (c) => {
   const { id: workspaceId, pageId } = c.req.valid("param");
 
-  const result = await c.var.services.pages.deletePermanently(
+  const result = await c.var.services.pages.deletePermanently({
     workspaceId,
     pageId,
-  );
+  });
 
   if (result.isErr()) {
     console.error("Error permanently deleting page:", result.error);
@@ -183,7 +186,7 @@ export const emptyTrashHandler: AppRouteHandler<EmptyTrashRoute> = async (
 ) => {
   const { id: workspaceId } = c.req.valid("param");
 
-  const result = await c.var.services.pages.emptyTrash(workspaceId);
+  const result = await c.var.services.pages.emptyTrash({ workspaceId });
 
   if (result.isErr()) {
     console.error("Error emptying trash:", result.error);

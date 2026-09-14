@@ -29,9 +29,11 @@ export interface PagePermissionRow {
 export class PagesRepository {
   constructor(private readonly db: DBClient) {}
 
-  async getWorkspacePages(
-    workspaceId: WorkspaceId,
-  ): Promise<Result<PageTreeNode[], DatabaseError>> {
+  async getWorkspacePages({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<PageTreeNode[], DatabaseError>> {
     try {
       const result = await this.db
         .select({
@@ -56,12 +58,13 @@ export class PagesRepository {
     }
   }
 
-  async createPage(
-    tx: AppDB,
-    input: CreatePageInput,
-  ): Promise<Result<Page, DatabaseError>> {
+  async createPage({
+    input,
+  }: {
+    input: CreatePageInput;
+  }): Promise<Result<Page, DatabaseError>> {
     try {
-      const [result] = await tx.insert(pages).values(input).returning({
+      const [result] = await this.db.insert(pages).values(input).returning({
         id: pages.id,
         parentId: pages.parentId,
         workspaceId: pages.workspaceId,
@@ -82,7 +85,6 @@ export class PagesRepository {
       return Result.ok(result);
     } catch (error) {
       console.error("Error creating page:", error);
-
       return Result.err(
         new DatabaseError({
           message: "Failed to create page",
@@ -91,13 +93,13 @@ export class PagesRepository {
     }
   }
 
-  async createPagePermission(
-    tx: AppDB,
-    input: CreatePagePermissionInput,
-  ): Promise<Result<true, DatabaseError>> {
+  async createPagePermission({
+    input,
+  }: {
+    input: CreatePagePermissionInput;
+  }): Promise<Result<true, DatabaseError>> {
     try {
-      await tx.insert(pagePermissions).values(input);
-
+      await this.db.insert(pagePermissions).values(input);
       return Result.ok(true);
     } catch (error) {
       return Result.err(
@@ -106,9 +108,11 @@ export class PagesRepository {
     }
   }
 
-  async getPagePermissions(
-    pageId: PageId,
-  ): Promise<Result<PagePermissionRow[], DatabaseError>> {
+  async getPagePermissions({
+    pageId,
+  }: {
+    pageId: PageId;
+  }): Promise<Result<PagePermissionRow[], DatabaseError>> {
     try {
       const rows = await this.db
         .select({
@@ -131,34 +135,58 @@ export class PagesRepository {
     }
   }
 
-  async setPagePermission(
-    tx: AppDB,
-    input: {
-      workspaceId: WorkspaceId;
-      pageId: PageId;
-      userId: UserId;
-      role: AllPageRole;
-    },
-  ): Promise<Result<true, DatabaseError>> {
+  async setPagePermission({
+    workspaceId,
+    pageId,
+    userId,
+    role,
+  }: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+    userId: UserId;
+    role: AllPageRole;
+  }): Promise<Result<true, DatabaseError>> {
+    return this.setPagePermissionTx({
+      tx: this.db,
+      workspaceId,
+      pageId,
+      userId,
+      role,
+    });
+  }
+
+  async setPagePermissionTx({
+    tx,
+    workspaceId,
+    pageId,
+    userId,
+    role,
+  }: {
+    tx: AppDB;
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+    userId: UserId;
+    role: AllPageRole;
+  }): Promise<Result<true, DatabaseError>> {
     try {
-      if (input.role === "viewer") {
+      if (role === "viewer") {
         await tx
           .delete(pagePermissions)
           .where(
             and(
-              eq(pagePermissions.pageId, input.pageId),
-              eq(pagePermissions.userId, input.userId),
-              eq(pagePermissions.workspaceId, input.workspaceId),
+              eq(pagePermissions.pageId, pageId),
+              eq(pagePermissions.userId, userId),
+              eq(pagePermissions.workspaceId, workspaceId),
             ),
           );
       } else {
         await tx
           .insert(pagePermissions)
           .values({
-            pageId: input.pageId,
-            userId: input.userId,
-            workspaceId: input.workspaceId,
-            role: input.role,
+            pageId,
+            userId,
+            workspaceId,
+            role,
           })
           .onConflictDoUpdate({
             target: [
@@ -167,7 +195,7 @@ export class PagesRepository {
               pagePermissions.workspaceId,
             ],
             set: {
-              role: input.role,
+              role,
               updatedAt: new Date(),
             },
           });
@@ -182,9 +210,11 @@ export class PagesRepository {
     }
   }
 
-  async getPageContent(
-    pageId: PageId,
-  ): Promise<Result<Uint8Array | null, DatabaseError>> {
+  async getPageContent({
+    pageId,
+  }: {
+    pageId: PageId;
+  }): Promise<Result<Uint8Array | null, DatabaseError>> {
     try {
       const [pageData] = await this.db
         .select({ content: pages.content })
@@ -203,18 +233,25 @@ export class PagesRepository {
     }
   }
 
-  async updatePageContent(
-    pageId: PageId,
-    content: Uint8Array,
-  ): Promise<Result<true, DatabaseError>> {
-    return this.updatePageContentTx(this.db, pageId, content);
+  async updatePageContent({
+    pageId,
+    content,
+  }: {
+    pageId: PageId;
+    content: Uint8Array;
+  }): Promise<Result<true, DatabaseError>> {
+    return this.updatePageContentTx({ tx: this.db, pageId, content });
   }
 
-  async updatePageContentTx(
-    tx: AppDB,
-    pageId: PageId,
-    content: Uint8Array,
-  ): Promise<Result<true, DatabaseError>> {
+  async updatePageContentTx({
+    tx,
+    pageId,
+    content,
+  }: {
+    tx: AppDB;
+    pageId: PageId;
+    content: Uint8Array;
+  }): Promise<Result<true, DatabaseError>> {
     try {
       await tx
         .update(pages)
@@ -229,10 +266,13 @@ export class PagesRepository {
     }
   }
 
-  async getPageWithoutContent(
-    workspaceId: WorkspaceId,
-    pageId: PageId,
-  ): Promise<Result<Omit<Page, "content">, DatabaseError | NotFoundError>> {
+  async getPageWithoutContent({
+    workspaceId,
+    pageId,
+  }: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+  }): Promise<Result<Omit<Page, "content">, DatabaseError | NotFoundError>> {
     try {
       const [page] = await this.db
         .select({
@@ -260,18 +300,25 @@ export class PagesRepository {
     }
   }
 
-  async updatePageMetadata(
-    pageId: PageId,
-    data: Partial<Pick<Page, "title" | "icon" | "cover">>,
-  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
-    return this.updatePageMetadataTx(this.db, pageId, data);
+  async updatePageMetadata({
+    pageId,
+    data,
+  }: {
+    pageId: PageId;
+    data: Partial<Pick<Page, "title" | "icon" | "cover">>;
+  }): Promise<Result<Page, DatabaseError | NotFoundError>> {
+    return this.updatePageMetadataTx({ tx: this.db, pageId, data });
   }
 
-  async updatePageMetadataTx(
-    tx: AppDB,
-    pageId: PageId,
-    data: Partial<Pick<Page, "title" | "icon" | "cover">>,
-  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
+  async updatePageMetadataTx({
+    tx,
+    pageId,
+    data,
+  }: {
+    tx: AppDB;
+    pageId: PageId;
+    data: Partial<Pick<Page, "title" | "icon" | "cover">>;
+  }): Promise<Result<Page, DatabaseError | NotFoundError>> {
     try {
       const [updated] = await tx
         .update(pages)
@@ -302,9 +349,11 @@ export class PagesRepository {
     }
   }
 
-  async getPageById(
-    pageId: PageId,
-  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
+  async getPageById({
+    pageId,
+  }: {
+    pageId: PageId;
+  }): Promise<Result<Page, DatabaseError | NotFoundError>> {
     try {
       const [page] = await this.db
         .select({
@@ -332,9 +381,11 @@ export class PagesRepository {
     }
   }
 
-  async getPagesByIds(
-    pageIds: PageId[],
-  ): Promise<Result<Page[], DatabaseError>> {
+  async getPagesByIds({
+    pageIds,
+  }: {
+    pageIds: PageId[];
+  }): Promise<Result<Page[], DatabaseError>> {
     if (pageIds.length === 0) return Result.ok([]);
     try {
       const rows = await this.db
@@ -361,10 +412,13 @@ export class PagesRepository {
     }
   }
 
-  async getPagePermissionForUser(
-    pageId: PageId,
-    userId: UserId,
-  ): Promise<Result<PagePermissionRole | null, DatabaseError>> {
+  async getPagePermissionForUser({
+    pageId,
+    userId,
+  }: {
+    pageId: PageId;
+    userId: UserId;
+  }): Promise<Result<PagePermissionRole | null, DatabaseError>> {
     try {
       const [permission] = await this.db
         .select({ role: pagePermissions.role })
@@ -385,23 +439,25 @@ export class PagesRepository {
     }
   }
 
-  async createAccessRequest(
-    tx: AppDB,
-    input: {
-      pageId: PageId;
-      workspaceId: WorkspaceId;
-      userId: UserId;
-      requestedRole: PagePermissionRole;
-    },
-  ): Promise<Result<PageAccessRequest, DatabaseError>> {
+  async createAccessRequest({
+    pageId,
+    workspaceId,
+    userId,
+    requestedRole,
+  }: {
+    pageId: PageId;
+    workspaceId: WorkspaceId;
+    userId: UserId;
+    requestedRole: PagePermissionRole;
+  }): Promise<Result<PageAccessRequest, DatabaseError>> {
     try {
-      const [data] = await tx
+      const [data] = await this.db
         .insert(pageAccessRequests)
         .values({
-          pageId: input.pageId,
-          workspaceId: input.workspaceId,
-          userId: input.userId,
-          requestedRole: input.requestedRole,
+          pageId,
+          workspaceId,
+          userId,
+          requestedRole,
           status: "pending",
         })
         .returning();
@@ -421,10 +477,13 @@ export class PagesRepository {
     }
   }
 
-  async getPendingAccessRequestForUser(
-    pageId: PageId,
-    userId: UserId,
-  ): Promise<Result<PageAccessRequest | null, DatabaseError>> {
+  async getPendingAccessRequestForUser({
+    pageId,
+    userId,
+  }: {
+    pageId: PageId;
+    userId: UserId;
+  }): Promise<Result<PageAccessRequest | null, DatabaseError>> {
     try {
       const [request] = await this.db
         .select()
@@ -450,9 +509,11 @@ export class PagesRepository {
     }
   }
 
-  async getAccessRequestById(
-    requestId: string,
-  ): Promise<Result<PageAccessRequest, DatabaseError | NotFoundError>> {
+  async getAccessRequestById({
+    requestId,
+  }: {
+    requestId: string;
+  }): Promise<Result<PageAccessRequest, DatabaseError | NotFoundError>> {
     try {
       const [request] = await this.db
         .select()
@@ -474,11 +535,25 @@ export class PagesRepository {
     }
   }
 
-  async updateAccessRequestStatus(
-    tx: AppDB,
-    requestId: string,
-    status: "approved" | "rejected",
-  ): Promise<Result<PageAccessRequest, DatabaseError | NotFoundError>> {
+  async updateAccessRequestStatus({
+    requestId,
+    status,
+  }: {
+    requestId: string;
+    status: "approved" | "rejected";
+  }): Promise<Result<PageAccessRequest, DatabaseError | NotFoundError>> {
+    return this.updateAccessRequestStatusTx({ tx: this.db, requestId, status });
+  }
+
+  async updateAccessRequestStatusTx({
+    tx,
+    requestId,
+    status,
+  }: {
+    tx: AppDB;
+    requestId: string;
+    status: "approved" | "rejected";
+  }): Promise<Result<PageAccessRequest, DatabaseError | NotFoundError>> {
     try {
       const [updated] = await tx
         .update(pageAccessRequests)
@@ -501,9 +576,11 @@ export class PagesRepository {
     }
   }
 
-  async getTrashedPages(
-    workspaceId: WorkspaceId,
-  ): Promise<Result<Page[], DatabaseError>> {
+  async getTrashedPages({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<Page[], DatabaseError>> {
     try {
       const rows = await this.db
         .select({
@@ -530,10 +607,13 @@ export class PagesRepository {
     }
   }
 
-  async getDescendantPageIds(
-    workspaceId: WorkspaceId,
-    pageId: PageId,
-  ): Promise<Result<PageId[], DatabaseError>> {
+  async getDescendantPageIds({
+    workspaceId,
+    pageId,
+  }: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+  }): Promise<Result<PageId[], DatabaseError>> {
     try {
       const query = sql<{ id: PageId }>`
       WITH RECURSIVE page_tree AS (
@@ -568,16 +648,17 @@ export class PagesRepository {
     }
   }
 
-  async moveToTrash(
-    tx: AppDB,
-    pageIds: PageId[],
-  ): Promise<Result<true, DatabaseError>> {
+  async moveToTrash({
+    pageIds,
+  }: {
+    pageIds: PageId[];
+  }): Promise<Result<true, DatabaseError>> {
     try {
       if (pageIds.length === 0) {
         return Result.ok(true);
       }
 
-      await tx
+      await this.db
         .update(pages)
         .set({ inTrash: true, updatedAt: new Date() })
         .where(inArray(pages.id, pageIds));
@@ -591,14 +672,17 @@ export class PagesRepository {
     }
   }
 
-  async restoreFromTrash(
-    tx: AppDB,
-    pageId: PageId,
-    parentId: PageId | null,
-    descendantIds: PageId[] = [],
-  ): Promise<Result<Page, DatabaseError | NotFoundError>> {
+  async restoreFromTrash({
+    pageId,
+    parentId,
+    descendantIds = [],
+  }: {
+    pageId: PageId;
+    parentId: PageId | null;
+    descendantIds?: PageId[];
+  }): Promise<Result<Page, DatabaseError | NotFoundError>> {
     try {
-      const [updated] = await tx
+      const [updated] = await this.db
         .update(pages)
         .set({ inTrash: false, parentId, updatedAt: new Date() })
         .where(eq(pages.id, pageId))
@@ -619,7 +703,7 @@ export class PagesRepository {
       }
 
       if (descendantIds.length > 0) {
-        await tx
+        await this.db
           .update(pages)
           .set({ inTrash: false, updatedAt: new Date() })
           .where(inArray(pages.id, descendantIds));
@@ -634,16 +718,17 @@ export class PagesRepository {
     }
   }
 
-  async deletePermanently(
-    tx: AppDB,
-    pageIds: PageId[],
-  ): Promise<Result<true, DatabaseError>> {
+  async deletePermanently({
+    pageIds,
+  }: {
+    pageIds: PageId[];
+  }): Promise<Result<true, DatabaseError>> {
     try {
       if (pageIds.length === 0) {
         return Result.ok(true);
       }
 
-      await tx.delete(pages).where(inArray(pages.id, pageIds));
+      await this.db.delete(pages).where(inArray(pages.id, pageIds));
 
       return Result.ok(true);
     } catch (error) {
@@ -654,12 +739,13 @@ export class PagesRepository {
     }
   }
 
-  async emptyTrash(
-    tx: AppDB,
-    workspaceId: WorkspaceId,
-  ): Promise<Result<PageId[], DatabaseError>> {
+  async emptyTrash({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<PageId[], DatabaseError>> {
     try {
-      const trashedPages = await tx
+      const trashedPages = await this.db
         .select({ id: pages.id })
         .from(pages)
         .where(
@@ -671,7 +757,7 @@ export class PagesRepository {
       }
 
       const pageIds = trashedPages.map((p) => p.id as PageId);
-      await tx.delete(pages).where(inArray(pages.id, pageIds));
+      await this.db.delete(pages).where(inArray(pages.id, pageIds));
 
       return Result.ok(pageIds);
     } catch (error) {

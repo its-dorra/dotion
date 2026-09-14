@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.2",
+    "@ai-sdk/groq": "^4.0.41",
     "@blocknote/xl-ai": "^0.54.0",
     "@dotion/auth": "workspace:*",
     "@dotion/db": "workspace:*",

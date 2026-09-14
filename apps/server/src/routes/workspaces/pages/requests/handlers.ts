@@ -50,10 +50,10 @@ export const getRequestStatusHandler: AppRouteHandler<
   const currentUser = c.var.currentUser;
   const { pageId } = c.req.valid("param");
 
-  const result = await c.var.services.pages.getAccessRequestStatus(
+  const result = await c.var.services.pages.getAccessRequestStatus({
     pageId,
-    currentUser.id,
-  );
+    userId: currentUser.id,
+  });
 
   if (result.isErr()) {
     return result.error.match({

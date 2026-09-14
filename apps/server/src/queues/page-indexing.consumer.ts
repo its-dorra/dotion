@@ -31,7 +31,10 @@ export async function processPageIndexingBatch(
           console.warn(
             `PageIndexingConsumer: page ${pageId} no longer exists, acking and releasing outbox.`,
           );
-          await services.outbox.markCompleted("page_indexing", pageId);
+          await services.outbox.markCompleted({
+            type: "page_indexing",
+            aggregateId: pageId,
+          });
           msg.ack();
         } else {
           console.error(
@@ -47,7 +50,11 @@ export async function processPageIndexingBatch(
       console.log(
         `PageIndexingConsumer: successfully indexed page ${pageId} (${summary.inserted} inserted, ${summary.updatedContent} re-embedded, ${summary.updatedMeta} metadata updated, ${summary.deleted} deleted, ${summary.unchanged} unchanged).`,
       );
-      await services.outbox.markCompleted("page_indexing", pageId, claimedAt);
+      await services.outbox.markCompleted({
+        type: "page_indexing",
+        aggregateId: pageId,
+        claimedAt,
+      });
       msg.ack();
     } catch (error) {
       console.error(

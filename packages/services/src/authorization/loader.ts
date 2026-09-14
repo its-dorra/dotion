@@ -23,11 +23,15 @@ export interface DomainServices {
 export class AttributeLoader {
   constructor(private readonly services: DomainServices) {}
 
-  async loadResourceData<R extends ResourceType>(
-    resource: R,
-    input: ResourceInput<R>,
-    user: User,
-  ): Promise<Result<ResourceData<R> | null, DatabaseError>> {
+  async loadResourceData<R extends ResourceType>({
+    resource,
+    input,
+    user,
+  }: {
+    resource: R;
+    input: ResourceInput<R>;
+    user: User;
+  }): Promise<Result<ResourceData<R> | null, DatabaseError>> {
     switch (resource) {
       case "workspace": {
         const { workspaceId } = input as ResourceInput<"workspace">;
@@ -82,9 +86,9 @@ export class AttributeLoader {
       }
 
       case "user": {
-        return this.services.users.loadUserResourceData(
-          input as ResourceInput<"user">,
-        ) as Promise<Result<ResourceData<R> | null, DatabaseError>>;
+        return this.services.users.loadUserResourceData({
+          input: input as ResourceInput<"user">,
+        }) as Promise<Result<ResourceData<R> | null, DatabaseError>>;
       }
 
       default:
@@ -92,11 +96,15 @@ export class AttributeLoader {
     }
   }
 
-  async loadScopeData<R extends ResourceType>(
-    resource: R,
-    scopeInput: ScopeInput<R> | undefined,
-    user: User,
-  ): Promise<Result<ScopeData<R> | null, DatabaseError>> {
+  async loadScopeData<R extends ResourceType>({
+    resource,
+    scopeInput,
+    user,
+  }: {
+    resource: R;
+    scopeInput?: ScopeInput<R>;
+    user: User;
+  }): Promise<Result<ScopeData<R> | null, DatabaseError>> {
     switch (resource) {
       case "workspace": {
         const data: ScopeData<"workspace"> = {};

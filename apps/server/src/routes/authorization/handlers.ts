@@ -9,10 +9,10 @@ export const checkPermissionHandler: AppRouteHandler<
   const currentUser = c.var.currentUser;
   const query = c.req.valid("query");
 
-  const result = await c.var.services.authorization.checkPermission(
-    currentUser,
+  const result = await c.var.services.authorization.checkPermission({
+    user: currentUser,
     query,
-  );
+  });
 
   if (result.isErr()) {
     return result.error.match({

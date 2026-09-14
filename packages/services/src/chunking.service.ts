@@ -285,10 +285,13 @@ export class ChunkingService {
     return blocks;
   }
 
-  async parseDocumentSections(
-    pageTitle: string,
-    blocks: BlockNoteBlock[],
-  ): Promise<ParsedSection[]> {
+  async parseDocumentSections({
+    pageTitle,
+    blocks,
+  }: {
+    pageTitle: string;
+    blocks: BlockNoteBlock[];
+  }): Promise<ParsedSection[]> {
     const safeTitle = pageTitle.trim() || "Untitled";
 
     if (!Array.isArray(blocks) || blocks.length === 0) {
@@ -458,10 +461,13 @@ export class ChunkingService {
     return result;
   }
 
-  async parseBinaryYDocToSections(
-    pageTitle: string,
-    contentBinary: Uint8Array | null,
-  ): Promise<ParsedSection[]> {
+  async parseBinaryYDocToSections({
+    pageTitle,
+    contentBinary,
+  }: {
+    pageTitle: string;
+    contentBinary: Uint8Array | null;
+  }): Promise<ParsedSection[]> {
     let blocks: BlockNoteBlock[] = [];
     if (contentBinary && contentBinary.length > 0) {
       try {
@@ -475,6 +481,6 @@ export class ChunkingService {
         );
       }
     }
-    return this.parseDocumentSections(pageTitle, blocks);
+    return this.parseDocumentSections({ pageTitle, blocks });
   }
 }

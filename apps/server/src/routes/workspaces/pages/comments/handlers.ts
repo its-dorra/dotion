@@ -14,7 +14,10 @@ export const listCommentsHandler: AppRouteHandler<ListCommentsRoute> = async (
   const { pageId } = c.req.valid("param");
   const query = c.req.valid("query");
 
-  const result = await c.var.services.comments.getPageComments(pageId, query);
+  const result = await c.var.services.comments.getPageComments({
+    pageId,
+    pagination: query,
+  });
   if (result.isErr()) {
     return result.error.match({
       DatabaseError: () =>
@@ -36,7 +39,8 @@ export const createCommentHandler: AppRouteHandler<CreateCommentRoute> = async (
     const body = c.req.valid("json");
     const currentUser = c.var.currentUser;
 
-    const result = await c.var.services.comments.createComment(currentUser.id, {
+    const result = await c.var.services.comments.createComment({
+      userId: currentUser.id,
       pageId,
       body: body.body,
       parentId: body.parentId ?? null,
@@ -74,10 +78,10 @@ export const resolveCommentHandler: AppRouteHandler<
 > = async (c) => {
   const { pageId, commentId } = c.req.valid("param");
 
-  const result = await c.var.services.comments.resolveComment(
+  const result = await c.var.services.comments.resolveComment({
     pageId,
     commentId,
-  );
+  });
   if (result.isErr()) {
     return c.json(
       errorResponseJson("Failed to resolve comment"),
@@ -93,7 +97,10 @@ export const deleteCommentHandler: AppRouteHandler<DeleteCommentRoute> = async (
 ) => {
   const { pageId, commentId } = c.req.valid("param");
 
-  const result = await c.var.services.comments.deleteComment(pageId, commentId);
+  const result = await c.var.services.comments.deleteComment({
+    pageId,
+    commentId,
+  });
   if (result.isErr()) {
     return result.error.match({
       DatabaseError: () =>

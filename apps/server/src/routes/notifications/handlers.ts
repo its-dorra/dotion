@@ -9,10 +9,10 @@ export const listHandler: AppRouteHandler<ListRoute> = async (c) => {
   const currentUser = c.var.currentUser;
   const pagination = c.req.valid("query");
 
-  const result = await c.var.services.notifications.getNotifications(
-    currentUser.id,
+  const result = await c.var.services.notifications.getNotifications({
+    userId: currentUser.id,
     pagination,
-  );
+  });
 
   if (result.isErr()) {
     return result.error.match({
@@ -33,10 +33,10 @@ export const markAsReadHandler: AppRouteHandler<MarkAsReadRoute> = async (
   const currentUser = c.var.currentUser;
   const { id } = c.req.valid("param");
 
-  const result = await c.var.services.notifications.markAsRead(
-    currentUser.id,
-    id,
-  );
+  const result = await c.var.services.notifications.markAsRead({
+    userId: currentUser.id,
+    notificationId: id,
+  });
 
   if (result.isErr()) {
     return result.error.match({
@@ -64,9 +64,9 @@ export const markAllAsReadHandler: AppRouteHandler<MarkAllAsReadRoute> = async (
 ) => {
   const currentUser = c.var.currentUser;
 
-  const result = await c.var.services.notifications.markAllAsRead(
-    currentUser.id,
-  );
+  const result = await c.var.services.notifications.markAllAsRead({
+    userId: currentUser.id,
+  });
 
   if (result.isErr()) {
     return result.error.match({

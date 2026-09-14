@@ -17,11 +17,11 @@ export const listThreadsHandler: AppRouteHandler<ListThreadsRoute> = async (
   const { id: workspaceId } = c.req.valid("param");
   const query = c.req.valid("query");
 
-  const result = await c.var.services.assistant.listThreads(
+  const result = await c.var.services.assistant.listThreads({
     workspaceId,
-    currentUser.id,
-    query,
-  );
+    userId: currentUser.id,
+    pagination: query,
+  });
 
   if (result.isErr()) {
     return result.error.match({
@@ -42,10 +42,10 @@ export const createThreadHandler: AppRouteHandler<CreateThreadRoute> = async (
   const currentUser = c.var.currentUser;
   const { id: workspaceId } = c.req.valid("param");
 
-  const result = await c.var.services.assistant.createThread(
+  const result = await c.var.services.assistant.createThread({
     workspaceId,
-    currentUser.id,
-  );
+    userId: currentUser.id,
+  });
 
   if (result.isErr()) {
     return result.error.match({
@@ -65,7 +65,7 @@ export const deleteThreadHandler: AppRouteHandler<DeleteThreadRoute> = async (
 ) => {
   const { threadId } = c.req.valid("param");
 
-  const result = await c.var.services.assistant.deleteThread(threadId);
+  const result = await c.var.services.assistant.deleteThread({ threadId });
 
   if (result.isErr()) {
     return result.error.match({
@@ -86,7 +86,10 @@ export const listMessagesHandler: AppRouteHandler<ListMessagesRoute> = async (
   const { threadId } = c.req.valid("param");
   const query = c.req.valid("query");
 
-  const result = await c.var.services.assistant.listMessages(threadId, query);
+  const result = await c.var.services.assistant.listMessages({
+    threadId,
+    pagination: query,
+  });
 
   if (result.isErr()) {
     return result.error.match({

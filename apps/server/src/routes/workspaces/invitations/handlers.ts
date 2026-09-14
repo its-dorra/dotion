@@ -17,11 +17,11 @@ export const inviteMemberHandler: AppRouteHandler<InviteMemberRoute> = async (
   const { id } = c.req.valid("param");
   const input = c.req.valid("json");
 
-  const result = await c.var.services.workspaces.inviteMember(
-    id,
-    currentUser.id,
+  const result = await c.var.services.workspaces.inviteMember({
+    workspaceId: id,
+    inviterId: currentUser.id,
     input,
-  );
+  });
 
   if (result.isErr()) {
     return result.error.match({
@@ -52,10 +52,10 @@ export const listWorkspaceInvitationsHandler: AppRouteHandler<
   const { id } = c.req.valid("param");
   const pagination = c.req.valid("query");
 
-  const result = await c.var.services.workspaces.getWorkspaceInvitations(
-    id,
+  const result = await c.var.services.workspaces.getWorkspaceInvitations({
+    workspaceId: id,
     pagination,
-  );
+  });
 
   if (result.isErr()) {
     return result.error.match({
@@ -80,10 +80,10 @@ export const cancelWorkspaceInvitationHandler: AppRouteHandler<
 > = async (c) => {
   const { id, invitationId } = c.req.valid("param");
 
-  const result = await c.var.services.workspaces.cancelInvitation(
-    id,
+  const result = await c.var.services.workspaces.cancelInvitation({
+    workspaceId: id,
     invitationId,
-  );
+  });
 
   if (result.isErr()) {
     return result.error.match({
@@ -112,10 +112,10 @@ export const acceptInvitationHandler: AppRouteHandler<
   const currentUser = c.var.currentUser;
   const { invitationId } = c.req.valid("param");
 
-  const result = await c.var.services.workspaces.acceptInvitation(
+  const result = await c.var.services.workspaces.acceptInvitation({
     invitationId,
-    currentUser.id,
-  );
+    userId: currentUser.id,
+  });
 
   if (result.isErr()) {
     return result.error.match({
@@ -146,10 +146,10 @@ export const declineInvitationHandler: AppRouteHandler<
   const currentUser = c.var.currentUser;
   const { invitationId } = c.req.valid("param");
 
-  const result = await c.var.services.workspaces.declineInvitation(
+  const result = await c.var.services.workspaces.declineInvitation({
     invitationId,
-    currentUser.id,
-  );
+    userId: currentUser.id,
+  });
 
   if (result.isErr()) {
     return result.error.match({

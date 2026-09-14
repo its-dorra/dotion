@@ -38,21 +38,30 @@ export class WorkspacesService {
     private readonly outboxService: OutboxService,
   ) {}
 
-  async getAllWorkspaces(userId: UserId) {
-    return this.workspacesRepository.getAllWorkspaces(userId);
+  async getAllWorkspaces({ userId }: { userId: UserId }) {
+    return this.workspacesRepository.getAllWorkspaces({ userId });
   }
 
-  async createWorkspace(input: CreateWorkspaceInput, userId: UserId) {
+  async createWorkspace({
+    input,
+    userId,
+  }: {
+    input: CreateWorkspaceInput;
+    userId: UserId;
+  }) {
     return this.dbClient.transaction(async (tx) => {
       return Result.gen(async function* (this: WorkspacesService) {
         const workspace = yield* Result.await(
-          this.workspacesRepository.createWorkspace(tx, input),
+          this.workspacesRepository.createWorkspaceTx({ tx, input }),
         );
         yield* Result.await(
-          this.workspacesRepository.createWorkspaceMember(tx, {
-            workspaceId: workspace.id,
-            userId,
-            role: "owner",
+          this.workspacesRepository.createWorkspaceMemberTx({
+            tx,
+            input: {
+              workspaceId: workspace.id,
+              userId,
+              role: "owner",
+            },
           }),
         );
         return Result.ok(workspace);
@@ -64,8 +73,14 @@ export class WorkspacesService {
     });
   }
 
-  async getWorkspaceById(workspaceId: WorkspaceId, userId: UserId) {
-    return this.workspacesRepository.getById(workspaceId, userId);
+  async getWorkspaceById({
+    workspaceId,
+    userId,
+  }: {
+    workspaceId: WorkspaceId;
+    userId: UserId;
+  }) {
+    return this.workspacesRepository.getById({ workspaceId, userId });
   }
 
   async searchCandidateUsers({
@@ -80,8 +95,8 @@ export class WorkspacesService {
     return Result.gen(async function* (this: WorkspacesService) {
       const [memberUserIds, pendingInvitedUserIds] = yield* Result.await(
         Result.allAsync([
-          this.workspacesRepository.getMemberUserIds(workspaceId),
-          this.workspacesRepository.getPendingInvitedUserIds(workspaceId),
+          this.workspacesRepository.getMemberUserIds({ workspaceId }),
+          this.workspacesRepository.getPendingInvitedUserIds({ workspaceId }),
         ]),
       );
 
@@ -101,20 +116,23 @@ export class WorkspacesService {
     }, this);
   }
 
-  async getMembers(
-    workspaceId: WorkspaceId,
-    pagination: PaginationQuery,
-  ): Promise<Result<PaginatedData<WorkspaceMemberDetail>, DatabaseError>> {
+  async getMembers({
+    workspaceId,
+    pagination,
+  }: {
+    workspaceId: WorkspaceId;
+    pagination: PaginationQuery;
+  }): Promise<Result<PaginatedData<WorkspaceMemberDetail>, DatabaseError>> {
     return Result.gen(async function* (this: WorkspacesService) {
       const membersResult = yield* Result.await(
-        this.workspacesRepository.getMembers(workspaceId, pagination),
+        this.workspacesRepository.getMembers({ workspaceId, pagination }),
       );
 
       const memberRows = membersResult.payload;
       const userIds = memberRows.map((m) => m.userId);
 
       const users = yield* Result.await(
-        this.usersService.getUsersByIds(userIds),
+        this.usersService.getUsersByIds({ userIds }),
       );
       const usersMap = new Map(users.map((u) => [u.id, u]));
 
@@ -138,24 +156,28 @@ export class WorkspacesService {
     }, this);
   }
 
-  async getWorkspaceOwnerUserId(workspaceId: WorkspaceId) {
-    return this.workspacesRepository.getWorkspaceOwnerUserId(workspaceId);
+  async getWorkspaceOwnerUserId({ workspaceId }: { workspaceId: WorkspaceId }) {
+    return this.workspacesRepository.getWorkspaceOwnerUserId({ workspaceId });
   }
 
-  async inviteMember(
-    workspaceId: WorkspaceId,
-    inviterId: UserId,
-    input: InviteMemberInput,
-  ): Promise<
+  async inviteMember({
+    workspaceId,
+    inviterId,
+    input,
+  }: {
+    workspaceId: WorkspaceId;
+    inviterId: UserId;
+    input: InviteMemberInput;
+  }): Promise<
     Result<
       WorkspaceInvitationWithDetails,
       DatabaseError | NotFoundError | UniqueConstraintViolationError
     >
   > {
     const targetUserPromise = input.userId
-      ? this.usersService.getUserById(input.userId)
+      ? this.usersService.getUserById({ userId: input.userId })
       : input.email
-        ? this.usersService.getUserByEmail(input.email)
+        ? this.usersService.getUserByEmail({ email: input.email })
         : null;
 
     if (!targetUserPromise) {
@@ -176,13 +198,16 @@ export class WorkspacesService {
       const [inviterUser, workspace, pendingInvitation, isAlreadyMember] =
         yield* Result.await(
           Result.allAsync([
-            this.usersService.getUserById(inviterId),
-            this.workspacesRepository.getWorkspaceOnly(workspaceId),
-            this.workspacesRepository.getPendingInvitationForUser(
+            this.usersService.getUserById({ userId: inviterId }),
+            this.workspacesRepository.getWorkspaceOnly({ workspaceId }),
+            this.workspacesRepository.getPendingInvitationForUser({
               workspaceId,
-              targetUser.id,
-            ),
-            this.workspacesRepository.isMember(workspaceId, targetUser.id),
+              userId: targetUser.id,
+            }),
+            this.workspacesRepository.isMember({
+              workspaceId,
+              userId: targetUser.id,
+            }),
           ]),
         );
 
@@ -204,11 +229,14 @@ export class WorkspacesService {
         this.dbClient.transaction(async (tx) => {
           return Result.gen(async function* (this: WorkspacesService) {
             const invitation = yield* Result.await(
-              this.workspacesRepository.createInvitation(tx, {
-                workspaceId,
-                invitedUserId: targetUser.id,
-                invitedByUserId: inviterId,
-                status: "pending",
+              this.workspacesRepository.createInvitationTx({
+                tx,
+                input: {
+                  workspaceId,
+                  invitedUserId: targetUser.id,
+                  invitedByUserId: inviterId,
+                  status: "pending",
+                },
               }),
             );
 
@@ -222,14 +250,17 @@ export class WorkspacesService {
             };
 
             yield* Result.await(
-              this.outboxService.emitEventTx(tx, {
-                type: "workspace.invitation_created",
-                aggregateId: invitation.id,
-                payload: {
-                  workspaceId,
-                  invitation: invitationWithDetails,
-                  invitedUserId: targetUser.id,
-                  invitedByUserId: inviterId,
+              this.outboxService.emitEventTx({
+                tx,
+                event: {
+                  type: "workspace.invitation_created",
+                  aggregateId: invitation.id,
+                  payload: {
+                    workspaceId,
+                    invitation: invitationWithDetails,
+                    invitedUserId: targetUser.id,
+                    invitedByUserId: inviterId,
+                  },
                 },
               }),
             );
@@ -260,10 +291,13 @@ export class WorkspacesService {
     }, this);
   }
 
-  async getWorkspaceInvitations(
-    workspaceId: WorkspaceId,
-    pagination: PaginationQuery,
-  ): Promise<
+  async getWorkspaceInvitations({
+    workspaceId,
+    pagination,
+  }: {
+    workspaceId: WorkspaceId;
+    pagination: PaginationQuery;
+  }): Promise<
     Result<
       PaginatedData<WorkspaceInvitationWithDetails>,
       DatabaseError | NotFoundError
@@ -271,10 +305,10 @@ export class WorkspacesService {
   > {
     return Result.gen(async function* (this: WorkspacesService) {
       const invitesResult = yield* Result.await(
-        this.workspacesRepository.getPendingInvitationsForWorkspace(
+        this.workspacesRepository.getPendingInvitationsForWorkspace({
           workspaceId,
           pagination,
-        ),
+        }),
       );
 
       const invites = invitesResult.payload;
@@ -285,8 +319,8 @@ export class WorkspacesService {
 
       const [users, workspace] = yield* Result.await(
         Result.allAsync([
-          this.usersService.getUsersByIds(userIds),
-          this.workspacesRepository.getWorkspaceOnly(workspaceId),
+          this.usersService.getUsersByIds({ userIds }),
+          this.workspacesRepository.getWorkspaceOnly({ workspaceId }),
         ]),
       );
 
@@ -312,10 +346,13 @@ export class WorkspacesService {
     }, this);
   }
 
-  async acceptInvitation(
-    invitationId: WorkspaceInvitationId,
-    userId: UserId,
-  ): Promise<
+  async acceptInvitation({
+    invitationId,
+    userId,
+  }: {
+    invitationId: WorkspaceInvitationId;
+    userId: UserId;
+  }): Promise<
     Result<
       Workspace,
       DatabaseError | NotFoundError | UniqueConstraintViolationError
@@ -323,7 +360,7 @@ export class WorkspacesService {
   > {
     return Result.gen(async function* (this: WorkspacesService) {
       const invitation = yield* Result.await(
-        this.workspacesRepository.getInvitationById(invitationId),
+        this.workspacesRepository.getInvitationById({ invitationId }),
       );
 
       if (invitation.invitedUserId !== userId) {
@@ -342,32 +379,35 @@ export class WorkspacesService {
         this.dbClient.transaction(async (tx) => {
           return Result.gen(async function* (this: WorkspacesService) {
             yield* Result.await(
-              this.workspacesRepository.updateInvitationStatus(
+              this.workspacesRepository.updateInvitationStatusTx({
                 tx,
                 invitationId,
-                "accepted",
-              ),
-            );
-
-            yield* Result.await(
-              this.workspacesRepository.createWorkspaceMember(tx, {
-                workspaceId: invitation.workspaceId,
-                userId,
-                role: "member",
+                status: "accepted",
               }),
             );
 
-            await this.workspacesRepository.incrementMembersCount(
-              tx,
-              invitation.workspaceId,
+            yield* Result.await(
+              this.workspacesRepository.createWorkspaceMemberTx({
+                tx,
+                input: {
+                  workspaceId: invitation.workspaceId,
+                  userId,
+                  role: "member",
+                },
+              }),
             );
+
+            await this.workspacesRepository.incrementMembersCountTx({
+              tx,
+              workspaceId: invitation.workspaceId,
+            });
 
             const [workspace, user] = yield* Result.await(
               Result.allAsync([
-                this.workspacesRepository.getWorkspaceOnly(
-                  invitation.workspaceId,
-                ),
-                this.usersService.getUserById(userId),
+                this.workspacesRepository.getWorkspaceOnly({
+                  workspaceId: invitation.workspaceId,
+                }),
+                this.usersService.getUserById({ userId }),
               ]),
             );
 
@@ -411,10 +451,16 @@ export class WorkspacesService {
     }, this);
   }
 
-  async declineInvitation(invitationId: WorkspaceInvitationId, userId: UserId) {
+  async declineInvitation({
+    invitationId,
+    userId,
+  }: {
+    invitationId: WorkspaceInvitationId;
+    userId: UserId;
+  }) {
     return Result.gen(async function* (this: WorkspacesService) {
       const invitation = yield* Result.await(
-        this.workspacesRepository.getInvitationById(invitationId),
+        this.workspacesRepository.getInvitationById({ invitationId }),
       );
 
       if (invitation.invitedUserId !== userId) {
@@ -430,11 +476,10 @@ export class WorkspacesService {
       }
 
       yield* Result.await(
-        this.workspacesRepository.updateInvitationStatus(
-          this.dbClient,
+        this.workspacesRepository.updateInvitationStatus({
           invitationId,
-          "declined",
-        ),
+          status: "declined",
+        }),
       );
 
       yield* Result.await(
@@ -451,17 +496,19 @@ export class WorkspacesService {
     }, this);
   }
 
-  async cancelInvitation(
-    workspaceId: WorkspaceId,
-    invitationId: WorkspaceInvitationId,
-  ) {
+  async cancelInvitation({
+    workspaceId,
+    invitationId,
+  }: {
+    workspaceId: WorkspaceId;
+    invitationId: WorkspaceInvitationId;
+  }) {
     return Result.gen(async function* (this: WorkspacesService) {
       yield* Result.await(
-        this.workspacesRepository.updateInvitationStatus(
-          this.dbClient,
+        this.workspacesRepository.updateInvitationStatus({
           invitationId,
-          "cancelled",
-        ),
+          status: "cancelled",
+        }),
       );
 
       yield* Result.await(
@@ -479,14 +526,21 @@ export class WorkspacesService {
     }, this);
   }
 
-  async updateMemberRole(
-    workspaceId: WorkspaceId,
-    targetUserId: UserId,
-    newRole: WorkspaceRole,
-  ): Promise<Result<WorkspaceMemberDetail, DatabaseError | NotFoundError>> {
+  async updateMemberRole({
+    workspaceId,
+    targetUserId,
+    newRole,
+  }: {
+    workspaceId: WorkspaceId;
+    targetUserId: UserId;
+    newRole: WorkspaceRole;
+  }): Promise<Result<WorkspaceMemberDetail, DatabaseError | NotFoundError>> {
     return Result.gen(async function* (this: WorkspacesService) {
       const targetMember = yield* Result.await(
-        this.workspacesRepository.getMember(workspaceId, targetUserId),
+        this.workspacesRepository.getMember({
+          workspaceId,
+          userId: targetUserId,
+        }),
       );
 
       if (targetMember.role === "owner") {
@@ -502,15 +556,16 @@ export class WorkspacesService {
       }
 
       const updatedRow = yield* Result.await(
-        this.workspacesRepository.updateMemberRole(
-          this.dbClient,
+        this.workspacesRepository.updateMemberRole({
           workspaceId,
-          targetUserId,
-          newRole,
-        ),
+          userId: targetUserId,
+          role: newRole,
+        }),
       );
 
-      const userResult = await this.usersService.getUserById(targetUserId);
+      const userResult = await this.usersService.getUserById({
+        userId: targetUserId,
+      });
       const user = userResult.isOk() ? userResult.value : null;
 
       const memberDetail: WorkspaceMemberDetail = {
@@ -539,10 +594,19 @@ export class WorkspacesService {
     }, this);
   }
 
-  async removeMember(workspaceId: WorkspaceId, targetUserId: UserId) {
+  async removeMember({
+    workspaceId,
+    targetUserId,
+  }: {
+    workspaceId: WorkspaceId;
+    targetUserId: UserId;
+  }) {
     return Result.gen(async function* (this: WorkspacesService) {
       const targetMember = yield* Result.await(
-        this.workspacesRepository.getMember(workspaceId, targetUserId),
+        this.workspacesRepository.getMember({
+          workspaceId,
+          userId: targetUserId,
+        }),
       );
 
       if (targetMember.role === "owner") {
@@ -555,16 +619,16 @@ export class WorkspacesService {
         this.dbClient.transaction(async (tx) => {
           return Result.gen(async function* (this: WorkspacesService) {
             yield* Result.await(
-              this.workspacesRepository.removeMember(
+              this.workspacesRepository.removeMemberTx({
                 tx,
                 workspaceId,
-                targetUserId,
-              ),
+                userId: targetUserId,
+              }),
             );
-            await this.workspacesRepository.decrementMembersCount(
+            await this.workspacesRepository.decrementMembersCountTx({
               tx,
               workspaceId,
-            );
+            });
             return Result.ok(true as const);
           }, this).then(
             Result.tapError(() => {
@@ -596,7 +660,7 @@ export class WorkspacesService {
     userId: UserId;
   }): Promise<Result<ResourceData<"workspace">, DatabaseError>> {
     return this.workspacesRepository
-      .getMember(workspaceId, userId)
+      .getMember({ workspaceId, userId })
       .then((res) => {
         if (res.isOk()) {
           return Result.ok({
@@ -624,8 +688,14 @@ export class WorkspacesService {
     callerUserId: UserId;
   }): Promise<Result<ResourceData<"workspaceMember"> | null, DatabaseError>> {
     const [targetRes, callerRes] = await Promise.all([
-      this.workspacesRepository.getMember(workspaceId, targetUserId),
-      this.workspacesRepository.getMember(workspaceId, callerUserId),
+      this.workspacesRepository.getMember({
+        workspaceId,
+        userId: targetUserId,
+      }),
+      this.workspacesRepository.getMember({
+        workspaceId,
+        userId: callerUserId,
+      }),
     ]);
 
     if (targetRes.isErr() && !NotFoundError.is(targetRes.error)) {
@@ -660,7 +730,7 @@ export class WorkspacesService {
     return Result.gen(async function* (this: WorkspacesService) {
       const invitation = yield* Result.await(
         this.workspacesRepository
-          .getInvitationById(invitationId)
+          .getInvitationById({ invitationId })
           .then((res) => {
             if (res.isOk()) return Result.ok(res.value);
             if (NotFoundError.is(res.error)) return Result.ok(null);
@@ -671,7 +741,10 @@ export class WorkspacesService {
 
       const callerMember = yield* Result.await(
         this.workspacesRepository
-          .getMember(invitation.workspaceId, callerUserId)
+          .getMember({
+            workspaceId: invitation.workspaceId,
+            userId: callerUserId,
+          })
           .then((res) => {
             if (res.isOk()) return Result.ok(res.value);
             if (NotFoundError.is(res.error)) return Result.ok(null);
@@ -699,7 +772,7 @@ export class WorkspacesService {
     if (!workspaceId) return Result.ok(null);
 
     return this.workspacesRepository
-      .getMember(workspaceId, userId)
+      .getMember({ workspaceId, userId })
       .then((res) => {
         if (res.isOk()) {
           return Result.ok({

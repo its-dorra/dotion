@@ -14,8 +14,10 @@ export class NotificationsService {
     private readonly userEventPublisher: UserEventPublisher,
   ) {}
 
-  async createNotification(input: CreateNotificationInput) {
-    const result = await this.notificationsRepository.createNotification(input);
+  async createNotification({ input }: { input: CreateNotificationInput }) {
+    const result = await this.notificationsRepository.createNotification({
+      input,
+    });
     if (result.isOk()) {
       await this.userEventPublisher.broadcastNotification(
         input.userId,
@@ -25,19 +27,37 @@ export class NotificationsService {
     return result;
   }
 
-  async createNotificationTx(tx: AppDB, input: CreateNotificationInput) {
-    return this.notificationsRepository.createNotificationTx(tx, input);
+  async createNotificationTx({
+    tx,
+    input,
+  }: {
+    tx: AppDB;
+    input: CreateNotificationInput;
+  }) {
+    return this.notificationsRepository.createNotificationTx({ tx, input });
   }
 
-  async getNotifications(userId: UserId, pagination: PaginationQuery) {
-    return this.notificationsRepository.getByUserId(userId, pagination);
+  async getNotifications({
+    userId,
+    pagination,
+  }: {
+    userId: UserId;
+    pagination: PaginationQuery;
+  }) {
+    return this.notificationsRepository.getByUserId({ userId, pagination });
   }
 
-  async markAsRead(userId: UserId, notificationId: NotificationId) {
-    const result = await this.notificationsRepository.markAsRead(
+  async markAsRead({
+    userId,
+    notificationId,
+  }: {
+    userId: UserId;
+    notificationId: NotificationId;
+  }) {
+    const result = await this.notificationsRepository.markAsRead({
       userId,
       notificationId,
-    );
+    });
     if (result.isOk()) {
       await this.userEventPublisher.broadcastNotificationRead(
         userId,
@@ -47,8 +67,8 @@ export class NotificationsService {
     return result;
   }
 
-  async markAllAsRead(userId: UserId) {
-    const result = await this.notificationsRepository.markAllAsRead(userId);
+  async markAllAsRead({ userId }: { userId: UserId }) {
+    const result = await this.notificationsRepository.markAllAsRead({ userId });
     if (result.isOk()) {
       await this.userEventPublisher?.broadcastNotificationAllRead(userId);
     }

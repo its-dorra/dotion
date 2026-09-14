@@ -8,10 +8,10 @@ export async function handleScheduledOutbox(
   const { services, eventRouter } = createAppContext(env, ctx);
   const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
 
-  const staleEntriesResult = await services.outbox.getStaleEntries(
-    twoMinutesAgo,
-    50,
-  );
+  const staleEntriesResult = await services.outbox.getStaleEntries({
+    olderThan: twoMinutesAgo,
+    limit: 50,
+  });
 
   if (staleEntriesResult.isErr()) {
     console.error(
@@ -41,13 +41,19 @@ export async function handleScheduledOutbox(
 
         if (parsed.success) {
           await eventRouter.dispatch(parsed.data);
-          await services.outbox.markCompleted(entry.type, entry.aggregateId);
+          await services.outbox.markCompleted({
+            type: entry.type,
+            aggregateId: entry.aggregateId,
+          });
           console.log(
             `OutboxPoller: successfully redelivered ${entry.type} for ${entry.aggregateId}.`,
           );
         } else if (entry.type === "page_indexing" && env.PAGE_INDEXING_QUEUE) {
           await env.PAGE_INDEXING_QUEUE.send(entry.payload);
-          await services.outbox.markCompleted(entry.type, entry.aggregateId);
+          await services.outbox.markCompleted({
+            type: entry.type,
+            aggregateId: entry.aggregateId,
+          });
         } else {
           console.warn(
             `OutboxPoller: unmatched schema for event ${entry.type}:`,

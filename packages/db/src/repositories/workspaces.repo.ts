@@ -38,9 +38,11 @@ export interface WorkspaceMemberRow {
 export class WorkspacesRepository {
   constructor(private readonly db: DBClient) {}
 
-  async getAllWorkspaces(
-    userId: UserId,
-  ): Promise<Result<Workspace[], DatabaseError>> {
+  async getAllWorkspaces({
+    userId,
+  }: {
+    userId: UserId;
+  }): Promise<Result<Workspace[], DatabaseError>> {
     try {
       const result = await this.db
         .select({
@@ -67,10 +69,21 @@ export class WorkspacesRepository {
     }
   }
 
-  async createWorkspace(
-    tx: AppDB,
-    input: CreateWorkspaceInput,
-  ): Promise<Result<Workspace, DatabaseError>> {
+  async createWorkspace({
+    input,
+  }: {
+    input: CreateWorkspaceInput;
+  }): Promise<Result<Workspace, DatabaseError>> {
+    return this.createWorkspaceTx({ tx: this.db, input });
+  }
+
+  async createWorkspaceTx({
+    tx,
+    input,
+  }: {
+    tx: AppDB;
+    input: CreateWorkspaceInput;
+  }): Promise<Result<Workspace, DatabaseError>> {
     try {
       const [data] = await tx
         .insert(workspaces)
@@ -102,10 +115,23 @@ export class WorkspacesRepository {
     }
   }
 
-  async createWorkspaceMember(
-    tx: AppDB,
-    input: CreateWorkspaceMemberInput,
-  ): Promise<
+  async createWorkspaceMember({
+    input,
+  }: {
+    input: CreateWorkspaceMemberInput;
+  }): Promise<
+    Result<WorkspaceMemberRow, DatabaseError | UniqueConstraintViolationError>
+  > {
+    return this.createWorkspaceMemberTx({ tx: this.db, input });
+  }
+
+  async createWorkspaceMemberTx({
+    tx,
+    input,
+  }: {
+    tx: AppDB;
+    input: CreateWorkspaceMemberInput;
+  }): Promise<
     Result<WorkspaceMemberRow, DatabaseError | UniqueConstraintViolationError>
   > {
     try {
@@ -144,10 +170,13 @@ export class WorkspacesRepository {
     }
   }
 
-  async getById(
-    workspaceId: WorkspaceId,
-    userId: UserId,
-  ): Promise<Result<Workspace, DatabaseError | NotFoundError>> {
+  async getById({
+    workspaceId,
+    userId,
+  }: {
+    workspaceId: WorkspaceId;
+    userId: UserId;
+  }): Promise<Result<Workspace, DatabaseError | NotFoundError>> {
     try {
       const [data] = await this.db
         .select({
@@ -185,9 +214,11 @@ export class WorkspacesRepository {
     }
   }
 
-  async getWorkspaceOnly(
-    workspaceId: WorkspaceId,
-  ): Promise<Result<Workspace, DatabaseError | NotFoundError>> {
+  async getWorkspaceOnly({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<Workspace, DatabaseError | NotFoundError>> {
     try {
       const [data] = await this.db
         .select({
@@ -216,9 +247,11 @@ export class WorkspacesRepository {
     }
   }
 
-  async getMemberUserIds(
-    workspaceId: WorkspaceId,
-  ): Promise<Result<UserId[], DatabaseError>> {
+  async getMemberUserIds({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<UserId[], DatabaseError>> {
     try {
       const rows = await this.db
         .select({ userId: workspaceMembers.userId })
@@ -234,9 +267,11 @@ export class WorkspacesRepository {
     }
   }
 
-  async getPendingInvitedUserIds(
-    workspaceId: WorkspaceId,
-  ): Promise<Result<UserId[], DatabaseError>> {
+  async getPendingInvitedUserIds({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<UserId[], DatabaseError>> {
     try {
       const rows = await this.db
         .select({ userId: workspaceInvitations.invitedUserId })
@@ -259,10 +294,13 @@ export class WorkspacesRepository {
     }
   }
 
-  async getPendingInvitationForUser(
-    workspaceId: WorkspaceId,
-    userId: UserId,
-  ): Promise<Result<WorkspaceInvitation | null, DatabaseError>> {
+  async getPendingInvitationForUser({
+    workspaceId,
+    userId,
+  }: {
+    workspaceId: WorkspaceId;
+    userId: UserId;
+  }): Promise<Result<WorkspaceInvitation | null, DatabaseError>> {
     try {
       const [row] = await this.db
         .select({
@@ -297,10 +335,13 @@ export class WorkspacesRepository {
     }
   }
 
-  async getMembers(
-    workspaceId: WorkspaceId,
-    pagination: PaginationQuery,
-  ): Promise<Result<PaginatedData<WorkspaceMemberRow>, DatabaseError>> {
+  async getMembers({
+    workspaceId,
+    pagination,
+  }: {
+    workspaceId: WorkspaceId;
+    pagination: PaginationQuery;
+  }): Promise<Result<PaginatedData<WorkspaceMemberRow>, DatabaseError>> {
     try {
       const offset = (pagination.page - 1) * pagination.limit;
 
@@ -344,10 +385,13 @@ export class WorkspacesRepository {
     }
   }
 
-  async getMember(
-    workspaceId: WorkspaceId,
-    userId: UserId,
-  ): Promise<Result<WorkspaceMemberRow, DatabaseError | NotFoundError>> {
+  async getMember({
+    workspaceId,
+    userId,
+  }: {
+    workspaceId: WorkspaceId;
+    userId: UserId;
+  }): Promise<Result<WorkspaceMemberRow, DatabaseError | NotFoundError>> {
     try {
       const [row] = await this.db
         .select({
@@ -378,10 +422,13 @@ export class WorkspacesRepository {
     }
   }
 
-  async isMember(
-    workspaceId: WorkspaceId,
-    userId: UserId,
-  ): Promise<Result<boolean, DatabaseError>> {
+  async isMember({
+    workspaceId,
+    userId,
+  }: {
+    workspaceId: WorkspaceId;
+    userId: UserId;
+  }): Promise<Result<boolean, DatabaseError>> {
     try {
       const [row] = await this.db
         .select({ userId: workspaceMembers.userId })
@@ -402,9 +449,11 @@ export class WorkspacesRepository {
     }
   }
 
-  async getWorkspaceOwnerUserId(
-    workspaceId: WorkspaceId,
-  ): Promise<Result<UserId, DatabaseError | NotFoundError>> {
+  async getWorkspaceOwnerUserId({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<UserId, DatabaseError | NotFoundError>> {
     try {
       const [row] = await this.db
         .select({
@@ -434,10 +483,23 @@ export class WorkspacesRepository {
     }
   }
 
-  async createInvitation(
-    tx: AppDB,
-    input: CreateWorkspaceInvitationInput,
-  ): Promise<
+  async createInvitation({
+    input,
+  }: {
+    input: CreateWorkspaceInvitationInput;
+  }): Promise<
+    Result<WorkspaceInvitation, DatabaseError | UniqueConstraintViolationError>
+  > {
+    return this.createInvitationTx({ tx: this.db, input });
+  }
+
+  async createInvitationTx({
+    tx,
+    input,
+  }: {
+    tx: AppDB;
+    input: CreateWorkspaceInvitationInput;
+  }): Promise<
     Result<WorkspaceInvitation, DatabaseError | UniqueConstraintViolationError>
   > {
     try {
@@ -481,9 +543,11 @@ export class WorkspacesRepository {
     }
   }
 
-  async getInvitationById(
-    invitationId: WorkspaceInvitationId,
-  ): Promise<Result<WorkspaceInvitation, DatabaseError | NotFoundError>> {
+  async getInvitationById({
+    invitationId,
+  }: {
+    invitationId: WorkspaceInvitationId;
+  }): Promise<Result<WorkspaceInvitation, DatabaseError | NotFoundError>> {
     try {
       const [row] = await this.db
         .select({
@@ -513,10 +577,13 @@ export class WorkspacesRepository {
     }
   }
 
-  async getPendingInvitationsForWorkspace(
-    workspaceId: WorkspaceId,
-    pagination: PaginationQuery,
-  ): Promise<Result<PaginatedData<WorkspaceInvitation>, DatabaseError>> {
+  async getPendingInvitationsForWorkspace({
+    workspaceId,
+    pagination,
+  }: {
+    workspaceId: WorkspaceId;
+    pagination: PaginationQuery;
+  }): Promise<Result<PaginatedData<WorkspaceInvitation>, DatabaseError>> {
     try {
       const offset = (pagination.page - 1) * pagination.limit;
       const whereClause = and(
@@ -571,11 +638,25 @@ export class WorkspacesRepository {
     }
   }
 
-  async updateInvitationStatus(
-    tx: AppDB,
-    invitationId: WorkspaceInvitationId,
-    status: "pending" | "accepted" | "declined" | "cancelled",
-  ): Promise<Result<WorkspaceInvitation, DatabaseError | NotFoundError>> {
+  async updateInvitationStatus({
+    invitationId,
+    status,
+  }: {
+    invitationId: WorkspaceInvitationId;
+    status: "pending" | "accepted" | "declined" | "cancelled";
+  }): Promise<Result<WorkspaceInvitation, DatabaseError | NotFoundError>> {
+    return this.updateInvitationStatusTx({ tx: this.db, invitationId, status });
+  }
+
+  async updateInvitationStatusTx({
+    tx,
+    invitationId,
+    status,
+  }: {
+    tx: AppDB;
+    invitationId: WorkspaceInvitationId;
+    status: "pending" | "accepted" | "declined" | "cancelled";
+  }): Promise<Result<WorkspaceInvitation, DatabaseError | NotFoundError>> {
     try {
       const [updated] = await tx
         .update(workspaceInvitations)
@@ -606,14 +687,17 @@ export class WorkspacesRepository {
     }
   }
 
-  async updateMemberRole(
-    tx: AppDB,
-    workspaceId: WorkspaceId,
-    userId: UserId,
-    role: WorkspaceRole,
-  ): Promise<Result<WorkspaceMemberRow, DatabaseError | NotFoundError>> {
+  async updateMemberRole({
+    workspaceId,
+    userId,
+    role,
+  }: {
+    workspaceId: WorkspaceId;
+    userId: UserId;
+    role: WorkspaceRole;
+  }): Promise<Result<WorkspaceMemberRow, DatabaseError | NotFoundError>> {
     try {
-      const [updated] = await tx
+      const [updated] = await this.db
         .update(workspaceMembers)
         .set({ role })
         .where(
@@ -645,11 +729,25 @@ export class WorkspacesRepository {
     }
   }
 
-  async removeMember(
-    tx: AppDB,
-    workspaceId: WorkspaceId,
-    userId: UserId,
-  ): Promise<Result<boolean, DatabaseError | NotFoundError>> {
+  async removeMember({
+    workspaceId,
+    userId,
+  }: {
+    workspaceId: WorkspaceId;
+    userId: UserId;
+  }): Promise<Result<boolean, DatabaseError | NotFoundError>> {
+    return this.removeMemberTx({ tx: this.db, workspaceId, userId });
+  }
+
+  async removeMemberTx({
+    tx,
+    workspaceId,
+    userId,
+  }: {
+    tx: AppDB;
+    workspaceId: WorkspaceId;
+    userId: UserId;
+  }): Promise<Result<boolean, DatabaseError | NotFoundError>> {
     try {
       const [deleted] = await tx
         .delete(workspaceMembers)
@@ -676,10 +774,21 @@ export class WorkspacesRepository {
     }
   }
 
-  async incrementMembersCount(
-    tx: AppDB,
-    workspaceId: WorkspaceId,
-  ): Promise<Result<boolean, DatabaseError>> {
+  async incrementMembersCount({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<boolean, DatabaseError>> {
+    return this.incrementMembersCountTx({ tx: this.db, workspaceId });
+  }
+
+  async incrementMembersCountTx({
+    tx,
+    workspaceId,
+  }: {
+    tx: AppDB;
+    workspaceId: WorkspaceId;
+  }): Promise<Result<boolean, DatabaseError>> {
     try {
       await tx
         .update(workspaces)
@@ -695,10 +804,21 @@ export class WorkspacesRepository {
     }
   }
 
-  async decrementMembersCount(
-    tx: AppDB,
-    workspaceId: WorkspaceId,
-  ): Promise<Result<boolean, DatabaseError>> {
+  async decrementMembersCount({
+    workspaceId,
+  }: {
+    workspaceId: WorkspaceId;
+  }): Promise<Result<boolean, DatabaseError>> {
+    return this.decrementMembersCountTx({ tx: this.db, workspaceId });
+  }
+
+  async decrementMembersCountTx({
+    tx,
+    workspaceId,
+  }: {
+    tx: AppDB;
+    workspaceId: WorkspaceId;
+  }): Promise<Result<boolean, DatabaseError>> {
     try {
       await tx
         .update(workspaces)

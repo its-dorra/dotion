@@ -71,7 +71,8 @@ jobs:
             GITHUB_CLIENT_SECRET
             GOOGLE_CLIENT_ID
             GOOGLE_CLIENT_SECRET
-            GEMINI_API_KEY
+            GOOGLE_GENERATIVE_AI_API_KEY
+            GROQ_API_KEY
             SENTRY_DSN
             BETTER_AUTH_URL
             CORS_ORIGIN
@@ -83,7 +84,8 @@ jobs:
           GITHUB_CLIENT_SECRET: ${{ secrets.GB_CLIENT_SECRET }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_SERVER_DSN }}
           BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

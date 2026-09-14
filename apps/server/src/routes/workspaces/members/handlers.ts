@@ -15,7 +15,10 @@ export const listMembersHandler: AppRouteHandler<ListMembersRoute> = async (
   const { id } = c.req.valid("param");
   const pagination = c.req.valid("query");
 
-  const result = await c.var.services.workspaces.getMembers(id, pagination);
+  const result = await c.var.services.workspaces.getMembers({
+    workspaceId: id,
+    pagination,
+  });
 
   if (result.isErr()) {
     return result.error.match({
@@ -41,11 +44,11 @@ export const updateMemberRoleHandler: AppRouteHandler<
   const { id, memberId } = c.req.valid("param");
   const { role } = c.req.valid("json");
 
-  const result = await c.var.services.workspaces.updateMemberRole(
-    id,
-    memberId,
-    role,
-  );
+  const result = await c.var.services.workspaces.updateMemberRole({
+    workspaceId: id,
+    targetUserId: memberId,
+    newRole: role,
+  });
 
   if (result.isErr()) {
     return result.error.match({
@@ -70,7 +73,10 @@ export const removeMemberHandler: AppRouteHandler<RemoveMemberRoute> = async (
 ) => {
   const { id, memberId } = c.req.valid("param");
 
-  const result = await c.var.services.workspaces.removeMember(id, memberId);
+  const result = await c.var.services.workspaces.removeMember({
+    workspaceId: id,
+    targetUserId: memberId,
+  });
 
   if (result.isErr()) {
     return result.error.match({

@@ -17,18 +17,13 @@ import { DatabaseError, NotFoundError } from "../errors";
 export class NotificationsRepository {
   constructor(private readonly db: DBClient) {}
 
-  async createNotification(
-    input: CreateNotificationInput,
-  ): Promise<Result<Notification, DatabaseError>> {
-    return this.createNotificationTx(this.db as unknown as AppDB, input);
-  }
-
-  async createNotificationTx(
-    tx: AppDB,
-    input: CreateNotificationInput,
-  ): Promise<Result<Notification, DatabaseError>> {
+  async createNotification({
+    input,
+  }: {
+    input: CreateNotificationInput;
+  }): Promise<Result<Notification, DatabaseError>> {
     try {
-      const [row] = await tx
+      const [row] = await this.db
         .insert(notifications)
         .values({
           ...input,
@@ -57,10 +52,50 @@ export class NotificationsRepository {
     }
   }
 
-  async getByUserId(
-    userId: UserId,
-    pagination: PaginationQuery,
-  ): Promise<Result<PaginatedData<Notification>, DatabaseError>> {
+  async createNotificationTx({
+    tx,
+    input,
+  }: {
+    tx: AppDB;
+    input: CreateNotificationInput;
+  }): Promise<Result<Notification, DatabaseError>> {
+    try {
+      const [row] = await tx
+        .insert(notifications)
+        .values({
+          ...input,
+        })
+        .returning({
+          id: notifications.id,
+          userId: notifications.userId,
+          metadata: notifications.metadata,
+          isRead: notifications.isRead,
+          createdAt: notifications.createdAt,
+          updatedAt: notifications.updatedAt,
+        });
+
+      if (!row) {
+        return Result.err(
+          new DatabaseError({ message: "Failed to create notification" }),
+        );
+      }
+
+      return Result.ok(row as unknown as Notification);
+    } catch (e) {
+      console.error("NotificationsRepository.createNotificationTx error:", e);
+      return Result.err(
+        new DatabaseError({ message: "Failed to create notification" }),
+      );
+    }
+  }
+
+  async getByUserId({
+    userId,
+    pagination,
+  }: {
+    userId: UserId;
+    pagination: PaginationQuery;
+  }): Promise<Result<PaginatedData<Notification>, DatabaseError>> {
     try {
       const offset = (pagination.page - 1) * pagination.limit;
 
@@ -105,10 +140,13 @@ export class NotificationsRepository {
     }
   }
 
-  async markAsRead(
-    userId: UserId,
-    notificationId: NotificationId,
-  ): Promise<Result<boolean, DatabaseError | NotFoundError>> {
+  async markAsRead({
+    userId,
+    notificationId,
+  }: {
+    userId: UserId;
+    notificationId: NotificationId;
+  }): Promise<Result<boolean, DatabaseError | NotFoundError>> {
     try {
       const [updated] = await this.db
         .update(notifications)
@@ -136,7 +174,11 @@ export class NotificationsRepository {
     }
   }
 
-  async markAllAsRead(userId: UserId): Promise<Result<boolean, DatabaseError>> {
+  async markAllAsRead({
+    userId,
+  }: {
+    userId: UserId;
+  }): Promise<Result<boolean, DatabaseError>> {
     try {
       await this.db
         .update(notifications)

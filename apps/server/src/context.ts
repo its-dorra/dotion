@@ -93,10 +93,12 @@ export const createAppContext = (
         }
         return val;
       },
-      async increment(key, amount = 1) {
+      async increment(key, ttl = 60) {
         const current = await env.KV.get(key);
-        const next = (current ? parseInt(current, 10) || 0 : 0) + amount;
-        await env.KV.put(key, String(next));
+        const next = (current ? parseInt(current, 10) || 0 : 0) + 1;
+        await env.KV.put(key, String(next), {
+          expirationTtl: Math.max(ttl, 60),
+        });
         return next;
       },
     },
@@ -203,7 +205,7 @@ function buildServices(
   );
   const storage = new StorageService(env.R2);
 
-  const embedding = new EmbeddingService(env.GEMINI_API_KEY);
+  const embedding = new EmbeddingService();
   const chunking = new ChunkingService();
   const search = new SearchService(
     repositories.search,
@@ -213,13 +215,7 @@ function buildServices(
     db,
   );
 
-  const ai = new AIService(
-    env.GEMINI_API_KEY,
-    creditsManager,
-    search,
-    pages,
-    chunking,
-  );
+  const ai = new AIService(creditsManager, search, pages, chunking);
 
   const assistant = new AssistantService(repositories.assistant, ai, db);
 

@@ -27,29 +27,33 @@ export class UsersService {
     });
   }
 
-  async getUserById(userId: UserId) {
-    return this.usersRepository.getUserById(userId);
+  async getUserById({ userId }: { userId: UserId }) {
+    return this.usersRepository.getUserById({ userId });
   }
 
-  async getUserByEmail(email: string) {
-    return this.usersRepository.getUserByEmail(email);
+  async getUserByEmail({ email }: { email: string }) {
+    return this.usersRepository.getUserByEmail({ email });
   }
 
-  async getUsersByIds(userIds: UserId[]) {
-    return this.usersRepository.getUsersByIds(userIds);
+  async getUsersByIds({ userIds }: { userIds: UserId[] }) {
+    return this.usersRepository.getUsersByIds({ userIds });
   }
 
-  async loadUserResourceData(
-    input: ResourceInput<"user">,
-  ): Promise<Result<ResourceData<"user"> | null, DatabaseError>> {
-    return this.usersRepository.getUserById(input.userId).then((res) => {
-      if (res.isOk()) {
-        return Result.ok({ targetUserId: res.value.id });
-      }
-      if (NotFoundError.is(res.error)) {
-        return Result.ok(null);
-      }
-      return Result.err(res.error);
-    });
+  async loadUserResourceData({
+    input,
+  }: {
+    input: ResourceInput<"user">;
+  }): Promise<Result<ResourceData<"user"> | null, DatabaseError>> {
+    return this.usersRepository
+      .getUserById({ userId: input.userId })
+      .then((res) => {
+        if (res.isOk()) {
+          return Result.ok({ targetUserId: res.value.id });
+        }
+        if (NotFoundError.is(res.error)) {
+          return Result.ok(null);
+        }
+        return Result.err(res.error);
+      });
   }
 }

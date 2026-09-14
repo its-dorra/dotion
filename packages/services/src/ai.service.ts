@@ -1,5 +1,5 @@
 import { Result } from "better-result";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createGroq } from "@ai-sdk/groq";
 import {
   streamText,
   generateText,
@@ -24,7 +24,7 @@ import type { PagesService } from "./pages.service";
 import type { ChunkingService } from "./chunking.service";
 import { AIError, QuotaExceededError } from "@dotion/shared/ai/errors";
 import {
-  DEFAULT_GEMINI_MODEL,
+  DEFAULT_GROQ_MODEL,
   STRICT_RAG_SYSTEM_PROMPT,
 } from "@dotion/shared/ai/constants";
 import {
@@ -70,16 +70,15 @@ function extractToolPartsFromSteps(
 }
 
 export class AIService {
-  private readonly googleClient: ReturnType<typeof createGoogleGenerativeAI>;
+  private readonly groqClient: ReturnType<typeof createGroq>;
 
   constructor(
-    apiKey: string,
     private readonly creditsManager: UserCreditsManager,
     private readonly searchService: SearchService,
     private readonly pagesService: PagesService,
     private readonly chunkingService: ChunkingService,
   ) {
-    this.googleClient = createGoogleGenerativeAI({ apiKey });
+    this.groqClient = createGroq();
   }
 
   private async checkQuota(
@@ -129,7 +128,7 @@ export class AIService {
       yield* Result.await(this.checkQuota(input.userId));
 
       try {
-        const model = this.googleClient(DEFAULT_GEMINI_MODEL);
+        const model = this.groqClient(DEFAULT_GROQ_MODEL);
         const system = aiDocumentFormats.html.systemPrompt;
         const modelMessages = await convertToModelMessages(
           injectDocumentStateMessages(
@@ -205,7 +204,7 @@ export class AIService {
       yield* Result.await(this.checkQuota(input.userId));
 
       try {
-        const model = this.googleClient(DEFAULT_GEMINI_MODEL);
+        const model = this.groqClient(DEFAULT_GROQ_MODEL);
         const citations: AssistantCitation[] = [];
 
         const tools = createWorkspaceTools({
@@ -287,9 +286,13 @@ export class AIService {
     }, this);
   }
 
-  async generateSummaryTitle(userPrompt: string): Promise<string | null> {
+  async generateSummaryTitle({
+    userPrompt,
+  }: {
+    userPrompt: string;
+  }): Promise<string | null> {
     try {
-      const model = this.googleClient(DEFAULT_GEMINI_MODEL);
+      const model = this.groqClient(DEFAULT_GROQ_MODEL);
       const titleResult = await generateText({
         model,
         prompt: `Generate a concise 3-4 word title summarizing this question: "${userPrompt}". Return ONLY the title text, without quotes.`,

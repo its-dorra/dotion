@@ -13,11 +13,11 @@ import type { Notification } from "@dotion/shared/notifications/types";
 import type { ResourceType } from "@dotion/shared/authorization/types";
 
 export interface PermissionCacheInvalidator {
-  invalidateUserPermissions(
-    userId: string,
-    resourceType?: ResourceType,
-    id?: string,
-  ): Promise<void>;
+  invalidateUserPermissions(params: {
+    userId: string;
+    resourceType?: ResourceType;
+    id?: string;
+  }): Promise<void>;
 }
 
 export interface WorkspaceEventPublisher {

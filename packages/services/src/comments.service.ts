@@ -21,42 +21,53 @@ export class CommentsService {
   constructor(
     private readonly commentsRepository: CommentsRepository,
     private readonly pagesService: PagesService,
-    private readonly dbClient: DBClient,
+    _dbClient: DBClient,
     private readonly eventDispatcher: DomainEventDispatcher,
     _outboxService: OutboxService,
   ) {}
 
-  async getPageComments(pageId: PageId, pagination: PaginationQuery) {
-    return this.commentsRepository.getPageComments(pageId, pagination);
+  async getPageComments({
+    pageId,
+    pagination,
+  }: {
+    pageId: PageId;
+    pagination: PaginationQuery;
+  }) {
+    return this.commentsRepository.getPageComments({ pageId, pagination });
   }
 
-  async getCommentById(commentId: CommentId) {
-    return this.commentsRepository.getCommentById(commentId);
+  async getCommentById({ commentId }: { commentId: CommentId }) {
+    return this.commentsRepository.getCommentById({ commentId });
   }
 
-  async createComment(
-    userId: UserId,
-    input: {
-      pageId: PageId;
-      body: string;
-      parentId?: CommentId | null;
-    },
-  ): Promise<
+  async createComment({
+    userId,
+    pageId,
+    body,
+    parentId,
+  }: {
+    userId: UserId;
+    pageId: PageId;
+    body: string;
+    parentId?: CommentId | null;
+  }): Promise<
     Result<CommentWithRepliesAndAuthor, DatabaseError | NotFoundError>
   > {
     return Result.gen(async function* (this: CommentsService) {
       const comment = yield* Result.await(
-        this.commentsRepository.createComment(this.dbClient, {
-          pageId: input.pageId,
-          authorId: userId,
-          body: input.body,
-          parentId: input.parentId ?? null,
+        this.commentsRepository.createComment({
+          input: {
+            pageId,
+            authorId: userId,
+            body,
+            parentId: parentId ?? null,
+          },
         }),
       );
 
       const rootId = (comment.parentId ?? comment.id) as CommentId;
       const commentWithReplies = yield* Result.await(
-        this.commentsRepository.getCommentById(rootId),
+        this.commentsRepository.getCommentById({ commentId: rootId }),
       );
 
       yield* Result.await(
@@ -64,7 +75,7 @@ export class CommentsService {
           type: "comment.created",
           aggregateId: commentWithReplies.id,
           payload: {
-            pageId: input.pageId,
+            pageId,
             comment: commentWithReplies,
           },
         }),
@@ -74,10 +85,16 @@ export class CommentsService {
     }, this);
   }
 
-  async resolveComment(pageId: PageId, commentId: CommentId) {
+  async resolveComment({
+    pageId,
+    commentId,
+  }: {
+    pageId: PageId;
+    commentId: CommentId;
+  }) {
     return Result.gen(async function* (this: CommentsService) {
       const resolved = yield* Result.await(
-        this.commentsRepository.resolveComment(commentId),
+        this.commentsRepository.resolveComment({ commentId }),
       );
 
       yield* Result.await(
@@ -95,10 +112,16 @@ export class CommentsService {
     }, this);
   }
 
-  async deleteComment(pageId: PageId, commentId: CommentId) {
+  async deleteComment({
+    pageId,
+    commentId,
+  }: {
+    pageId: PageId;
+    commentId: CommentId;
+  }) {
     return Result.gen(async function* (this: CommentsService) {
       const deleted = yield* Result.await(
-        this.commentsRepository.deleteComment(commentId),
+        this.commentsRepository.deleteComment({ commentId }),
       );
 
       yield* Result.await(
@@ -128,7 +151,7 @@ export class CommentsService {
     return Result.gen(async function* (this: CommentsService) {
       const comment = yield* Result.await(
         this.commentsRepository
-          .getCommentById(commentId)
+          .getCommentById({ commentId })
           .then(
             Result.tryRecover((error: DatabaseError | NotFoundError) =>
               error._tag === "NotFoundError"

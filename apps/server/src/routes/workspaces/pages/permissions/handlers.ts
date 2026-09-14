@@ -9,11 +9,11 @@ export const listPermissionsHandler: AppRouteHandler<
   const { id: workspaceId, pageId } = c.req.valid("param");
   const pagination = c.req.valid("query");
 
-  const result = await c.var.services.pages.getPagePermissions(
+  const result = await c.var.services.pages.getPagePermissions({
     workspaceId,
     pageId,
     pagination,
-  );
+  });
 
   if (result.isErr()) {
     console.error("Error fetching page permissions:", result.error);

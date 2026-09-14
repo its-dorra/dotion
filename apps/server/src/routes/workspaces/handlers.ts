@@ -8,9 +8,9 @@ import * as HttpStatusPhrases from "stoker/http-status-phrases";
 export const listHandler: AppRouteHandler<ListRoute> = async (c) => {
   const currentUser = c.var.currentUser;
 
-  const result = await c.var.services.workspaces.getAllWorkspaces(
-    currentUser.id,
-  );
+  const result = await c.var.services.workspaces.getAllWorkspaces({
+    userId: currentUser.id,
+  });
 
   if (result.isErr()) {
     return result.error.match({
@@ -30,10 +30,10 @@ export const createHandler: AppRouteHandler<CreateRoute> = async (c) => {
     const currentUser = c.var.currentUser;
     const input = c.req.valid("json");
 
-    const result = await c.var.services.workspaces.createWorkspace(
+    const result = await c.var.services.workspaces.createWorkspace({
       input,
-      currentUser.id,
-    );
+      userId: currentUser.id,
+    });
 
     if (result.isErr()) {
       return result.error.match({
@@ -64,10 +64,10 @@ export const getByIdHandler: AppRouteHandler<GetByIdRoute> = async (c) => {
   const currentUser = c.var.currentUser;
   const { id } = c.req.valid("param");
 
-  const result = await c.var.services.workspaces.getWorkspaceById(
-    id,
-    currentUser.id,
-  );
+  const result = await c.var.services.workspaces.getWorkspaceById({
+    workspaceId: id,
+    userId: currentUser.id,
+  });
 
   if (result.isErr()) {
     return result.error.match({

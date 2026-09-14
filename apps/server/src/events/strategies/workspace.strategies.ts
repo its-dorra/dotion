@@ -28,17 +28,19 @@ export class WorkspaceInvitationCreatedStrategy implements DomainEventStrategy<"
           invitation,
         ),
         this.notificationsService.createNotification({
-          userId: invitedUserId,
-          metadata: {
-            type: "workspace_invitation",
-            workspaceInvitationId: invitation.id,
-            workspaceId,
-            workspaceName: invitation.workspaceName,
-            workspaceIcon: invitation.workspaceIcon ?? undefined,
-            invitedByUserId,
-            invitedByName: invitation.invitedByName,
+          input: {
+            userId: invitedUserId,
+            metadata: {
+              type: "workspace_invitation",
+              workspaceInvitationId: invitation.id,
+              workspaceId,
+              workspaceName: invitation.workspaceName,
+              workspaceIcon: invitation.workspaceIcon ?? undefined,
+              invitedByUserId,
+              invitedByName: invitation.invitedByName,
+            },
+            isRead: false,
           },
-          isRead: false,
         }),
       ]);
 
@@ -72,11 +74,11 @@ export class WorkspaceMemberJoinedStrategy implements DomainEventStrategy<"works
   ): Promise<Result<void, EventHandlingError>> {
     try {
       await Promise.all([
-        this.cacheInvalidator.invalidateUserPermissions(
-          event.payload.userId,
-          "workspace",
-          event.payload.workspaceId,
-        ),
+        this.cacheInvalidator.invalidateUserPermissions({
+          userId: event.payload.userId,
+          resourceType: "workspace",
+          id: event.payload.workspaceId,
+        }),
         this.workspacePublisher.broadcastMemberJoined(
           event.payload.workspaceId,
           {
@@ -115,11 +117,11 @@ export class WorkspaceMemberRemovedStrategy implements DomainEventStrategy<"work
   ): Promise<Result<void, EventHandlingError>> {
     try {
       await Promise.all([
-        this.cacheInvalidator.invalidateUserPermissions(
-          event.payload.userId,
-          "workspace",
-          event.payload.workspaceId,
-        ),
+        this.cacheInvalidator.invalidateUserPermissions({
+          userId: event.payload.userId,
+          resourceType: "workspace",
+          id: event.payload.workspaceId,
+        }),
         this.workspacePublisher.broadcastMemberRemoved(
           event.payload.workspaceId,
           event.payload.userId,

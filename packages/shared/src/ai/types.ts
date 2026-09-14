@@ -9,8 +9,8 @@ export interface AIUsageMetrics {
   completionTokens: number;
 }
 
-import { DEFAULT_GEMINI_MODEL } from "./constants";
-export { DEFAULT_GEMINI_MODEL };
+import { DEFAULT_GROQ_MODEL } from "./constants";
+export { DEFAULT_GROQ_MODEL };
 
 export type WorkspaceToolResult<T extends Record<string, unknown>> = {
   error?: string;

@@ -25,50 +25,65 @@ export class AssistantService {
   constructor(
     private readonly assistantRepository: AssistantRepository,
     private readonly aiService: AIService,
-    private readonly dbClient: DBClient,
+    _dbClient?: DBClient,
   ) {}
 
-  async listThreads(
-    workspaceId: WorkspaceId,
-    userId: UserId,
-    pagination: { cursor?: string; limit?: number } = {},
-  ): Promise<Result<PaginatedThreadsResponse, DatabaseError>> {
-    return this.assistantRepository.listThreads(
+  async listThreads({
+    workspaceId,
+    userId,
+    pagination = {},
+  }: {
+    workspaceId: WorkspaceId;
+    userId: UserId;
+    pagination?: { cursor?: string; limit?: number };
+  }): Promise<Result<PaginatedThreadsResponse, DatabaseError>> {
+    return this.assistantRepository.listThreads({
       workspaceId,
       userId,
       pagination,
-    );
+    });
   }
 
-  async getThread(
-    threadId: AssistantThreadId,
-  ): Promise<Result<AssistantThread, DatabaseError | NotFoundError>> {
-    return this.assistantRepository.getThread(threadId);
+  async getThread({
+    threadId,
+  }: {
+    threadId: AssistantThreadId;
+  }): Promise<Result<AssistantThread, DatabaseError | NotFoundError>> {
+    return this.assistantRepository.getThread({ threadId });
   }
 
-  async createThread(
-    workspaceId: WorkspaceId,
-    userId: UserId,
-    title?: string,
-  ): Promise<Result<AssistantThread, DatabaseError>> {
-    return this.assistantRepository.createThread(this.dbClient, {
+  async createThread({
+    workspaceId,
+    userId,
+    title,
+  }: {
+    workspaceId: WorkspaceId;
+    userId: UserId;
+    title?: string;
+  }): Promise<Result<AssistantThread, DatabaseError>> {
+    return this.assistantRepository.createThread({
       workspaceId,
       userId,
       title: title?.trim() || "",
     });
   }
 
-  async deleteThread(
-    threadId: AssistantThreadId,
-  ): Promise<Result<void, DatabaseError>> {
-    return this.assistantRepository.deleteThread(this.dbClient, threadId);
+  async deleteThread({
+    threadId,
+  }: {
+    threadId: AssistantThreadId;
+  }): Promise<Result<void, DatabaseError>> {
+    return this.assistantRepository.deleteThread({ threadId });
   }
 
-  async listMessages(
-    threadId: AssistantThreadId,
-    pagination: { cursor?: string; limit?: number } = {},
-  ): Promise<Result<PaginatedMessagesResponse, DatabaseError>> {
-    return this.assistantRepository.listMessages(threadId, pagination);
+  async listMessages({
+    threadId,
+    pagination = {},
+  }: {
+    threadId: AssistantThreadId;
+    pagination?: { cursor?: string; limit?: number };
+  }): Promise<Result<PaginatedMessagesResponse, DatabaseError>> {
+    return this.assistantRepository.listMessages({ threadId, pagination });
   }
 
   async streamChat(
@@ -81,13 +96,13 @@ export class AssistantService {
   > {
     return Result.gen(async function* (this: AssistantService) {
       const thread = yield* Result.await(
-        this.assistantRepository.getThread(input.threadId),
+        this.assistantRepository.getThread({ threadId: input.threadId }),
       );
 
-      const priorMessagesResult = await this.assistantRepository.listMessages(
-        input.threadId,
-        { limit: 10 },
-      );
+      const priorMessagesResult = await this.assistantRepository.listMessages({
+        threadId: input.threadId,
+        pagination: { limit: 10 },
+      });
       const priorMessages = priorMessagesResult.isOk()
         ? [...priorMessagesResult.value.items].reverse()
         : [];
@@ -116,7 +131,7 @@ export class AssistantService {
         : "";
 
       yield* Result.await(
-        this.assistantRepository.createMessage(this.dbClient, {
+        this.assistantRepository.createMessage({
           threadId: input.threadId,
           role: "user",
           content: userPrompt,
@@ -130,7 +145,7 @@ export class AssistantService {
         onFinish: (assistantResponse, usage, citations, toolCalls) => {
           const finishWork = (async () => {
             try {
-              await this.assistantRepository.createMessage(this.dbClient, {
+              await this.assistantRepository.createMessage({
                 threadId: input.threadId,
                 role: "assistant",
                 content: assistantResponse,
@@ -140,14 +155,14 @@ export class AssistantService {
               });
 
               if (!thread.title) {
-                const summaryTitle =
-                  await this.aiService.generateSummaryTitle(userPrompt);
+                const summaryTitle = await this.aiService.generateSummaryTitle({
+                  userPrompt,
+                });
                 if (summaryTitle) {
-                  await this.assistantRepository.updateThreadTitle(
-                    this.dbClient,
-                    input.threadId,
-                    summaryTitle,
-                  );
+                  await this.assistantRepository.updateThreadTitle({
+                    threadId: input.threadId,
+                    title: summaryTitle,
+                  });
                 }
               }
             } catch (error) {

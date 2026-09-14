@@ -72,10 +72,13 @@ export class StorageService {
     }
   }
 
-  async getFile(
-    storageKey: string,
-    options?: R2GetOptions,
-  ): Promise<Result<R2ObjectBody | R2Object | null, StorageError>> {
+  async getFile({
+    storageKey,
+    options,
+  }: {
+    storageKey: string;
+    options?: R2GetOptions;
+  }): Promise<Result<R2ObjectBody | R2Object | null, StorageError>> {
     try {
       const object = await this.r2.get(storageKey, options);
       return Result.ok(object);
@@ -90,15 +93,20 @@ export class StorageService {
     }
   }
 
-  async getPageFile(
-    workspaceId: WorkspaceId,
-    pageId: PageId,
-    fileKey: string,
-    options?: R2GetOptions,
-  ): Promise<Result<R2ObjectBody | R2Object | null, StorageError>> {
+  async getPageFile({
+    workspaceId,
+    pageId,
+    fileKey,
+    options,
+  }: {
+    workspaceId: WorkspaceId;
+    pageId: PageId;
+    fileKey: string;
+    options?: R2GetOptions;
+  }): Promise<Result<R2ObjectBody | R2Object | null, StorageError>> {
     const sanitizedKey = fileKey.replace(/(\.\.[\/\\])+/g, "");
     const storageKey = `workspaces/${workspaceId}/pages/${pageId}/${sanitizedKey}`;
-    return this.getFile(storageKey, options);
+    return this.getFile({ storageKey, options });
   }
 
   async deletePageFiles(params: {

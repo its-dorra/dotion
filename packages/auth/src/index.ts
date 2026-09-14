@@ -27,7 +27,9 @@ export function createAuth(
       schema,
       usePlural: true,
     }),
-
+    rateLimit: {
+      storage: "memory",
+    },
     secondaryStorage,
 
     trustedOrigins: [env.CORS_ORIGIN],

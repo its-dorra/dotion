@@ -37,30 +37,39 @@ export class SearchService {
     private readonly dbClient: DBClient,
   ) {}
 
-  async getPageSectionsMeta(
-    pageId: PageId,
-  ): Promise<Result<PageSectionMeta[], DatabaseError>> {
-    return this.searchRepository.getPageSectionsMeta(pageId);
+  async getPageSectionsMeta({
+    pageId,
+  }: {
+    pageId: PageId;
+  }): Promise<Result<PageSectionMeta[], DatabaseError>> {
+    return this.searchRepository.getPageSectionsMeta({ pageId });
   }
 
-  async getSectionsByPage(
-    pageId: PageId,
-  ): Promise<Result<PageSection[], DatabaseError>> {
-    return this.searchRepository.getSectionsByPage(pageId);
+  async getSectionsByPage({
+    pageId,
+  }: {
+    pageId: PageId;
+  }): Promise<Result<PageSection[], DatabaseError>> {
+    return this.searchRepository.getSectionsByPage({ pageId });
   }
 
-  async getAdjacentSections(
-    pageId: PageId,
-    sectionIndex: number,
-    count: number = 1,
-    direction: "prev" | "next" | "both" = "both",
-  ): Promise<Result<SearchHit[], DatabaseError>> {
-    return this.searchRepository.getAdjacentSections(
+  async getAdjacentSections({
+    pageId,
+    sectionIndex,
+    count = 1,
+    direction = "both",
+  }: {
+    pageId: PageId;
+    sectionIndex: number;
+    count?: number;
+    direction?: "prev" | "next" | "both";
+  }): Promise<Result<SearchHit[], DatabaseError>> {
+    return this.searchRepository.getAdjacentSections({
       pageId,
       sectionIndex,
       count,
       direction,
-    );
+    });
   }
 
   async syncPageSections(input: {
@@ -72,13 +81,19 @@ export class SearchService {
       return Result.gen(async function* (this: SearchService) {
         if (input.toDeleteIds.length > 0) {
           yield* Result.await(
-            this.searchRepository.deletePageSections(tx, input.toDeleteIds),
+            this.searchRepository.deletePageSectionsTx({
+              tx,
+              ids: input.toDeleteIds,
+            }),
           );
         }
 
         if (input.toInsert.length > 0) {
           yield* Result.await(
-            this.searchRepository.insertPageSections(tx, input.toInsert),
+            this.searchRepository.insertPageSectionsTx({
+              tx,
+              sections: input.toInsert,
+            }),
           );
         }
 
@@ -86,7 +101,11 @@ export class SearchService {
           yield* Result.await(
             Result.allAsync(
               input.toUpdate.map((update) =>
-                this.searchRepository.updatePageSection(tx, update.id, update),
+                this.searchRepository.updatePageSectionTx({
+                  tx,
+                  id: update.id,
+                  data: update,
+                }),
               ),
             ),
           );
@@ -110,19 +129,19 @@ export class SearchService {
     return Result.gen(async function* (this: SearchService) {
       const [pageResult, contentBinaryResult, existingMetaResult] =
         await Promise.all([
-          this.pagesService.getPageById(params.pageId),
-          this.pagesService.getPageContent(params.pageId),
-          this.searchRepository.getPageSectionsMeta(params.pageId),
+          this.pagesService.getPageById({ pageId: params.pageId }),
+          this.pagesService.getPageContent({ pageId: params.pageId }),
+          this.searchRepository.getPageSectionsMeta({ pageId: params.pageId }),
         ]);
 
       const page = yield* pageResult;
       const existingMeta = yield* existingMetaResult;
       const contentBinary = yield* contentBinaryResult;
 
-      const sections = await this.chunkingService.parseBinaryYDocToSections(
-        page.title,
+      const sections = await this.chunkingService.parseBinaryYDocToSections({
+        pageTitle: page.title,
         contentBinary,
-      );
+      });
 
       const existingMapByHeading = new Map<string, PageSectionMeta>();
       const existingMapByHashList = new Map<string, PageSectionMeta[]>();
@@ -210,7 +229,10 @@ export class SearchService {
       let generatedEmbeddings: number[][] = [];
       if (textsToEmbed.length > 0) {
         generatedEmbeddings = yield* Result.await(
-          this.embeddingService.embedBatch(textsToEmbed, "RETRIEVAL_DOCUMENT"),
+          this.embeddingService.embedBatch({
+            texts: textsToEmbed,
+            taskType: "RETRIEVAL_DOCUMENT",
+          }),
         );
       }
 
@@ -337,36 +359,54 @@ export class SearchService {
     return Result.gen(async function* (this: SearchService) {
       const [trashedPages, queryEmbedding] = yield* Result.await(
         Result.allAsync([
-          this.pagesService.getTrashedPages(params.workspaceId),
-          this.embeddingService.embedText(query, "RETRIEVAL_QUERY"),
+          this.pagesService.getTrashedPages({
+            workspaceId: params.workspaceId,
+          }),
+          this.embeddingService.embedText({
+            text: query,
+            taskType: "RETRIEVAL_QUERY",
+          }),
         ]),
       );
 
       const excludedPageIds = trashedPages.map((p) => p.id);
-      const searchOptions =
-        excludedPageIds.length > 0 ? { excludedPageIds } : undefined;
+      const searchOptions = {
+        ...(excludedPageIds.length > 0 ? { excludedPageIds } : {}),
+        minScore: 1.0,
+      };
 
       const candidateDepth = Math.max(40, page * limit * 2);
 
       const [bm25Hits, vectorHits] = yield* Result.await(
         Result.allAsync([
-          this.searchRepository.searchBM25(
-            params.workspaceId,
+          this.searchRepository.searchBM25({
+            workspaceId: params.workspaceId,
             query,
-            candidateDepth,
-            searchOptions,
-          ),
-          this.searchRepository.searchVector(
-            params.workspaceId,
+            limit: candidateDepth,
+            options: searchOptions,
+          }),
+          this.searchRepository.searchVector({
+            workspaceId: params.workspaceId,
             queryEmbedding,
-            candidateDepth,
-            undefined,
-            searchOptions,
-          ),
+            limit: candidateDepth,
+            minSimilarity: 0.5,
+            options: searchOptions,
+          }),
         ]),
       );
 
-      const fused = this.reciprocalRankFusion(bm25Hits, vectorHits, {
+      // Standalone BM25 Gating:
+      // If vector search found 0 hits (no section in the workspace reached semantic similarity >= 0.50),
+      // only accept BM25 hits if they represent a high-confidence exact match (score >= 3.0).
+      let effectiveBm25Hits = bm25Hits;
+      if (vectorHits.length === 0) {
+        const MIN_STANDALONE_BM25_SCORE = 3.0;
+        effectiveBm25Hits = bm25Hits.filter(
+          (hit) => hit.score >= MIN_STANDALONE_BM25_SCORE,
+        );
+      }
+
+      const fused = this.reciprocalRankFusion(effectiveBm25Hits, vectorHits, {
         weights: effectiveWeights,
       });
 
@@ -404,7 +444,7 @@ export class SearchService {
       );
 
       const pages = yield* Result.await(
-        this.pagesService.getPagesByIds(pagedUniquePageIds),
+        this.pagesService.getPagesByIds({ pageIds: pagedUniquePageIds }),
       );
 
       const pageMap = new Map<PageId, { title: string; icon: string | null }>();

@@ -95,7 +95,9 @@ export function createWorkspaceTools(
       const pageIdTyped = pageId as PageId;
 
       const pageResult = await Result.gen(async function* () {
-        const page = yield* Result.await(pagesService.getPageById(pageIdTyped));
+        const page = yield* Result.await(
+          pagesService.getPageById({ pageId: pageIdTyped }),
+        );
 
         if (page.inTrash) {
           return Result.err(
@@ -107,18 +109,22 @@ export function createWorkspaceTools(
 
         let rawContent = "";
 
-        const sectionsRes = await searchService.getSectionsByPage(page.id);
+        const sectionsRes = await searchService.getSectionsByPage({
+          pageId: page.id,
+        });
         if (sectionsRes.isOk() && sectionsRes.value.length > 0) {
           rawContent = sectionsRes.value
             .map((s) => `## ${s.sectionTitle}\n${s.content}`)
             .join("\n\n");
         } else {
-          const contentRes = await pagesService.getPageContent(page.id);
+          const contentRes = await pagesService.getPageContent({
+            pageId: page.id,
+          });
           if (contentRes.isOk() && contentRes.value) {
-            const sections = await chunkingService.parseBinaryYDocToSections(
-              page.title,
-              contentRes.value,
-            );
+            const sections = await chunkingService.parseBinaryYDocToSections({
+              pageTitle: page.title,
+              contentBinary: contentRes.value,
+            });
             rawContent = sections
               .map((s) => `## ${s.sectionTitle}\n${s.content}`)
               .join("\n\n");
@@ -185,11 +191,11 @@ export function createWorkspaceTools(
     execute: async ({ rootPageId, maxDepth }) => {
       const treeResult = await Result.gen(async function* () {
         const items = yield* Result.await(
-          pagesService.getPageTreeHierarchy(
+          pagesService.getPageTreeHierarchy({
             workspaceId,
-            rootPageId as PageId | undefined,
-            maxDepth ?? 3,
-          ),
+            rootPageId: rootPageId as PageId | undefined,
+            maxDepth: maxDepth ?? 3,
+          }),
         );
         return Result.ok({ items });
       });
@@ -210,12 +216,12 @@ export function createWorkspaceTools(
       const pageIdTyped = pageId as PageId;
       const adjacentResult = await Result.gen(async function* () {
         const hits = yield* Result.await(
-          searchService.getAdjacentSections(
-            pageIdTyped,
+          searchService.getAdjacentSections({
+            pageId: pageIdTyped,
             sectionIndex,
-            count ?? 1,
-            direction ?? "both",
-          ),
+            count: count ?? 1,
+            direction: direction ?? "both",
+          }),
         );
 
         const startIndex = citations?.length ?? 0;
@@ -264,7 +270,9 @@ export function createWorkspaceTools(
     execute: async ({ pageId, headingBlockId, blockIds }) => {
       const pageIdTyped = pageId as PageId;
       const blocksResult = await Result.gen(async function* () {
-        const page = yield* Result.await(pagesService.getPageById(pageIdTyped));
+        const page = yield* Result.await(
+          pagesService.getPageById({ pageId: pageIdTyped }),
+        );
 
         if (page.inTrash) {
           return Result.err(
@@ -275,7 +283,7 @@ export function createWorkspaceTools(
         }
 
         const contentBinary = yield* Result.await(
-          pagesService.getPageContent(pageIdTyped),
+          pagesService.getPageContent({ pageId: pageIdTyped }),
         );
 
         if (!contentBinary) {

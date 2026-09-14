@@ -76,20 +76,28 @@ export class AuthorizationService {
     }
   }
 
-  async loadResourceData<R extends ResourceType>(
-    resource: R,
-    input: ResourceInput<R>,
-    user: User,
-  ): Promise<Result<ResourceData<R> | null, DatabaseError>> {
-    return this.loader.loadResourceData(resource, input, user);
+  async loadResourceData<R extends ResourceType>({
+    resource,
+    input,
+    user,
+  }: {
+    resource: R;
+    input: ResourceInput<R>;
+    user: User;
+  }): Promise<Result<ResourceData<R> | null, DatabaseError>> {
+    return this.loader.loadResourceData({ resource, input, user });
   }
 
-  async loadScopeData<R extends ResourceType>(
-    resource: R,
-    scopeInput: ScopeInput<R> | undefined,
-    user: User,
-  ): Promise<Result<ScopeData<R> | null, DatabaseError>> {
-    return this.loader.loadScopeData(resource, scopeInput, user);
+  async loadScopeData<R extends ResourceType>({
+    resource,
+    scopeInput,
+    user,
+  }: {
+    resource: R;
+    scopeInput?: ScopeInput<R>;
+    user: User;
+  }): Promise<Result<ScopeData<R> | null, DatabaseError>> {
+    return this.loader.loadScopeData({ resource, scopeInput, user });
   }
 
   evaluate<R extends ResourceType, A extends ResourceAction<R>>(
@@ -122,7 +130,11 @@ export class AuthorizationService {
       if (this.engine.isCollectionAction(resourceType, params.action)) {
         const scopeInput = "scope" in params ? params.scope : undefined;
         const scopeData = yield* Result.await(
-          this.loader.loadScopeData(resourceType as R, scopeInput, params.user),
+          this.loader.loadScopeData({
+            resource: resourceType as R,
+            scopeInput,
+            user: params.user,
+          }),
         );
 
         decision = this.engine.evaluate({
@@ -147,11 +159,11 @@ export class AuthorizationService {
           resourceData = resWrapper.data;
         } else {
           resourceData = yield* Result.await(
-            this.loader.loadResourceData(
-              resWrapper.type,
-              resWrapper.id,
-              params.user,
-            ),
+            this.loader.loadResourceData({
+              resource: resWrapper.type,
+              input: resWrapper.id,
+              user: params.user,
+            }),
           );
         }
 
@@ -219,11 +231,15 @@ export class AuthorizationService {
     return null;
   }
 
-  async invalidateUserPermissions(
-    userId: string,
-    resourceType?: ResourceType,
-    id?: string,
-  ): Promise<void> {
+  async invalidateUserPermissions({
+    userId,
+    resourceType,
+    id,
+  }: {
+    userId: string;
+    resourceType?: ResourceType;
+    id?: string;
+  }): Promise<void> {
     const prefix = resourceType
       ? `authz:${userId}:${resourceType}:`
       : `authz:${userId}:`;
@@ -250,10 +266,13 @@ export class AuthorizationService {
     }
   }
 
-  async checkPermission(
-    user: User,
-    query: CheckPermissionQuery,
-  ): Promise<Result<Decision, DatabaseError | ValidationError>> {
+  async checkPermission({
+    user,
+    query,
+  }: {
+    user: User;
+    query: CheckPermissionQuery;
+  }): Promise<Result<Decision, DatabaseError | ValidationError>> {
     const isCollection = this.isCollectionAction(query.resource, query.action);
 
     if (isCollection) {
