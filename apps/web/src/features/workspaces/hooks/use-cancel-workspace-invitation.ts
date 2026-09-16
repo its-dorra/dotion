@@ -1,18 +1,17 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { workspacesApi } from '../api'
-import { removeWorkspaceInvitationFromCache } from '../utils'
 import * as m from '@/paraglide/messages'
 
+import type { WorkspaceId, WorkspaceInvitationId } from '../types'
+
 export interface CancelWorkspaceInvitationInput {
-  workspaceId: string
-  invitationId: string
+  workspaceId: WorkspaceId
+  invitationId: WorkspaceInvitationId
 }
 
 export function useCancelWorkspaceInvitation() {
-  const queryClient = useQueryClient()
-
   return useMutation(
     resultMutationOptions({
       mutationFn: ({
@@ -20,13 +19,7 @@ export function useCancelWorkspaceInvitation() {
         invitationId,
       }: CancelWorkspaceInvitationInput) =>
         workspacesApi.cancelWorkspaceInvitation(workspaceId, invitationId),
-      onSuccess: (_data, variables) => {
-        removeWorkspaceInvitationFromCache(
-          queryClient,
-          variables.workspaceId,
-          variables.invitationId,
-        )
-      },
+      onSuccess: () => {},
       onError: (error) => {
         toast.error(
           error?.message ?? m.toast_workspace_invitation_cancel_failed(),

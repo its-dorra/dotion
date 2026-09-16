@@ -1,4 +1,5 @@
 import { createAuthorizedRoute } from "#/lib/create-authorized-route";
+import { standardApiRateLimit } from "#/middlewares/rate-limit-middleware";
 import { workspaceId, assistantThreadId } from "@dotion/shared/ids";
 import {
   assistantThreadSchema,
@@ -15,6 +16,7 @@ import {
   forbiddenSchema,
   internalServerErrorSchema,
   notFoundErrorSchema,
+  tooManyRequestsSchema,
   unauthorizedSchema,
 } from "#/lib/http-response-helpers";
 import { z } from "zod";
@@ -28,6 +30,7 @@ export const listThreadsRoute = createAuthorizedRoute({
     "Fetches user's conversation threads in this workspace with cursor pagination.",
   method: "get",
   path: "/threads",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspace",
     action: "view",
@@ -45,6 +48,10 @@ export const listThreadsRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       paginatedThreadsResponseSchema,
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.UNAUTHORIZED]: jsonContent(
       unauthorizedSchema,
@@ -67,6 +74,7 @@ export const createThreadRoute = createAuthorizedRoute({
   description: "Creates a new conversation thread for the current user.",
   method: "post",
   path: "/threads",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspace",
     action: "view",
@@ -83,6 +91,10 @@ export const createThreadRoute = createAuthorizedRoute({
     [HttpStatusCodes.CREATED]: jsonContent(
       assistantThreadSchema,
       HttpStatusPhrases.CREATED,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.UNAUTHORIZED]: jsonContent(
       unauthorizedSchema,
@@ -105,6 +117,7 @@ export const deleteThreadRoute = createAuthorizedRoute({
   description: "Deletes a conversation thread and all its messages.",
   method: "delete",
   path: "/threads/:threadId",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspace",
     action: "view",
@@ -122,6 +135,10 @@ export const deleteThreadRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       z.object({ success: z.literal(true) }),
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.UNAUTHORIZED]: jsonContent(
       unauthorizedSchema,
@@ -144,6 +161,7 @@ export const listMessagesRoute = createAuthorizedRoute({
   description: "Fetches paginated messages for a conversation thread.",
   method: "get",
   path: "/threads/:threadId/messages",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspace",
     action: "view",
@@ -162,6 +180,10 @@ export const listMessagesRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       paginatedMessagesResponseSchema,
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.UNAUTHORIZED]: jsonContent(
       unauthorizedSchema,
@@ -189,6 +211,11 @@ export const streamAssistantChatRoute = createAuthorizedRoute({
     "Sends a prompt, executes RAG retrieval, and streams the answer with citations.",
   method: "post",
   path: "/threads/:threadId/chat",
+  rateLimit: {
+    limiter: (env) => env.AI_RATE_LIMITER,
+    keyGenerator: (c) => `ai:${c.var.currentUser.id}`,
+    errorMessage: "Too many AI requests. Please slow down.",
+  },
   authorization: {
     resource: "workspace",
     action: "view",
@@ -211,11 +238,7 @@ export const streamAssistantChatRoute = createAuthorizedRoute({
       description: "AI streaming response",
     },
     [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
-      z.object({
-        success: z.literal(false),
-        error: z.string(),
-        resetAt: z.number().optional(),
-      }),
+      tooManyRequestsSchema,
       HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(

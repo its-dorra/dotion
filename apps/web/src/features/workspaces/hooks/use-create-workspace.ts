@@ -16,6 +16,10 @@ export function useCreateWorkspace() {
       mutationFn: workspacesApi.createWorkspace,
 
       onSuccess: (workspace) => {
+        queryClient.setQueryData(
+          workspacesListQueryOptions().queryKey,
+          (old) => (old ? [...old, workspace] : [workspace]),
+        )
         toast.success(m.toast_workspace_created({ name: workspace.name }))
         navigate({
           to: '/app/workspaces/$workspaceId',
@@ -27,11 +31,6 @@ export function useCreateWorkspace() {
       onError: (error) => {
         console.log({ error })
         toast.error(error?.message ?? m.toast_workspace_create_failed())
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({
-          queryKey: workspacesListQueryOptions().queryKey,
-        })
       },
     }),
   )

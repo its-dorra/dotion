@@ -5,12 +5,12 @@ import * as awarenessProtocol from "y-protocols/awareness";
 import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
 
-const MSG_SYNC = 0;
-const MSG_AWARENESS = 1;
+export const MSG_SYNC = 0;
+export const MSG_AWARENESS = 1;
 
-const SYNC_STEP_1 = 0;
-const SYNC_STEP_2 = 1;
-const SYNC_UPDATE = 2;
+export const SYNC_STEP_1 = 0;
+export const SYNC_STEP_2 = 1;
+export const SYNC_UPDATE = 2;
 
 export type YjsProtocolResult = {
   reply?: Uint8Array;

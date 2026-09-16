@@ -78,7 +78,9 @@ export const PageEditor = memo(function PageEditor({
       AIExtension({
         transport: new DefaultChatTransport({
           api: `/api/v1/workspaces/${workspaceId}/pages/${pageId}/ai/streamText`,
-        }) as any,
+        }) as unknown as NonNullable<
+          Parameters<typeof AIExtension>[0]
+        >['transport'],
       }),
     ]
   }, [workspaceId, pageId])

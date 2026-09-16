@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { aiAssistantApi } from '../api'
-import { assistantKeys } from '../query-options'
+import { addThreadToCache } from '../utils'
 import { toast } from 'sonner'
 import * as m from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
@@ -12,10 +12,8 @@ export function useCreateAssistantThread(workspaceId: WorkspaceId) {
   return useMutation(
     resultMutationOptions({
       mutationFn: () => aiAssistantApi.createThread(workspaceId),
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: assistantKeys.threads(workspaceId),
-        })
+      onSuccess: (thread) => {
+        addThreadToCache({ queryClient, workspaceId, thread })
       },
       onError: (error) => {
         console.error('Error creating assistant thread:', error)

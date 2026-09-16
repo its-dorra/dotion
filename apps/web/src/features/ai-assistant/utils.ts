@@ -1,13 +1,16 @@
 import { isTextUIPart } from 'ai'
-import type { QueryClient, InfiniteData } from '@tanstack/react-query'
-import { assistantKeys } from './query-options'
+import type { QueryClient } from '@tanstack/react-query'
+import {
+  assistantThreadsInfiniteQueryOptions,
+  assistantMessagesInfiniteQueryOptions,
+} from './query-options'
 import type {
+  AssistantThread,
   ChatMessage,
   AssistantCitation,
   AssistantMessage,
   AssistantMessageId,
   AssistantThreadId,
-  PaginatedMessagesResponse,
   WorkspaceId,
   ToolPart,
 } from './types'
@@ -92,8 +95,8 @@ export function optimisticallyUpdateThreadMessagesCache({
     updatedAt: now,
   }
 
-  queryClient.setQueryData<InfiniteData<PaginatedMessagesResponse>>(
-    assistantKeys.messages(workspaceId, threadId),
+  queryClient.setQueryData(
+    assistantMessagesInfiniteQueryOptions(workspaceId, threadId).queryKey,
     (oldData) => {
       if (!oldData || oldData.pages.length === 0) {
         return {
@@ -117,6 +120,117 @@ export function optimisticallyUpdateThreadMessagesCache({
       return {
         ...oldData,
         pages: [updatedFirstPage, ...oldData.pages.slice(1)],
+      }
+    },
+  )
+}
+
+export function addThreadToCache({
+  queryClient,
+  workspaceId,
+  thread,
+}: {
+  queryClient: QueryClient
+  workspaceId: WorkspaceId
+  thread: AssistantThread
+}): void {
+  queryClient.setQueryData(
+    assistantThreadsInfiniteQueryOptions(workspaceId).queryKey,
+    (oldData) => {
+      if (!oldData || oldData.pages.length === 0) {
+        return {
+          pages: [
+            {
+              items: [thread],
+              nextCursor: null,
+              hasMore: false,
+            },
+          ],
+          pageParams: [undefined],
+        }
+      }
+
+      const exists = oldData.pages.some((page) =>
+        page.items.some((item) => item.id === thread.id),
+      )
+      if (exists) {
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => ({
+            ...page,
+            items: page.items.map((item) =>
+              item.id === thread.id ? thread : item,
+            ),
+          })),
+        }
+      }
+
+      const firstPage = oldData.pages[0]!
+      return {
+        ...oldData,
+        pages: [
+          {
+            ...firstPage,
+            items: [thread, ...firstPage.items],
+          },
+          ...oldData.pages.slice(1),
+        ],
+      }
+    },
+  )
+}
+
+export function removeThreadFromCache({
+  queryClient,
+  workspaceId,
+  threadId,
+}: {
+  queryClient: QueryClient
+  workspaceId: WorkspaceId
+  threadId: AssistantThreadId
+}): void {
+  queryClient.setQueryData(
+    assistantThreadsInfiniteQueryOptions(workspaceId).queryKey,
+    (oldData) => {
+      if (!oldData) return oldData
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page) => ({
+          ...page,
+          items: page.items.filter((item) => item.id !== threadId),
+        })),
+      }
+    },
+  )
+  queryClient.removeQueries({
+    queryKey: assistantMessagesInfiniteQueryOptions(workspaceId, threadId)
+      .queryKey,
+  })
+}
+
+export function touchThreadInCache({
+  queryClient,
+  workspaceId,
+  threadId,
+  updatedAt = new Date(),
+}: {
+  queryClient: QueryClient
+  workspaceId: WorkspaceId
+  threadId: AssistantThreadId
+  updatedAt?: Date
+}): void {
+  queryClient.setQueryData(
+    assistantThreadsInfiniteQueryOptions(workspaceId).queryKey,
+    (oldData) => {
+      if (!oldData) return oldData
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page) => ({
+          ...page,
+          items: page.items.map((item) =>
+            item.id === threadId ? { ...item, updatedAt } : item,
+          ),
+        })),
       }
     },
   )

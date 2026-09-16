@@ -10,6 +10,7 @@ import type {
   PaginatedPageMemberPermissions,
   AllPageRole as PagePermissionRole,
   AllPageRole,
+  PageAccessRequestStatusResponse,
 } from '@dotion/shared/pages/types'
 import type { UserId } from '@dotion/shared/users/types'
 import type { WorkspaceId } from '../workspaces/types'
@@ -25,6 +26,7 @@ export type {
   PaginatedPageMemberPermissions,
   PagePermissionRole,
   AllPageRole,
+  PageAccessRequestStatusResponse,
 }
 
 export type PageWsMessage =

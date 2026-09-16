@@ -3,6 +3,7 @@ import {
   resultInfiniteQueryOptions,
 } from '@/integrations/tanstack-query/better-result/query-options'
 import { workspacesApi } from './api'
+import type { WorkspaceId } from './types'
 
 export const workspacesKeys = {
   all: ['workspaces'] as const,
@@ -94,7 +95,7 @@ export function workspaceCandidateUsersInfiniteQueryOptions({
   workspaceId,
   query,
 }: {
-  workspaceId: string
+  workspaceId: WorkspaceId
   query: string
 }) {
   return resultInfiniteQueryOptions({

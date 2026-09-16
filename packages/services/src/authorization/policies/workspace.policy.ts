@@ -1,5 +1,5 @@
 import { allow } from "@dotion/shared/authorization/decisions";
-import { defineResourcePolicy } from "../policy";
+import { defineResourcePolicy } from "@dotion/shared/authorization/policy";
 import {
   isWorkspaceMemberPredicate,
   isWorkspaceOwnerPredicate,

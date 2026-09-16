@@ -49,7 +49,7 @@ export function PageAccessRequestContent({
     await markAsRead.mutateAsync(notification.id)
   }
 
-  const requestedRole = (notification.metadata as any).requestedRole ?? 'editor'
+  const requestedRole = notification.metadata.requestedRole ?? 'editor'
 
   return (
     <div>

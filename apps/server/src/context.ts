@@ -62,14 +62,12 @@ export const createAppContext = (
   executionCtx?: ExecutionContextLike,
 ) => {
   const db = createDb(env.DATABASE_URL);
+  const ctx: ExecutionContextLike = executionCtx ?? {
+    waitUntil: (promise: Promise<unknown>) => void promise,
+  };
 
   const repositories = buildRepositories(db);
-  const { services, eventRouter } = buildServices(
-    repositories,
-    db,
-    env,
-    executionCtx,
-  );
+  const { services, eventRouter } = buildServices(repositories, db, env, ctx);
 
   const auth = createAuth(
     db,
@@ -134,7 +132,7 @@ function buildServices(
   repositories: ReturnType<typeof buildRepositories>,
   db: DBClient,
   env: Env,
-  executionCtx?: ExecutionContextLike,
+  executionCtx: ExecutionContextLike,
 ) {
   const kvCache = new KVAuthorizationCache(env.KV);
   const workspacePublisher = new DurableObjectWorkspaceEventPublisher(env);

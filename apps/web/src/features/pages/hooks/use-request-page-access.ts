@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { pagesApi } from '../api'
-import { pagesKeys } from '../query-options'
+import { updatePageAccessRequestStatusInCache } from '../utils'
 import { toast } from 'sonner'
 import * as m from '@/paraglide/messages'
 import type { PageId, PagePermissionRole } from '@dotion/shared/pages/types'
@@ -21,13 +21,13 @@ export function useRequestPageAccess() {
         pageId: PageId
         requestedRole?: PagePermissionRole
       }) => pagesApi.createAccessRequest(workspaceId, pageId, requestedRole),
-      onSuccess: (_data, vars) => {
-        queryClient.invalidateQueries({
-          queryKey: pagesKeys.accessRequestStatus(
-            vars.workspaceId,
-            vars.pageId,
-          ),
-        })
+      onSuccess: (data, vars) => {
+        updatePageAccessRequestStatusInCache(
+          queryClient,
+          vars.workspaceId,
+          vars.pageId,
+          { hasPendingRequest: true, request: data },
+        )
         toast.success(m.page_request_access_success())
       },
       onError: (error) => {

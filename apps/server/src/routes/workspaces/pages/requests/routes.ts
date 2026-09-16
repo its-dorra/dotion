@@ -15,8 +15,10 @@ import {
   forbiddenSchema,
   internalServerErrorSchema,
   notFoundErrorSchema,
+  tooManyRequestsSchema,
   unauthorizedSchema,
 } from "#/lib/http-response-helpers";
+import { standardApiRateLimit } from "#/middlewares/rate-limit-middleware";
 
 const tags = ["Page Access Requests"];
 
@@ -25,6 +27,7 @@ export const createRequestRoute = createAuthorizedRoute({
   summary: "Request higher access role for a page",
   method: "post",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "view",
@@ -57,6 +60,10 @@ export const createRequestRoute = createAuthorizedRoute({
       notFoundErrorSchema,
       HttpStatusPhrases.NOT_FOUND,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -69,6 +76,7 @@ export const getRequestStatusRoute = createAuthorizedRoute({
   summary: "Get current user's pending access request for a page",
   method: "get",
   path: "/status",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "view",
@@ -93,6 +101,10 @@ export const getRequestStatusRoute = createAuthorizedRoute({
       forbiddenSchema,
       HttpStatusPhrases.FORBIDDEN,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -105,6 +117,7 @@ export const approveRequestRoute = createAuthorizedRoute({
   summary: "Approve a page access request",
   method: "post",
   path: "/{requestId}/approve",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "managePermissions",
@@ -133,6 +146,10 @@ export const approveRequestRoute = createAuthorizedRoute({
     [HttpStatusCodes.NOT_FOUND]: jsonContent(
       notFoundErrorSchema,
       HttpStatusPhrases.NOT_FOUND,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
@@ -146,6 +163,7 @@ export const rejectRequestRoute = createAuthorizedRoute({
   summary: "Reject a page access request",
   method: "post",
   path: "/{requestId}/reject",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "managePermissions",
@@ -174,6 +192,10 @@ export const rejectRequestRoute = createAuthorizedRoute({
     [HttpStatusCodes.NOT_FOUND]: jsonContent(
       notFoundErrorSchema,
       HttpStatusPhrases.NOT_FOUND,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,

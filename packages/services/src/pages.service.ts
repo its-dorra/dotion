@@ -677,11 +677,9 @@ export class PagesService {
     workspaceId,
     userId,
   }: {
-    workspaceId?: WorkspaceId;
+    workspaceId: WorkspaceId;
     userId: UserId;
   }): Promise<Result<ScopeData<"page"> | null, DatabaseError>> {
-    if (!workspaceId) return Result.ok(null);
-
     return this.workspacesService
       .loadWorkspaceScopeData({ workspaceId, userId })
       .then(
@@ -696,11 +694,9 @@ export class PagesService {
     pageId,
     userId,
   }: {
-    pageId?: PageId;
+    pageId: PageId;
     userId: UserId;
   }): Promise<Result<ScopeData<"pagePermission"> | null, DatabaseError>> {
-    if (!pageId) return Result.ok(null);
-
     return Result.gen(async function* (this: PagesService) {
       const page = yield* Result.await(
         this.pagesRepository.getPageById({ pageId }).then((res) => {

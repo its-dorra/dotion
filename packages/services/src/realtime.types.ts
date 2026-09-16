@@ -49,13 +49,13 @@ export interface WorkspaceEventPublisher {
   broadcastPageMovedToTrash(
     workspaceId: WorkspaceId,
     pageId: PageId,
-    pageIds?: PageId[],
+    pageIds: PageId[],
   ): Promise<void>;
   broadcastPageRestored(workspaceId: WorkspaceId, page: Page): Promise<void>;
   broadcastPageDeletedPermanently(
     workspaceId: WorkspaceId,
     pageId: PageId,
-    pageIds?: PageId[],
+    pageIds: PageId[],
   ): Promise<void>;
   broadcastTrashEmptied(workspaceId: WorkspaceId): Promise<void>;
 }
@@ -98,7 +98,7 @@ export interface UserEventPublisher {
 export interface UserCreditsManager {
   checkTokenQuota(
     userId: UserId,
-    params?: { minTokens: number },
+    params: { minTokens: number },
   ): Promise<{
     allowed: boolean;
     remainingTokens: number;

@@ -2,23 +2,27 @@ import { useParams } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SidebarTrigger } from '@/components/ui/sidebar'
-import { pagesKeys } from '../query-options'
-import type { Page, PageTreeNode } from '../types'
+import { pageDetailQueryOptions, pageTreeQueryOptions } from '../query-options'
+import type { PageId } from '../types'
+import type { WorkspaceId } from '@/features/workspaces/types'
 
 export function PageDetailLoading() {
   const params = useParams({ strict: false }) as {
-    workspaceId?: string
-    pageId?: string
+    workspaceId?: WorkspaceId
+    pageId?: PageId
   }
   const queryClient = useQueryClient()
 
-  const cachedPage = params.pageId
-    ? queryClient.getQueryData<Page>(pagesKeys.detail(params.pageId))
-    : undefined
+  const cachedPage =
+    params.pageId && params.workspaceId
+      ? queryClient.getQueryData(
+          pageDetailQueryOptions(params.workspaceId, params.pageId).queryKey,
+        )
+      : undefined
 
   const tree = params.workspaceId
-    ? queryClient.getQueryData<PageTreeNode[]>(
-        pagesKeys.tree(params.workspaceId),
+    ? queryClient.getQueryData(
+        pageTreeQueryOptions(params.workspaceId).queryKey,
       )
     : undefined
 

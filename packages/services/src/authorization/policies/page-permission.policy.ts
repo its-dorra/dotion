@@ -1,10 +1,11 @@
 import { allow, deny } from "@dotion/shared/authorization/decisions";
-import { defineResourcePolicy } from "../policy";
+import { defineResourcePolicy } from "@dotion/shared/authorization/policy";
 
 export const pagePermissionPolicy = defineResourcePolicy("pagePermission", {
-  list: ({ scope }) => {
-    if (!scope?.pageId) return deny("Page ID is required to list permissions");
-    return scope.userWorkspaceRole != null
+  list: ({ container }) => {
+    if (!container?.pageId)
+      return deny("Page ID is required to list permissions");
+    return container.userWorkspaceRole != null
       ? allow("Workspace members can view page permissions")
       : deny("Must be a workspace member to view page permissions");
   },

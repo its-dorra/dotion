@@ -6,26 +6,26 @@ import { canQueryOptions } from '@/features/authorization/query-options'
 import { GeneralSettings } from './general-settings'
 import { MembersContainer } from './members-container'
 import * as m from '@/paraglide/messages'
-import type { WorkspaceId } from '../types'
+import type { WorkspaceId, WorkspaceRole } from '../types'
 
 interface WorkspaceSettingsProps {
-  workspaceId: string
+  workspaceId: WorkspaceId
 }
 
 export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
-  const { data: workspace } = useSuspenseQuery(
+  const { data: _workspace } = useSuspenseQuery(
     workspaceDetailQueryOptions(workspaceId),
   )
 
   const { data: managePerm } = useQuery(
     canQueryOptions({
-      resource: { type: 'workspace', id: { workspaceId: workspaceId as WorkspaceId } },
+      resource: { type: 'workspace', id: { workspaceId } },
       action: 'manageSettings',
     }),
   )
 
   const canManage = managePerm?.allowed ?? false
-  const currentUserRole = (workspace as any)?.currentUserRole ?? 'member'
+  const currentUserRole: WorkspaceRole = canManage ? 'owner' : 'member'
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-12">

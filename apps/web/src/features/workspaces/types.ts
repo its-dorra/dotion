@@ -10,6 +10,8 @@ import type {
 import type { PaginatedData } from '@dotion/shared/pagination/types'
 import type { UserSearchResult } from '@dotion/shared/users/types'
 
+import type { WorkspaceInvitationId } from '@dotion/shared/ids'
+
 export type {
   WorkspaceId,
   Workspace,
@@ -19,6 +21,7 @@ export type {
   WorkspaceInvitationWithDetails,
   PaginatedData,
   UserSearchResult,
+  WorkspaceInvitationId,
 }
 
 export type WorkspaceRole = 'owner' | 'member'
@@ -36,22 +39,22 @@ export interface InviteMemberInput {
 }
 
 export interface AcceptInvitationInput {
-  invitationId: string
+  invitationId: WorkspaceInvitationId
 }
 
 export interface DeclineInvitationInput {
-  invitationId: string
+  invitationId: WorkspaceInvitationId
 }
 
 export interface UpdateMemberRoleInput {
   workspaceId: WorkspaceId
-  memberId: string
+  memberId: UserId
   role: 'owner' | 'member'
 }
 
 export interface RemoveMemberInput {
   workspaceId: WorkspaceId
-  memberId: string
+  memberId: UserId
 }
 
 export interface UpdateWorkspaceInput {

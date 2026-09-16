@@ -2,10 +2,10 @@ import { Result } from "better-result";
 import { DatabaseError } from "@dotion/db";
 import type {
   ResourceType,
-  ResourceInput,
-  ResourceData,
-  ScopeData,
-  ScopeInput,
+  ResourceTarget,
+  ResourceAttributes,
+  ContainerAttributes,
+  ResourceContainer,
 } from "@dotion/shared/authorization/types";
 import type { User } from "@dotion/auth";
 import type { WorkspacesService } from "#/workspaces.service";
@@ -25,70 +25,71 @@ export class AttributeLoader {
 
   async loadResourceData<R extends ResourceType>({
     resource,
-    input,
+    target,
     user,
   }: {
     resource: R;
-    input: ResourceInput<R>;
+    target: ResourceTarget<R>;
     user: User;
-  }): Promise<Result<ResourceData<R> | null, DatabaseError>> {
+  }): Promise<Result<ResourceAttributes<R> | null, DatabaseError>> {
     switch (resource) {
       case "workspace": {
-        const { workspaceId } = input as ResourceInput<"workspace">;
+        const { workspaceId } = target as ResourceTarget<"workspace">;
         return this.services.workspaces.loadWorkspaceResourceData({
           workspaceId,
           userId: user.id,
-        }) as Promise<Result<ResourceData<R> | null, DatabaseError>>;
+        }) as Promise<Result<ResourceAttributes<R> | null, DatabaseError>>;
       }
 
       case "workspaceMember": {
         const { workspaceId, memberUserId } =
-          input as ResourceInput<"workspaceMember">;
+          target as ResourceTarget<"workspaceMember">;
         return this.services.workspaces.loadWorkspaceMemberResourceData({
           workspaceId,
           targetUserId: memberUserId,
           callerUserId: user.id,
-        }) as Promise<Result<ResourceData<R> | null, DatabaseError>>;
+        }) as Promise<Result<ResourceAttributes<R> | null, DatabaseError>>;
       }
 
       case "workspaceInvitation": {
-        const { invitationId } = input as ResourceInput<"workspaceInvitation">;
+        const { invitationId } =
+          target as ResourceTarget<"workspaceInvitation">;
         return this.services.workspaces.loadWorkspaceInvitationResourceData({
           invitationId,
           callerUserId: user.id,
-        }) as Promise<Result<ResourceData<R> | null, DatabaseError>>;
+        }) as Promise<Result<ResourceAttributes<R> | null, DatabaseError>>;
       }
 
       case "page": {
-        const { pageId } = input as ResourceInput<"page">;
+        const { pageId } = target as ResourceTarget<"page">;
         return this.services.pages.loadPageResourceData({
           pageId,
           userId: user.id,
-        }) as Promise<Result<ResourceData<R> | null, DatabaseError>>;
+        }) as Promise<Result<ResourceAttributes<R> | null, DatabaseError>>;
       }
 
       case "pagePermission": {
         const { pageId, targetUserId } =
-          input as ResourceInput<"pagePermission">;
+          target as ResourceTarget<"pagePermission">;
         return this.services.pages.loadPagePermissionResourceData({
           pageId,
           targetUserId,
           callerUserId: user.id,
-        }) as Promise<Result<ResourceData<R> | null, DatabaseError>>;
+        }) as Promise<Result<ResourceAttributes<R> | null, DatabaseError>>;
       }
 
       case "comment": {
-        const { commentId } = input as ResourceInput<"comment">;
+        const { commentId } = target as ResourceTarget<"comment">;
         return this.services.comments.loadCommentResourceData({
           commentId,
           userId: user.id,
-        }) as Promise<Result<ResourceData<R> | null, DatabaseError>>;
+        }) as Promise<Result<ResourceAttributes<R> | null, DatabaseError>>;
       }
 
       case "user": {
         return this.services.users.loadUserResourceData({
-          input: input as ResourceInput<"user">,
-        }) as Promise<Result<ResourceData<R> | null, DatabaseError>>;
+          input: target as ResourceTarget<"user">,
+        }) as Promise<Result<ResourceAttributes<R> | null, DatabaseError>>;
       }
 
       default:
@@ -98,63 +99,69 @@ export class AttributeLoader {
 
   async loadScopeData<R extends ResourceType>({
     resource,
-    scopeInput,
+    container,
     user,
   }: {
     resource: R;
-    scopeInput?: ScopeInput<R>;
+    container?: ResourceContainer<R>;
     user: User;
-  }): Promise<Result<ScopeData<R> | null, DatabaseError>> {
+  }): Promise<Result<ContainerAttributes<R> | null, DatabaseError>> {
     switch (resource) {
       case "workspace": {
-        const data: ScopeData<"workspace"> = {};
-        return Result.ok(data as ScopeData<R>);
+        const data: ContainerAttributes<"workspace"> = {};
+        return Result.ok(data as ContainerAttributes<R>);
       }
 
       case "workspaceMember": {
-        const wsId = (scopeInput as ScopeInput<"workspaceMember">)?.workspaceId;
+        const wsId = (container as ResourceContainer<"workspaceMember">)
+          ?.workspaceId;
+        if (!wsId) return Result.ok(null);
         return this.services.workspaces.loadWorkspaceScopeData({
           workspaceId: wsId,
           userId: user.id,
-        }) as Promise<Result<ScopeData<R> | null, DatabaseError>>;
+        }) as Promise<Result<ContainerAttributes<R> | null, DatabaseError>>;
       }
 
       case "workspaceInvitation": {
-        const wsId = (scopeInput as ScopeInput<"workspaceInvitation">)
+        const wsId = (container as ResourceContainer<"workspaceInvitation">)
           ?.workspaceId;
+        if (!wsId) return Result.ok(null);
         return this.services.workspaces.loadWorkspaceScopeData({
           workspaceId: wsId,
           userId: user.id,
-        }) as Promise<Result<ScopeData<R> | null, DatabaseError>>;
+        }) as Promise<Result<ContainerAttributes<R> | null, DatabaseError>>;
       }
 
       case "page": {
-        const wsId = (scopeInput as ScopeInput<"page">)?.workspaceId;
+        const wsId = (container as ResourceContainer<"page">)?.workspaceId;
+        if (!wsId) return Result.ok(null);
         return this.services.pages.loadPageScopeData({
           workspaceId: wsId,
           userId: user.id,
-        }) as Promise<Result<ScopeData<R> | null, DatabaseError>>;
+        }) as Promise<Result<ContainerAttributes<R> | null, DatabaseError>>;
       }
 
       case "pagePermission": {
-        const pId = (scopeInput as ScopeInput<"pagePermission">)?.pageId;
+        const pId = (container as ResourceContainer<"pagePermission">)?.pageId;
+        if (!pId) return Result.ok(null);
         return this.services.pages.loadPagePermissionScopeData({
           pageId: pId,
           userId: user.id,
-        }) as Promise<Result<ScopeData<R> | null, DatabaseError>>;
+        }) as Promise<Result<ContainerAttributes<R> | null, DatabaseError>>;
       }
 
       case "comment": {
-        const pId = (scopeInput as ScopeInput<"comment">)?.pageId;
+        const pId = (container as ResourceContainer<"comment">)?.pageId;
+        if (!pId) return Result.ok(null);
         return this.services.comments.loadCommentScopeData({
           pageId: pId,
           userId: user.id,
-        }) as Promise<Result<ScopeData<R> | null, DatabaseError>>;
+        }) as Promise<Result<ContainerAttributes<R> | null, DatabaseError>>;
       }
 
       case "user": {
-        const data: ScopeData<"user"> = {};
-        return Result.ok(data as ScopeData<R>);
+        const data: ContainerAttributes<"user"> = {};
+        return Result.ok(data as ContainerAttributes<R>);
       }
 
       default:

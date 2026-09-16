@@ -8,8 +8,10 @@ import {
 import { InviteMemberForm } from './invite-member-form'
 import * as m from '@/paraglide/messages'
 
+import type { WorkspaceId } from '../types'
+
 interface InviteMemberSheetProps {
-  workspaceId: string
+  workspaceId: WorkspaceId
   open: boolean
   onOpenChange: (open: boolean) => void
 }

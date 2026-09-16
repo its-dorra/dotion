@@ -1,9 +1,11 @@
 import { createAuthorizedRoute } from "#/lib/create-authorized-route";
+import { standardApiRateLimit } from "#/middlewares/rate-limit-middleware";
 import {
   badRequestErrorSchema,
   forbiddenSchema,
   internalServerErrorSchema,
   notFoundErrorSchema,
+  tooManyRequestsSchema,
   unauthorizedSchema,
 } from "#/lib/http-response-helpers";
 import { jsonContent, jsonContentRequired } from "stoker/openapi/helpers";
@@ -30,6 +32,7 @@ export const inviteMemberRoute = createAuthorizedRoute({
     "Creates a pending workspace invitation and triggers a real-time notification to the invited user.",
   method: "post",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspace",
     action: "inviteMember",
@@ -45,6 +48,10 @@ export const inviteMemberRoute = createAuthorizedRoute({
     [HttpStatusCodes.CREATED]: jsonContent(
       zodSuccessResponse(WorkspaceInvitationWithDetailsSchema),
       HttpStatusPhrases.CREATED,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(
       badRequestErrorSchema,
@@ -75,6 +82,7 @@ export const listWorkspaceInvitationsRoute = createAuthorizedRoute({
   description: "Returns pending invitations for the specified workspace.",
   method: "get",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspaceInvitation",
     action: "list",
@@ -90,6 +98,10 @@ export const listWorkspaceInvitationsRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       zodSuccessResponse(PaginatedWorkspaceInvitationsDataSchema),
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.NOT_FOUND]: jsonContent(
       notFoundErrorSchema,
@@ -116,6 +128,7 @@ export const cancelWorkspaceInvitationRoute = createAuthorizedRoute({
   description: "Cancels a pending invitation to a workspace.",
   method: "delete",
   path: "/{invitationId}",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspaceInvitation",
     action: "cancel",
@@ -131,6 +144,10 @@ export const cancelWorkspaceInvitationRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       zodSuccessResponse(z.object({ success: z.literal(true) })),
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(
       badRequestErrorSchema,
@@ -162,6 +179,7 @@ export const acceptInvitationRoute = createAuthorizedRoute({
     "Accepts a pending workspace invitation and adds the authenticated user to the workspace as a member.",
   method: "post",
   path: "/{invitationId}/accept",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspaceInvitation",
     action: "accept",
@@ -176,6 +194,10 @@ export const acceptInvitationRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       zodSuccessResponse(WorkspaceSchema),
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(
       badRequestErrorSchema,
@@ -206,6 +228,7 @@ export const declineInvitationRoute = createAuthorizedRoute({
   description: "Declines a pending workspace invitation.",
   method: "post",
   path: "/{invitationId}/decline",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspaceInvitation",
     action: "decline",
@@ -220,6 +243,10 @@ export const declineInvitationRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       zodSuccessResponse(z.object({ success: z.literal(true) })),
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(
       badRequestErrorSchema,

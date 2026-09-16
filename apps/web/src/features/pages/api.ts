@@ -90,21 +90,28 @@ export class PagesApi {
 
     if (!response.ok) {
       return matchExhaustive(response.status, {
-        '401': () =>
+        [401]: () =>
           Result.err(new AuthenticationError({ message: 'Unauthorized' })),
-        '403': () =>
+        [403]: () =>
           Result.err(
             new InsufficientPagePermissionError({
               message:
                 'You do not have permission to view pages in this workspace.',
-              requiredRole: 'viewer' as any,
+              requiredRole: 'viewer',
             }),
           ),
-        '500': () =>
+        [500]: () =>
           Result.err(
             new AppError({
               source: 'Pages',
               message: 'Cannot fetch page tree',
+            }),
+          ),
+        default: () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: `Failed to fetch page tree: ${response.status}`,
             }),
           ),
       })
@@ -140,31 +147,38 @@ export class PagesApi {
 
     if (!response.ok) {
       return matchExhaustive(response.status, {
-        '401': () =>
+        [401]: () =>
           Result.err(
             new AuthenticationError({
               message: 'Unauthorized',
             }),
           ),
-        '403': () =>
+        [403]: () =>
           Result.err(
             new InsufficientPagePermissionError({
               message: 'You do not have permission to view this page.',
-              requiredRole: 'viewer' as any,
+              requiredRole: 'viewer',
             }),
           ),
-        '404': () =>
+        [404]: () =>
           Result.err(
             new PageNotFoundError({
               message: "This page doesn't exist.",
               pageId,
             }),
           ),
-        '500': () =>
+        [500]: () =>
           Result.err(
             new AppError({
               source: 'Pages',
               message: 'Cannot fetch page',
+            }),
+          ),
+        default: () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: `Failed to fetch page: ${response.status}`,
             }),
           ),
       })
@@ -201,39 +215,46 @@ export class PagesApi {
 
     if (!response.ok) {
       return matchExhaustive(response.status, {
-        '400': () =>
+        [400]: () =>
           Result.err(
             new ValidationError({
               message: 'Invalid input for creating a page',
               field: 'input',
             }),
           ),
-        '401': () =>
+        [401]: () =>
           Result.err(
             new AuthenticationError({
               message: 'Unauthorized',
             }),
           ),
-        '403': () =>
+        [403]: () =>
           Result.err(
             new InsufficientPagePermissionError({
               message:
                 'You do not have permission to create a page in this workspace.',
-              requiredRole: 'editor' as any,
+              requiredRole: 'editor',
             }),
           ),
-        '422': () =>
+        [422]: () =>
           Result.err(
             new ValidationError({
               message: 'Validation error occurred while creating the page',
               field: 'input',
             }),
           ),
-        '500': () =>
+        [500]: () =>
           Result.err(
             new AppError({
               source: 'Pages',
               message: 'Failed to create page due to server error',
+            }),
+          ),
+        default: () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: `Failed to create page: ${response.status}`,
             }),
           ),
       })
@@ -269,27 +290,34 @@ export class PagesApi {
 
     if (!response.ok) {
       return matchExhaustive(response.status, {
-        '401': () =>
+        [401]: () =>
           Result.err(new AuthenticationError({ message: 'Unauthorized' })),
-        '403': () =>
+        [403]: () =>
           Result.err(
             new InsufficientPagePermissionError({
               message: 'You do not have permission to move this page to trash.',
-              requiredRole: 'editor' as any,
+              requiredRole: 'editor',
             }),
           ),
-        '404': () =>
+        [404]: () =>
           Result.err(
             new PageNotFoundError({
               message: "This page doesn't exist.",
               pageId: input.pageId,
             }),
           ),
-        '500': () =>
+        [500]: () =>
           Result.err(
             new AppError({
               source: 'Pages',
               message: 'Failed to move page to trash',
+            }),
+          ),
+        default: () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: `Failed to move page to trash: ${response.status}`,
             }),
           ),
       })
@@ -322,27 +350,34 @@ export class PagesApi {
 
     if (!response.ok) {
       return matchExhaustive(response.status, {
-        '401': () =>
+        [401]: () =>
           Result.err(new AuthenticationError({ message: 'Unauthorized' })),
-        '403': () =>
+        [403]: () =>
           Result.err(
             new InsufficientPagePermissionError({
               message: 'You do not have permission to restore this page.',
-              requiredRole: 'editor' as any,
+              requiredRole: 'editor',
             }),
           ),
-        '404': () =>
+        [404]: () =>
           Result.err(
             new PageNotFoundError({
               message: "This page doesn't exist.",
               pageId: input.pageId,
             }),
           ),
-        '500': () =>
+        [500]: () =>
           Result.err(
             new AppError({
               source: 'Pages',
               message: 'Failed to restore page from trash',
+            }),
+          ),
+        default: () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: `Failed to restore page from trash: ${response.status}`,
             }),
           ),
       })
@@ -376,28 +411,35 @@ export class PagesApi {
 
     if (!response.ok) {
       return matchExhaustive(response.status, {
-        '401': () =>
+        [401]: () =>
           Result.err(new AuthenticationError({ message: 'Unauthorized' })),
-        '403': () =>
+        [403]: () =>
           Result.err(
             new InsufficientPagePermissionError({
               message:
                 'You do not have permission to permanently delete this page. Only workspace owners can permanently delete pages.',
-              requiredRole: 'owner' as any,
+              requiredRole: 'owner',
             }),
           ),
-        '404': () =>
+        [404]: () =>
           Result.err(
             new PageNotFoundError({
               message: "This page doesn't exist.",
               pageId: input.pageId,
             }),
           ),
-        '500': () =>
+        [500]: () =>
           Result.err(
             new AppError({
               source: 'Pages',
               message: 'Failed to permanently delete page',
+            }),
+          ),
+        default: () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: `Failed to permanently delete page: ${response.status}`,
             }),
           ),
       })
@@ -424,20 +466,27 @@ export class PagesApi {
 
     if (!response.ok) {
       return matchExhaustive(response.status, {
-        '401': () =>
+        [401]: () =>
           Result.err(new AuthenticationError({ message: 'Unauthorized' })),
-        '403': () =>
+        [403]: () =>
           Result.err(
             new InsufficientPagePermissionError({
               message: 'You do not have permission to view trash.',
-              requiredRole: 'viewer' as any,
+              requiredRole: 'viewer',
             }),
           ),
-        '500': () =>
+        [500]: () =>
           Result.err(
             new AppError({
               source: 'Pages',
               message: 'Failed to fetch trashed pages',
+            }),
+          ),
+        default: () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: `Failed to fetch trashed pages: ${response.status}`,
             }),
           ),
       })
@@ -478,21 +527,28 @@ export class PagesApi {
 
     if (!response.ok) {
       return matchExhaustive(response.status, {
-        '401': () =>
+        [401]: () =>
           Result.err(new AuthenticationError({ message: 'Unauthorized' })),
-        '403': () =>
+        [403]: () =>
           Result.err(
             new InsufficientPagePermissionError({
               message:
                 'You do not have permission to empty trash. Only workspace owners can empty trash.',
-              requiredRole: 'owner' as any,
+              requiredRole: 'owner',
             }),
           ),
-        '500': () =>
+        [500]: () =>
           Result.err(
             new AppError({
               source: 'Pages',
               message: 'Failed to empty trash',
+            }),
+          ),
+        default: () =>
+          Result.err(
+            new AppError({
+              source: 'Pages',
+              message: `Failed to empty trash: ${response.status}`,
             }),
           ),
       })
@@ -536,7 +592,7 @@ export class PagesApi {
               new InsufficientPagePermissionError({
                 message:
                   'You do not have permission to view permissions for this page.',
-                requiredRole: 'viewer' as any,
+                requiredRole: 'viewer',
               }),
             ),
           [500]: () =>
@@ -696,7 +752,7 @@ export class PagesApi {
               new InsufficientPagePermissionError({
                 message:
                   'You do not have permission to update page permissions.',
-                requiredRole: 'editor' as any,
+                requiredRole: 'editor',
               }),
             ),
           [404]: () =>

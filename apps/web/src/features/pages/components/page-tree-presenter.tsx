@@ -37,7 +37,7 @@ export function PageTreePresenter({
         <Can
           resource="page"
           action="create"
-          scope={{ workspaceId: workspaceId as WorkspaceId }}
+          container={{ workspaceId: workspaceId as WorkspaceId }}
         >
           <Button
             variant="ghost"

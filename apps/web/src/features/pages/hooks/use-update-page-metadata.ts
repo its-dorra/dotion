@@ -2,12 +2,7 @@ import { useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { pageDetailQueryOptions, pageTreeQueryOptions } from '../query-options'
 import type { WebSocketClient } from '@/lib/web-socket-client'
-import type {
-  PageId,
-  PageTreeNode,
-  PageWsMessage,
-  UpdatePageMetadataInput,
-} from '../types'
+import type { PageId, PageWsMessage, UpdatePageMetadataInput } from '../types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 
 interface UseUpdatePageMetadataOptions {
@@ -41,7 +36,7 @@ export function useUpdatePageMetadata({
       if (metadata.title !== undefined || metadata.icon !== undefined) {
         queryClient.setQueryData(
           pageTreeQueryOptions(workspaceId).queryKey,
-          (old: PageTreeNode[] | undefined) => {
+          (old) => {
             if (!old) return old
             return old.map((node) => {
               if (node.id === pageId) {

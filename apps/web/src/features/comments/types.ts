@@ -41,4 +41,5 @@ export interface DeleteCommentInput {
   workspaceId: WorkspaceId
   pageId: PageId
   commentId: CommentId
+  parentId?: CommentId | null
 }

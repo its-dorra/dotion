@@ -33,3 +33,5 @@ export type CreateNotificationInput = z.infer<typeof CreateNotificationSchema>;
 export type PaginatedNotifications = z.infer<
   typeof PaginatedNotificationsDataSchema
 >;
+
+export type { UserWsMessage } from "./ws.schema";

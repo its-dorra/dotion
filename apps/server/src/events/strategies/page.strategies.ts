@@ -378,25 +378,23 @@ export class PagePermissionUpdatedStrategy implements DomainEventStrategy<"page.
         ),
       ];
 
-      if (event.payload.pageTitle && event.payload.updatedByName) {
-        tasks.push(
-          this.notificationsService.createNotification({
-            input: {
-              userId: event.payload.targetUserId,
-              metadata: {
-                type: "permission_change",
-                pageId: event.payload.pageId,
-                workspaceId: event.payload.workspaceId,
-                pageTitle: event.payload.pageTitle,
-                changedByUserId: event.payload.updatedByUserId,
-                changedByName: event.payload.updatedByName,
-                newRole: event.payload.role,
-              },
-              isRead: false,
+      tasks.push(
+        this.notificationsService.createNotification({
+          input: {
+            userId: event.payload.targetUserId,
+            metadata: {
+              type: "permission_change",
+              pageId: event.payload.pageId,
+              workspaceId: event.payload.workspaceId,
+              pageTitle: event.payload.pageTitle,
+              changedByUserId: event.payload.updatedByUserId,
+              changedByName: event.payload.updatedByName,
+              newRole: event.payload.role,
             },
-          }),
-        );
-      }
+            isRead: false,
+          },
+        }),
+      );
 
       await Promise.all(tasks);
       return Result.ok(undefined);

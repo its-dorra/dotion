@@ -1,9 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { pagesApi } from '../api'
-import { pagesKeys } from '../query-options'
+import { pagePermissionsInfiniteQueryOptions } from '../query-options'
 import { updatePagePermissionInCache } from '../utils'
-import { authorizationKeys } from '@/features/authorization/query-options'
 import { toast } from 'sonner'
 import * as m from '@/paraglide/messages'
 import type { UpdatePagePermissionInput } from '../types'
@@ -15,7 +14,19 @@ export function useUpdatePagePermission() {
     resultMutationOptions({
       mutationFn: (input: UpdatePagePermissionInput) =>
         pagesApi.updatePagePermission(input),
-      onSuccess: (_permission, variables) => {
+      onMutate: async (variables) => {
+        await queryClient.cancelQueries({
+          queryKey: pagePermissionsInfiniteQueryOptions(
+            variables.workspaceId,
+            variables.pageId,
+          ).queryKey,
+        })
+        const previousPermissions = queryClient.getQueryData(
+          pagePermissionsInfiniteQueryOptions(
+            variables.workspaceId,
+            variables.pageId,
+          ).queryKey,
+        )
         updatePagePermissionInCache(
           queryClient,
           variables.workspaceId,
@@ -23,23 +34,23 @@ export function useUpdatePagePermission() {
           variables.userId,
           variables.role,
         )
-        queryClient.invalidateQueries({
-          queryKey: pagesKeys.permissions(
-            variables.workspaceId,
-            variables.pageId,
-          ),
-        })
-        queryClient.invalidateQueries({
-          queryKey: pagesKeys.detail(variables.pageId),
-        })
-        queryClient.invalidateQueries({
-          queryKey: authorizationKeys.all,
-        })
-        toast.success(m.toast_permission_updated())
+        return { previousPermissions }
       },
-      onError: (error) => {
+      onError: (error, variables, context) => {
+        if (context?.previousPermissions) {
+          queryClient.setQueryData(
+            pagePermissionsInfiniteQueryOptions(
+              variables.workspaceId,
+              variables.pageId,
+            ).queryKey,
+            context.previousPermissions,
+          )
+        }
         console.error('Error updating page permission:', error)
         toast.error(m.toast_permission_update_failed())
+      },
+      onSuccess: () => {
+        toast.success(m.toast_permission_updated())
       },
     }),
   )

@@ -96,42 +96,57 @@ export const UserActionsSchema = z.union([
   UserCollectionActionsSchema,
 ]);
 
-export const WorkspaceInputSchema = z.object({
+export const WorkspaceTargetSchema = z.object({
   workspaceId,
 });
+export const WorkspaceInputSchema = WorkspaceTargetSchema;
 
-export const WorkspaceMemberInputSchema = z.object({
+export const WorkspaceMemberTargetSchema = z.object({
   workspaceId,
   memberUserId: userId,
 });
+export const WorkspaceMemberInputSchema = WorkspaceMemberTargetSchema;
 
-export const WorkspaceInvitationInputSchema = z.object({
+export const WorkspaceInvitationTargetSchema = z.object({
   invitationId: workspaceInvitationId,
 });
+export const WorkspaceInvitationInputSchema = WorkspaceInvitationTargetSchema;
 
-export const PageInputSchema = z.object({
+export const PageTargetSchema = z.object({
   pageId,
 });
+export const PageInputSchema = PageTargetSchema;
 
-export const PagePermissionInputSchema = z.object({
+export const PagePermissionTargetSchema = z.object({
   pageId,
   targetUserId: userId,
 });
+export const PagePermissionInputSchema = PagePermissionTargetSchema;
 
-export const CommentInputSchema = z.object({
+export const CommentTargetSchema = z.object({
   commentId,
 });
+export const CommentInputSchema = CommentTargetSchema;
 
-export const UserInputSchema = z.object({
+export const UserTargetSchema = z.object({
   userId,
 });
+export const UserInputSchema = UserTargetSchema;
 
 export const resourceSchemas = {
   workspace: {
     instanceActions: WorkspaceInstanceActionsSchema,
     collectionActions: WorkspaceCollectionActionsSchema,
     actions: WorkspaceActionsSchema,
-    input: WorkspaceInputSchema,
+    target: WorkspaceTargetSchema,
+    container: z.object({}),
+    attributes: z.object({
+      workspaceId,
+      userRole: WorkspaceMemberRoleSchema.nullable(),
+    }),
+    containerAttributes: z.object({}),
+    // Backward compatibility aliases
+    input: WorkspaceTargetSchema,
     scopeInput: z.object({}),
     data: z.object({
       workspaceId,
@@ -143,7 +158,22 @@ export const resourceSchemas = {
     instanceActions: WorkspaceMemberInstanceActionsSchema,
     collectionActions: WorkspaceMemberCollectionActionsSchema,
     actions: WorkspaceMemberActionsSchema,
-    input: WorkspaceMemberInputSchema,
+    target: WorkspaceMemberTargetSchema,
+    container: z.object({
+      workspaceId,
+    }),
+    attributes: z.object({
+      workspaceId,
+      targetUserId: userId,
+      targetRole: WorkspaceMemberRoleSchema,
+      userRole: WorkspaceMemberRoleSchema.nullable(),
+    }),
+    containerAttributes: z.object({
+      workspaceId,
+      userRole: WorkspaceMemberRoleSchema.nullable(),
+    }),
+    // Backward compatibility aliases
+    input: WorkspaceMemberTargetSchema,
     scopeInput: z.object({
       workspaceId,
     }),
@@ -162,7 +192,23 @@ export const resourceSchemas = {
     instanceActions: WorkspaceInvitationInstanceActionsSchema,
     collectionActions: WorkspaceInvitationCollectionActionsSchema,
     actions: WorkspaceInvitationActionsSchema,
-    input: WorkspaceInvitationInputSchema,
+    target: WorkspaceInvitationTargetSchema,
+    container: z.object({
+      workspaceId,
+    }),
+    attributes: z.object({
+      invitationId: workspaceInvitationId,
+      workspaceId,
+      invitedUserId: userId.nullable(),
+      invitedByUserId: userId,
+      userRole: WorkspaceMemberRoleSchema.nullable(),
+    }),
+    containerAttributes: z.object({
+      workspaceId,
+      userRole: WorkspaceMemberRoleSchema.nullable(),
+    }),
+    // Backward compatibility aliases
+    input: WorkspaceInvitationTargetSchema,
     scopeInput: z.object({
       workspaceId,
     }),
@@ -182,7 +228,22 @@ export const resourceSchemas = {
     instanceActions: PageInstanceActionsSchema,
     collectionActions: PageCollectionActionsSchema,
     actions: PageActionsSchema,
-    input: PageInputSchema,
+    target: PageTargetSchema,
+    container: z.object({
+      workspaceId,
+    }),
+    attributes: z.object({
+      pageId,
+      workspaceId,
+      userWorkspaceRole: WorkspaceMemberRoleSchema.nullable(),
+      userPageRole: PagePermissionRoleSchema.nullable(),
+    }),
+    containerAttributes: z.object({
+      workspaceId,
+      userWorkspaceRole: WorkspaceMemberRoleSchema.nullable(),
+    }),
+    // Backward compatibility aliases
+    input: PageTargetSchema,
     scopeInput: z.object({
       workspaceId,
     }),
@@ -201,7 +262,25 @@ export const resourceSchemas = {
     instanceActions: PagePermissionInstanceActionsSchema,
     collectionActions: PagePermissionCollectionActionsSchema,
     actions: PagePermissionActionsSchema,
-    input: PagePermissionInputSchema,
+    target: PagePermissionTargetSchema,
+    container: z.object({
+      pageId,
+    }),
+    attributes: z.object({
+      pageId,
+      workspaceId,
+      targetUserId: userId,
+      targetRole: PagePermissionRoleSchema.nullable(),
+      targetUserWorkspaceRole: WorkspaceMemberRoleSchema.nullable(),
+      userWorkspaceRole: WorkspaceMemberRoleSchema.nullable(),
+    }),
+    containerAttributes: z.object({
+      pageId,
+      workspaceId,
+      userWorkspaceRole: WorkspaceMemberRoleSchema.nullable(),
+    }),
+    // Backward compatibility aliases
+    input: PagePermissionTargetSchema,
     scopeInput: z.object({
       pageId,
     }),
@@ -223,9 +302,28 @@ export const resourceSchemas = {
     instanceActions: CommentInstanceActionsSchema,
     collectionActions: CommentCollectionActionsSchema,
     actions: CommentActionsSchema,
-    input: CommentInputSchema,
+    target: CommentTargetSchema,
+    container: z.object({
+      pageId,
+    }),
+    attributes: z.object({
+      commentId,
+      pageId,
+      workspaceId,
+      authorId: userId,
+      userWorkspaceRole: WorkspaceMemberRoleSchema.nullable(),
+      userPageRole: PagePermissionRoleSchema.nullable(),
+    }),
+    containerAttributes: z.object({
+      pageId,
+      workspaceId,
+      userWorkspaceRole: WorkspaceMemberRoleSchema.nullable(),
+      userPageRole: PagePermissionRoleSchema.nullable(),
+    }),
+    // Backward compatibility aliases
+    input: CommentTargetSchema,
     scopeInput: z.object({
-      pageId: pageId.optional(),
+      pageId,
     }),
     data: z.object({
       commentId,
@@ -246,7 +344,14 @@ export const resourceSchemas = {
     instanceActions: UserInstanceActionsSchema,
     collectionActions: UserCollectionActionsSchema,
     actions: UserActionsSchema,
-    input: UserInputSchema,
+    target: UserTargetSchema,
+    container: z.object({}),
+    attributes: z.object({
+      targetUserId: userId,
+    }),
+    containerAttributes: z.object({}),
+    // Backward compatibility aliases
+    input: UserTargetSchema,
     scopeInput: z.object({}),
     data: z.object({
       targetUserId: userId,
@@ -265,28 +370,26 @@ export const ResourceTypeSchema = z.enum([
   "user",
 ]);
 
-export const AllActionsSchema = z.enum([
-  "view",
-  "update",
-  "delete",
-  "create",
-  "list",
-  "listTrash",
-  "emptyTrash",
-  "inviteMember",
-  "manageSettings",
-  "updateRole",
-  "remove",
-  "accept",
-  "decline",
-  "cancel",
-  "restore",
-  "deletePermanently",
-  "move",
-  "managePermissions",
-  "share",
-  "resolve",
-]);
+const allActionValues = Array.from(
+  new Set([
+    ...WorkspaceInstanceActionsSchema.options,
+    ...WorkspaceCollectionActionsSchema.options,
+    ...WorkspaceMemberInstanceActionsSchema.options,
+    ...WorkspaceMemberCollectionActionsSchema.options,
+    ...WorkspaceInvitationInstanceActionsSchema.options,
+    ...WorkspaceInvitationCollectionActionsSchema.options,
+    ...PageInstanceActionsSchema.options,
+    ...PageCollectionActionsSchema.options,
+    ...PagePermissionInstanceActionsSchema.options,
+    ...PagePermissionCollectionActionsSchema.options,
+    ...CommentInstanceActionsSchema.options,
+    ...CommentCollectionActionsSchema.options,
+    ...UserInstanceActionsSchema.options,
+    ...UserCollectionActionsSchema.options,
+  ]),
+) as [string, ...string[]];
+
+export const AllActionsSchema = z.enum(allActionValues);
 
 export const CheckPermissionQuerySchema = z
   .object({

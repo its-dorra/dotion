@@ -1,14 +1,14 @@
 import { allow, deny } from "@dotion/shared/authorization/decisions";
-import { defineResourcePolicy } from "../policy";
+import { defineResourcePolicy } from "@dotion/shared/authorization/policy";
 
 export const workspaceInvitationPolicy = defineResourcePolicy(
   "workspaceInvitation",
   {
-    list: ({ scope }) => {
-      if (!scope?.workspaceId) {
+    list: ({ container }) => {
+      if (!container?.workspaceId) {
         return deny("Workspace ID is required to list invitations");
       }
-      if (scope.userRole === "owner") {
+      if (container.userRole === "owner") {
         return allow("Workspace owner can list invitations");
       }
       return deny("Only workspace owner can list invitations");

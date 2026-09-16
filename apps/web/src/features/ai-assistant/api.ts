@@ -38,21 +38,28 @@ export class AiAssistantApi {
 
       if (!response.ok) {
         return matchExhaustive(response.status, {
-          '401': () =>
+          [401]: () =>
             Result.err(
               new AuthenticationError({ message: 'Authentication required.' }),
             ),
-          '403': () =>
+          [403]: () =>
             Result.err(
               new AuthorizationError({
                 message: 'Access denied for this workspace.',
               }),
             ),
-          '500': () =>
+          [500]: () =>
             Result.err(
               new AppError({
                 source: 'AiAssistant',
                 message: 'Failed to fetch conversation threads.',
+              }),
+            ),
+          default: () =>
+            Result.err(
+              new AppError({
+                source: 'AiAssistant',
+                message: `Failed to fetch conversation threads: ${response.status}`,
               }),
             ),
         })
@@ -92,21 +99,28 @@ export class AiAssistantApi {
 
       if (!response.ok) {
         return matchExhaustive(response.status, {
-          '401': () =>
+          [401]: () =>
             Result.err(
               new AuthenticationError({ message: 'Authentication required.' }),
             ),
-          '403': () =>
+          [403]: () =>
             Result.err(
               new AuthorizationError({
                 message: 'Access denied for this workspace.',
               }),
             ),
-          '500': () =>
+          [500]: () =>
             Result.err(
               new AppError({
                 source: 'AiAssistant',
                 message: 'Failed to create new conversation thread.',
+              }),
+            ),
+          default: () =>
+            Result.err(
+              new AppError({
+                source: 'AiAssistant',
+                message: `Failed to create conversation thread: ${response.status}`,
               }),
             ),
         })
@@ -147,21 +161,28 @@ export class AiAssistantApi {
 
       if (!response.ok) {
         return matchExhaustive(response.status, {
-          '401': () =>
+          [401]: () =>
             Result.err(
               new AuthenticationError({ message: 'Authentication required.' }),
             ),
-          '403': () =>
+          [403]: () =>
             Result.err(
               new AuthorizationError({
                 message: 'Access denied for this workspace.',
               }),
             ),
-          '500': () =>
+          [500]: () =>
             Result.err(
               new AppError({
                 source: 'AiAssistant',
                 message: 'Failed to delete conversation thread.',
+              }),
+            ),
+          default: () =>
+            Result.err(
+              new AppError({
+                source: 'AiAssistant',
+                message: `Failed to delete conversation thread: ${response.status}`,
               }),
             ),
         })
@@ -209,28 +230,35 @@ export class AiAssistantApi {
 
       if (!response.ok) {
         return matchExhaustive(response.status, {
-          '401': () =>
+          [401]: () =>
             Result.err(
               new AuthenticationError({ message: 'Authentication required.' }),
             ),
-          '403': () =>
+          [403]: () =>
             Result.err(
               new AuthorizationError({
                 message: 'Access denied for this workspace.',
               }),
             ),
-          '404': () =>
+          [404]: () =>
             Result.err(
               new ThreadNotFoundError({
                 message: 'Conversation thread not found.',
                 threadId,
               }),
             ),
-          '500': () =>
+          [500]: () =>
             Result.err(
               new AppError({
                 source: 'AiAssistant',
                 message: 'Failed to fetch thread messages.',
+              }),
+            ),
+          default: () =>
+            Result.err(
+              new AppError({
+                source: 'AiAssistant',
+                message: `Failed to fetch thread messages: ${response.status}`,
               }),
             ),
         })

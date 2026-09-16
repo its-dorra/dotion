@@ -1,5 +1,5 @@
 import { allow, deny } from "@dotion/shared/authorization/decisions";
-import { defineResourcePolicy } from "../policy";
+import { defineResourcePolicy } from "@dotion/shared/authorization/policy";
 import {
   isPageCommenterOrEditorPredicate,
   isPageViewerPredicate,
@@ -7,15 +7,15 @@ import {
 } from "../predicates";
 
 export const commentPolicy = defineResourcePolicy("comment", {
-  create: ({ scope }) => {
+  create: ({ container }) => {
     return isPageCommenterOrEditorPredicate(
-      scope?.userWorkspaceRole,
-      scope?.userPageRole,
+      container?.userWorkspaceRole,
+      container?.userPageRole,
     );
   },
 
-  list: ({ scope }) => {
-    return isWorkspaceMemberPredicate(scope?.userWorkspaceRole);
+  list: ({ container }) => {
+    return isWorkspaceMemberPredicate(container?.userWorkspaceRole);
   },
 
   view: ({ resource }) => {

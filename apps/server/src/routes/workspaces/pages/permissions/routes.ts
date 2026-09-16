@@ -18,8 +18,10 @@ import {
   forbiddenSchema,
   internalServerErrorSchema,
   notFoundErrorSchema,
+  tooManyRequestsSchema,
   unauthorizedSchema,
 } from "#/lib/http-response-helpers";
+import { standardApiRateLimit } from "#/middlewares/rate-limit-middleware";
 
 const tags = ["Page Permissions"];
 
@@ -28,6 +30,7 @@ export const listPermissionsRoute = createAuthorizedRoute({
   summary: "Get paginated member permissions for a page",
   method: "get",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "pagePermission",
     action: "list",
@@ -53,6 +56,10 @@ export const listPermissionsRoute = createAuthorizedRoute({
       forbiddenSchema,
       HttpStatusPhrases.FORBIDDEN,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -65,6 +72,7 @@ export const updatePermissionRoute = createAuthorizedRoute({
   summary: "Update member permission role on a page",
   method: "patch",
   path: "/{memberId}",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "pagePermission",
     action: "update",
@@ -104,6 +112,10 @@ export const updatePermissionRoute = createAuthorizedRoute({
     [HttpStatusCodes.NOT_FOUND]: jsonContent(
       notFoundErrorSchema,
       HttpStatusPhrases.NOT_FOUND,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,

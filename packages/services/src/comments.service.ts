@@ -49,7 +49,7 @@ export class CommentsService {
     userId: UserId;
     pageId: PageId;
     body: string;
-    parentId?: CommentId | null;
+    parentId: CommentId | null;
   }): Promise<
     Result<CommentWithRepliesAndAuthor, DatabaseError | NotFoundError>
   > {
@@ -185,11 +185,9 @@ export class CommentsService {
     pageId,
     userId,
   }: {
-    pageId?: PageId;
+    pageId: PageId;
     userId: UserId;
   }): Promise<Result<ScopeData<"comment"> | null, DatabaseError>> {
-    if (!pageId) return Result.ok(null);
-
     return this.pagesService.loadPageResourceData({ pageId, userId }).then(
       Result.map((pageData) => {
         if (!pageData) return null;

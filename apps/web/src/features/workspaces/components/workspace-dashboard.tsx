@@ -101,7 +101,7 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
             </Link>
           </Button>
 
-          <Can resource="page" action="create" scope={{ workspaceId }}>
+          <Can resource="page" action="create" container={{ workspaceId }}>
             <Button
               size="sm"
               onClick={handleCreatePage}
@@ -122,7 +122,7 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
             {m.workspace_pages_heading()}
           </h2>
           {pageTree.length > 0 && (
-            <Can resource="page" action="create" scope={{ workspaceId }}>
+            <Can resource="page" action="create" container={{ workspaceId }}>
               <Button
                 variant="ghost"
                 size="sm"
@@ -148,7 +148,7 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
               {m.page_tree_empty_desc()}
             </p>
-            <Can resource="page" action="create" scope={{ workspaceId }}>
+            <Can resource="page" action="create" container={{ workspaceId }}>
               <Button
                 size="sm"
                 onClick={handleCreatePage}

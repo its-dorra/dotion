@@ -3,7 +3,7 @@ import { useBetterAuth } from './use-better-auth'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import * as m from '@/paraglide/messages'
-import { authQueryKeys } from '../query-options'
+import { authQueryOptions } from '../query-options'
 
 export const useSignOut = () => {
   const { signOut } = useBetterAuth()
@@ -15,7 +15,7 @@ export const useSignOut = () => {
   return useMutation({
     mutationFn: () => signOut(),
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: authQueryKeys.session })
+      queryClient.setQueryData(authQueryOptions().queryKey, null)
       queryClient.clear()
       navigate({ to: '/' })
     },

@@ -1,24 +1,22 @@
-import type { User } from "@dotion/auth";
-import type { Decision } from "@dotion/shared/authorization/decisions";
+import type { User } from "../users/types";
+import type { Decision } from "./decisions";
 import type {
   ResourceType,
-  ResourceData,
-  ScopeData,
+  ResourceAction,
+  ResourceAttributes,
+  ContainerAttributes,
   InstanceLevelAction,
   CollectionLevelAction,
-} from "@dotion/shared/authorization/types";
-import type { AuthorizationContext } from "./context";
+} from "./types";
 
 export interface InstancePolicyParams<R extends ResourceType> {
   user: User;
-  resource: ResourceData<R>;
-  context: AuthorizationContext;
+  resource: ResourceAttributes<R>;
 }
 
 export interface CollectionPolicyParams<R extends ResourceType> {
   user: User;
-  scope?: ScopeData<R>;
-  context: AuthorizationContext;
+  container: ContainerAttributes<R>;
 }
 
 export type InstancePolicyHandler<R extends ResourceType> = (
@@ -49,3 +47,23 @@ export function defineResourcePolicy<R extends ResourceType>(
     handlers,
   };
 }
+
+export type AuthorizeEngineParams<
+  R extends ResourceType,
+  A extends ResourceAction<R>,
+> =
+  A extends CollectionLevelAction<R>
+    ? {
+        user: User;
+        resource: R;
+        action: A;
+        container: ContainerAttributes<R>;
+      }
+    : {
+        user: User;
+        resource: {
+          type: R;
+          attributes: ResourceAttributes<R>;
+        };
+        action: A;
+      };

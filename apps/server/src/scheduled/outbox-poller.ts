@@ -3,7 +3,7 @@ import { DomainEventSchema } from "@dotion/shared/events";
 
 export async function handleScheduledOutbox(
   env: Env,
-  ctx?: ExecutionContext,
+  ctx: ExecutionContext,
 ): Promise<void> {
   const { services, eventRouter } = createAppContext(env, ctx);
   const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);

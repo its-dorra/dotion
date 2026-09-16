@@ -1,12 +1,12 @@
 import { allow, deny } from "@dotion/shared/authorization/decisions";
-import { defineResourcePolicy } from "../policy";
+import { defineResourcePolicy } from "@dotion/shared/authorization/policy";
 
 export const workspaceMemberPolicy = defineResourcePolicy("workspaceMember", {
-  list: ({ scope }) => {
-    if (!scope?.workspaceId) {
+  list: ({ container }) => {
+    if (!container?.workspaceId) {
       return deny("Workspace ID is required to list members");
     }
-    return scope.userRole != null
+    return container.userRole != null
       ? allow("Workspace members can view member list")
       : deny("Must be a workspace member to list members");
   },

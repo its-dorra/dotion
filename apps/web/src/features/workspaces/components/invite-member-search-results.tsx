@@ -34,7 +34,7 @@ export function InviteMemberSearchResults({
   }
 
   return (
-    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border bg-popover p-1 shadow-lg animate-in fade-in-0 zoom-in-95">
+    <div className="max-h-64 overflow-y-auto p-1">
       {isPending ? (
         <div className="flex items-center justify-center gap-2 p-4 text-xs text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />

@@ -18,7 +18,7 @@ export interface KVNamespaceLike {
 
 export interface AuthorizationCache extends PermissionCacheInvalidator {
   get(key: string): Promise<Decision | null>;
-  set(key: string, decision: Decision, ttlSeconds?: number): Promise<void>;
+  set(key: string, decision: Decision, ttlSeconds: number): Promise<void>;
   delete(key: string): Promise<void>;
   invalidatePrefix(prefix: string): Promise<void>;
 }
@@ -96,72 +96,6 @@ export class KVAuthorizationCache implements AuthorizationCache {
           ),
         ),
       );
-    }
-  }
-}
-
-export class MemoryAuthorizationCache implements AuthorizationCache {
-  private cache = new Map<string, { decision: Decision; expiresAt: number }>();
-
-  async get(key: string): Promise<Decision | null> {
-    const item = this.cache.get(key);
-    if (!item) return null;
-    if (Date.now() > item.expiresAt) {
-      this.cache.delete(key);
-      return null;
-    }
-    return item.decision;
-  }
-
-  async set(key: string, decision: Decision, ttlSeconds = 300): Promise<void> {
-    this.cache.set(key, {
-      decision,
-      expiresAt: Date.now() + ttlSeconds * 1000,
-    });
-  }
-
-  async delete(key: string): Promise<void> {
-    this.cache.delete(key);
-  }
-
-  async invalidatePrefix(prefix: string): Promise<void> {
-    for (const key of this.cache.keys()) {
-      if (key.startsWith(prefix)) {
-        this.cache.delete(key);
-      }
-    }
-  }
-
-  async invalidateUserPermissions({
-    userId,
-    resourceType,
-    id,
-  }: {
-    userId: string;
-    resourceType?: ResourceType;
-    id?: string;
-  }): Promise<void> {
-    const prefix = resourceType
-      ? `authz:${userId}:${resourceType}:`
-      : `authz:${userId}:`;
-
-    await this.invalidatePrefix(prefix);
-
-    if (resourceType === "page" && id) {
-      const pageActions = [
-        "view",
-        "update",
-        "delete",
-        "restore",
-        "move",
-        "managePermissions",
-        "share",
-      ];
-      for (const action of pageActions) {
-        await this.delete(
-          `authz:${userId}:page:${action}:${JSON.stringify({ pageId: id })}`,
-        );
-      }
     }
   }
 }

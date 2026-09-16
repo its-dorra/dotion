@@ -1,9 +1,11 @@
 import { createAuthorizedRoute } from "#/lib/create-authorized-route";
+import { standardApiRateLimit } from "#/middlewares/rate-limit-middleware";
 import {
   badRequestErrorSchema,
   forbiddenSchema,
   internalServerErrorSchema,
   notFoundErrorSchema,
+  tooManyRequestsSchema,
   unauthorizedSchema,
 } from "#/lib/http-response-helpers";
 import { jsonContent, jsonContentRequired } from "stoker/openapi/helpers";
@@ -28,6 +30,7 @@ export const listMembersRoute = createAuthorizedRoute({
   description: "Returns paginated members of the specified workspace.",
   method: "get",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspaceMember",
     action: "list",
@@ -43,6 +46,10 @@ export const listMembersRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       zodSuccessResponse(PaginatedWorkspaceMembersDataSchema),
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.NOT_FOUND]: jsonContent(
       notFoundErrorSchema,
@@ -69,6 +76,7 @@ export const updateMemberRoleRoute = createAuthorizedRoute({
   description: "Updates the role of a member in the workspace.",
   method: "patch",
   path: "/{memberId}",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspaceMember",
     action: "updateRole",
@@ -88,6 +96,10 @@ export const updateMemberRoleRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       zodSuccessResponse(WorkspaceMemberDetailSchema),
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(
       badRequestErrorSchema,
@@ -118,6 +130,7 @@ export const removeMemberRoute = createAuthorizedRoute({
   description: "Removes a member from the workspace.",
   method: "delete",
   path: "/{memberId}",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspaceMember",
     action: "remove",
@@ -136,6 +149,10 @@ export const removeMemberRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       zodSuccessResponse(z.object({ success: z.literal(true) })),
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(
       badRequestErrorSchema,

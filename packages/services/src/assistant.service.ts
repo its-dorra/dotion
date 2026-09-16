@@ -25,7 +25,7 @@ export class AssistantService {
   constructor(
     private readonly assistantRepository: AssistantRepository,
     private readonly aiService: AIService,
-    _dbClient?: DBClient,
+    _dbClient: DBClient,
   ) {}
 
   async listThreads({

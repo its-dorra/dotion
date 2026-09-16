@@ -35,6 +35,7 @@ export const CommentRow = memo(function CommentRow({
       workspaceId,
       pageId,
       commentId: comment.id,
+      parentId: comment.parentId,
     })
   }
 

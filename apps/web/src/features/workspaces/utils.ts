@@ -2,18 +2,20 @@ import type {
   WorkspaceWsMessage,
   WorkspaceInvitation,
   WorkspaceMember,
-  PaginatedData,
 } from './types'
-import type { InfiniteData, QueryClient } from '@tanstack/react-query'
-import { workspacesKeys } from './query-options'
+import type { QueryClient } from '@tanstack/react-query'
+import {
+  workspaceInvitationsInfiniteQueryOptions,
+  workspaceMembersInfiniteQueryOptions,
+} from './query-options'
 
 export const removeWorkspaceInvitationFromCache = (
   queryClient: QueryClient,
   workspaceId: string,
   invitationId: string,
 ) => {
-  queryClient.setQueriesData<InfiniteData<PaginatedData<WorkspaceInvitation>>>(
-    { queryKey: workspacesKeys.workspaceInvitations(workspaceId) },
+  queryClient.setQueryData(
+    workspaceInvitationsInfiniteQueryOptions(workspaceId).queryKey,
     (oldData) => {
       if (!oldData) return oldData
       return {
@@ -40,8 +42,8 @@ export const addWorkspaceInvitationToCache = (
   workspaceId: string,
   invitation: WorkspaceInvitation,
 ) => {
-  queryClient.setQueriesData<InfiniteData<PaginatedData<WorkspaceInvitation>>>(
-    { queryKey: workspacesKeys.workspaceInvitations(workspaceId) },
+  queryClient.setQueryData(
+    workspaceInvitationsInfiniteQueryOptions(workspaceId).queryKey,
     (oldData) => {
       if (!oldData) return oldData
       const [firstPage, ...restPages] = oldData.pages
@@ -78,8 +80,8 @@ export const addWorkspaceMemberToCache = (
   workspaceId: string,
   member: WorkspaceMember,
 ) => {
-  queryClient.setQueriesData<InfiniteData<PaginatedData<WorkspaceMember>>>(
-    { queryKey: workspacesKeys.members(workspaceId) },
+  queryClient.setQueryData(
+    workspaceMembersInfiniteQueryOptions(workspaceId).queryKey,
     (oldData) => {
       if (!oldData) return oldData
       const [firstPage, ...restPages] = oldData.pages
@@ -116,8 +118,8 @@ export const removeWorkspaceMemberFromCache = (
   workspaceId: string,
   userId: string,
 ) => {
-  queryClient.setQueriesData<InfiniteData<PaginatedData<WorkspaceMember>>>(
-    { queryKey: workspacesKeys.members(workspaceId) },
+  queryClient.setQueryData(
+    workspaceMembersInfiniteQueryOptions(workspaceId).queryKey,
     (oldData) => {
       if (!oldData) return oldData
       return {
@@ -145,8 +147,8 @@ export const updateWorkspaceMemberRoleInCache = (
   userId: string,
   role: 'owner' | 'member',
 ) => {
-  queryClient.setQueriesData<InfiniteData<PaginatedData<WorkspaceMember>>>(
-    { queryKey: workspacesKeys.members(workspaceId) },
+  queryClient.setQueryData(
+    workspaceMembersInfiniteQueryOptions(workspaceId).queryKey,
     (oldData) => {
       if (!oldData) return oldData
       return {

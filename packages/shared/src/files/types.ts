@@ -20,6 +20,6 @@ export interface StorageUploadStreamInput {
   stream: ReadableStream<Uint8Array>;
   filename: string;
   mimeType: string;
-  size?: number;
-  maxBytes?: number;
+  size: number;
+  maxBytes: number;
 }

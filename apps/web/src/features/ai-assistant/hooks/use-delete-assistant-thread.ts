@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { aiAssistantApi } from '../api'
-import { assistantKeys } from '../query-options'
+import { assistantThreadsInfiniteQueryOptions } from '../query-options'
+import { removeThreadFromCache } from '../utils'
 import { toast } from 'sonner'
 import * as m from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
@@ -14,12 +15,25 @@ export function useDeleteAssistantThread(workspaceId: WorkspaceId) {
     resultMutationOptions({
       mutationFn: (threadId: AssistantThreadId) =>
         aiAssistantApi.deleteThread(workspaceId, threadId),
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: assistantKeys.threads(workspaceId),
+      onMutate: async (threadId) => {
+        await queryClient.cancelQueries({
+          queryKey: assistantThreadsInfiniteQueryOptions(workspaceId).queryKey,
         })
+        const previousThreads = queryClient.getQueryData(
+          assistantThreadsInfiniteQueryOptions(workspaceId).queryKey,
+        )
+
+        removeThreadFromCache({ queryClient, workspaceId, threadId })
+
+        return { previousThreads }
       },
-      onError: (error) => {
+      onError: (error, _threadId, context) => {
+        if (context?.previousThreads) {
+          queryClient.setQueryData(
+            assistantThreadsInfiniteQueryOptions(workspaceId).queryKey,
+            context.previousThreads,
+          )
+        }
         console.error('Error deleting assistant thread:', error)
         toast.error(error?.message ?? m.error_assistant_threads_failed())
       },

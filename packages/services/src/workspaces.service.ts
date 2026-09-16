@@ -766,11 +766,9 @@ export class WorkspacesService {
     workspaceId,
     userId,
   }: {
-    workspaceId?: WorkspaceId;
+    workspaceId: WorkspaceId;
     userId: UserId;
   }): Promise<Result<ScopeData<"workspaceMember"> | null, DatabaseError>> {
-    if (!workspaceId) return Result.ok(null);
-
     return this.workspacesRepository
       .getMember({ workspaceId, userId })
       .then((res) => {

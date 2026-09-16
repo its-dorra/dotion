@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { notifications } from "@dotion/db/schema";
 import { createInsertSchema, createSelectSchema } from "drizzle-orm/zod";
-import { notificationId, userId, workspaceId, pageId } from "../ids";
+import {
+  notificationId,
+  userId,
+  workspaceId,
+  pageId,
+  workspaceInvitationId,
+} from "../ids";
 import { createPaginatedDataSchema } from "../pagination/schema";
 import { PagePermissionRoleSchema, AllPageRoleSchema } from "../pages/schema";
 
@@ -17,7 +23,7 @@ export const NotificationTypeSchema = z.enum([
 
 export const WorkspaceInvitationNotificationMetadataSchema = z.object({
   type: z.literal("workspace_invitation"),
-  workspaceInvitationId: z.string(),
+  workspaceInvitationId: workspaceInvitationId,
   workspaceId: workspaceId,
   workspaceName: z.string(),
   workspaceIcon: z.string().optional(),
@@ -48,7 +54,7 @@ export const PermissionChangeNotificationMetadataSchema = z.object({
 
 export const PageAccessRequestNotificationMetadataSchema = z.object({
   type: z.literal("page_access_request"),
-  requestId: z.string().optional(),
+  requestId: z.string(),
   pageId: pageId,
   workspaceId: workspaceId,
   pageTitle: z.string(),
@@ -60,7 +66,7 @@ export const PageAccessRequestNotificationMetadataSchema = z.object({
 
 export const PageAccessRequestResolvedNotificationMetadataSchema = z.object({
   type: z.literal("page_access_request_resolved"),
-  requestId: z.string().optional(),
+  requestId: z.string(),
   pageId: pageId,
   workspaceId: workspaceId,
   pageTitle: z.string(),

@@ -1,4 +1,5 @@
 import { createAuthorizedRoute } from "#/lib/create-authorized-route";
+import { standardApiRateLimit } from "#/middlewares/rate-limit-middleware";
 import { workspaceId } from "@dotion/shared/workspaces/schema";
 import {
   searchRequestQuerySchema,
@@ -11,6 +12,7 @@ import {
   badRequestErrorSchema,
   forbiddenSchema,
   internalServerErrorSchema,
+  tooManyRequestsSchema,
   unauthorizedSchema,
 } from "#/lib/http-response-helpers";
 import { z } from "zod";
@@ -24,6 +26,7 @@ export const searchRoute = createAuthorizedRoute({
     "Executes a hybrid search (BM25 + pgvector) across all document sections in the workspace.",
   method: "get",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspace",
     action: "view",
@@ -41,6 +44,10 @@ export const searchRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       searchResponseSchema,
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(
       badRequestErrorSchema,

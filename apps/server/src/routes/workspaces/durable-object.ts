@@ -1,39 +1,94 @@
 import type { UserId } from "@dotion/shared/users/types";
+import type { WorkspaceId } from "@dotion/shared/workspaces/types";
+import type { PermissionKey } from "@dotion/shared/authorization/types";
 import { WorkspaceWsMessageSchema } from "@dotion/shared/workspaces/ws.schema";
 import type { WorkspaceWsMessage } from "@dotion/shared/workspaces/types";
 import { DurableObject } from "cloudflare:workers";
+import { WsRouter } from "#/lib/ws-router";
+import type { WorkspaceWsAttachment, WorkspaceWsContext } from "./ws/types";
+import {
+  DocumentTitleChangedStrategy,
+  DocumentIconChangedStrategy,
+  DocumentCoverChangedStrategy,
+} from "./ws/strategies/workspace.strategies";
 
-export type Attachments = {
-  userId: UserId;
-};
+export type { WorkspaceWsAttachment, WorkspaceWsContext };
+export type Attachments = WorkspaceWsAttachment;
 
 export class WorkspacesDO extends DurableObject<Env> {
+  private readonly router = new WsRouter<WorkspaceWsContext>()
+    .register(new DocumentTitleChangedStrategy())
+    .register(new DocumentIconChangedStrategy())
+    .register(new DocumentCoverChangedStrategy());
+
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
   }
 
   async fetch(request: Request): Promise<Response> {
     const webSocketPair = new WebSocketPair();
-
     const [client, server] = [webSocketPair[0], webSocketPair[1]];
 
-    this.ctx.acceptWebSocket(server);
+    const userId =
+      (request.headers.get("X-User-Id") as UserId) ?? ("" as UserId);
+    const workspaceId =
+      (request.headers.get("X-Workspace-Id") as WorkspaceId) ??
+      ("" as WorkspaceId);
+    const permissionsHeader = request.headers.get("X-Permissions") ?? "";
+    const permissions = new Set<PermissionKey>(
+      permissionsHeader
+        ? (permissionsHeader.split(",") as PermissionKey[])
+        : [],
+    );
 
-    const userId = request.headers.get("X-User-Id") as UserId;
-
-    server.serializeAttachment({
+    const attachment: WorkspaceWsAttachment = {
       userId,
-    });
+      workspaceId,
+      permissions,
+    };
+
+    server.serializeAttachment(attachment);
+
+    this.ctx.acceptWebSocket(server);
 
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  async webSocketMessage(_ws: WebSocket, message: ArrayBuffer | string) {
+  private createContext(
+    ws: WebSocket,
+    attachment: WorkspaceWsAttachment,
+  ): WorkspaceWsContext {
+    return {
+      ws,
+      userId: attachment.userId,
+      workspaceId: attachment.workspaceId,
+      hasPermission: (permission) => attachment.permissions.has(permission),
+      broadcastToAll: (data) => this.broadcastJSONToAll(data),
+      broadcastToAllExceptSender: (data) =>
+        this.broadcastJSONToAllExceptSender(ws, data),
+    };
+  }
+
+  async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string) {
     if (typeof message !== "string") return;
-    const data = WorkspaceWsMessageSchema.safeParse(JSON.parse(message));
-    if (!data.success) {
-      console.error("Invalid message received:", data.error);
-      return;
+    try {
+      const parsed = WorkspaceWsMessageSchema.safeParse(JSON.parse(message));
+      if (!parsed.success) {
+        console.error("WorkspacesDO invalid message received:", parsed.error);
+        return;
+      }
+
+      const attachment =
+        ws.deserializeAttachment() as WorkspaceWsAttachment | null;
+      if (!attachment) {
+        console.error("WorkspacesDO missing attachment");
+        return;
+      }
+
+      const ctx = this.createContext(ws, attachment);
+      await this.router.dispatch(ctx, parsed.data.type, parsed.data.payload);
+    } catch (e) {
+      console.error("WorkspacesDO message parse error:", e);
     }
   }
 

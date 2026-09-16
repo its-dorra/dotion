@@ -1,8 +1,10 @@
 import { createAuthorizedRoute } from "#/lib/create-authorized-route";
+import { standardApiRateLimit } from "#/middlewares/rate-limit-middleware";
 import {
   badRequestErrorSchema,
   forbiddenSchema,
   internalServerErrorSchema,
+  tooManyRequestsSchema,
   unauthorizedSchema,
 } from "#/lib/http-response-helpers";
 import { jsonContent } from "stoker/openapi/helpers";
@@ -27,6 +29,7 @@ export const candidateUsersRoute = createAuthorizedRoute({
     "Returns paginated user search results excluding existing workspace members and pending invitees.",
   method: "get",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspace",
     action: "inviteMember",
@@ -42,6 +45,10 @@ export const candidateUsersRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       zodSuccessResponse(PaginatedUserSearchResultsDataSchema),
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(
       badRequestErrorSchema,

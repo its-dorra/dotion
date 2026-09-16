@@ -569,35 +569,36 @@ HTTP Request
   → createAuthorizedRoute
       → currentUserMiddleware (authenticates & injects user)
       → requirePermission (authorization middleware)
-          → AuthorizationService.authorize({ user, resource, action, context })
+          → AuthorizationService.authorize({ user, resource, action, container? | target? })
               1. Check KV Authorization Cache (cache hit → return Decision)
               2. AttributeLoader.loadResourceData / loadScopeData (delegates to domain services via Promise.all)
-              3. PolicyEngine.evaluate({ user, resource | scope, action, context }) (Pure Policy)
+              3. PolicyEngine.evaluate({ user, resource: ResourceAttributes<R> | container: ContainerAttributes<R>, action }) (Pure Policy)
               4. Cache ALLOW decisions in KV (TTL: 60s)
           → IF DENY → 403 Forbidden
           → IF ALLOW → handler
 ```
 
-- **Pure Policies** (`packages/services/src/authorization/policies/`): Pure, synchronous functions. They receive `{ user, resource: ResourceData<R>, context }` (for instance actions) or `{ user, scope: ScopeData<R>, context }` (for collection actions) and return `allow(...)` or `deny(...)`. Policies do **not** perform I/O, database queries, or have loaders injected.
-- **AttributeLoader** (`packages/services/src/authorization/loader.ts`): Centralizes all attribute resolution by delegating to dedicated domain service methods (e.g. `workspacesService.loadWorkspaceResourceData`, `pagesService.loadPageResourceData`). **Has zero repository dependencies and executes no raw database queries.** Uses `Promise.all` for independent concurrent queries.
-- **PolicyEngine** (`packages/services/src/authorization/engine.ts`): Synchronous registry and evaluator of domain resource policies.
-- **KVAuthorizationCache** (`packages/services/src/authorization/cache.ts`): Backed by Cloudflare KV (`DOTION_CACHE_KV` / in-memory fallback). Implements `PermissionCacheInvalidator`. Note: In Cloudflare Workers, in-memory caches do not persist across worker invocations; KV is the persistent cache.
-- **AuthorizationService** (`packages/services/src/authorization/authorization.service.ts`): Orchestrates cache lookups, attribute loading, policy evaluation, and cache updates.
+- **Pure Policies** (`packages/services/src/authorization/policies/`): Pure, synchronous functions. They receive `{ user, resource: ResourceAttributes<R> }` (for instance actions) or `{ user, container: ContainerAttributes<R> }` (for collection actions) and return `allow(...)` or `deny(...)`. Policies do **not** perform I/O, database queries, or have loaders injected. Never use fallback chaining (`container ?? scope` or `resource ?? data`).
+- **AttributeLoader** (`packages/services/src/authorization/loader.ts`): Centralizes all attribute resolution by delegating to dedicated domain service methods (e.g. `workspacesService.loadWorkspaceResourceData`, `pagesService.loadPageResourceData`). **Has zero repository dependencies and executes no raw database queries.** Validates container IDs upfront before invoking domain scope loaders.
+- **PolicyEngine** (`packages/services/src/authorization/engine.ts`): Synchronous registry and evaluator of domain resource policies. Passes clean `{ container }` or `{ resource }` directly to registered policy handlers.
+- **KVAuthorizationCache** (`packages/services/src/authorization/cache.ts`): Backed exclusively by Cloudflare KV (`DOTION_CACHE_KV`). Implements `PermissionCacheInvalidator`. In Cloudflare Workers' multi-isolate serverless runtime, in-memory caches (`Map`) cause inconsistent state and memory leaks; **all in-memory authorization cache implementations are banned**.
+- **AuthorizationService** (`packages/services/src/authorization/authorization.service.ts`): Orchestrates cache lookups, attribute loading, policy evaluation, and cache updates. Constructor requires `cache: AuthorizationCache` without in-memory fallback.
 
 ### 6.2 Resource Layer Contract (`packages/shared/src/authorization`)
 
 Every resource registered in the authorization system is defined in `resourceSchemas` in `packages/shared/src/authorization/schema.ts`:
 
-- **`ResourceInput<R>`**: Non-optional required identifiers for instance-level actions (e.g. `{ pageId: PageId }`, `{ workspaceId: WorkspaceId, memberUserId: UserId }`).
-- **`ResourceData<R>`**: Lean, minimal entity attributes required for policy evaluation (e.g. `{ pageId, workspaceId, userWorkspaceRole, userPageRole }`). Never pass full DB rows or unused metadata (such as `title`, `content`, `icon`, `createdAt`).
-- **`ScopeData<R>`**: Contextual attributes of the parent container for collection actions (e.g. `{ workspaceId, userWorkspaceRole }` when creating a page).
+- **`ResourceTarget<R>`**: Non-optional required identifiers for instance-level actions (e.g. `{ pageId: PageId }`, `{ workspaceId: WorkspaceId, memberUserId: UserId }`).
+- **`ResourceContainer<R>`**: Required identifiers of the parent container for collection-level actions (e.g. `{ workspaceId: WorkspaceId }` for page creation, `{ pageId: PageId }` for comment creation).
+- **`ResourceAttributes<R>`**: Lean, minimal entity attributes required for instance policy evaluation (e.g. `{ pageId, workspaceId, userWorkspaceRole, userPageRole }`). Never pass full DB rows or unused metadata (such as `title`, `content`, `icon`, `createdAt`).
+- **`ContainerAttributes<R>`**: Contextual attributes of the parent container for collection actions (e.g. `{ workspaceId, userWorkspaceRole }` when creating a page).
 
 ### 6.3 Instance Actions vs. Collection Actions
 
-| Action Type            | Examples                                                               | Input Mapping                                                    | Policy Parameter            | Purpose                                                                |
-| :--------------------- | :--------------------------------------------------------------------- | :--------------------------------------------------------------- | :-------------------------- | :--------------------------------------------------------------------- |
-| **Instance Actions**   | `page.view`, `page.update`, `comment.delete`, `workspaceMember.remove` | `mapInput: ({ params, query, body, c }) => ResourceInput<R>`     | `resource: ResourceData<R>` | Verifies access to a specific, existing entity instance.               |
-| **Collection Actions** | `page.create`, `page.list`, `workspaceMember.list`, `comment.create`   | `mapScope?: ({ params, query, c }) => Partial<ResourceInput<R>>` | `scope: ScopeData<R>`       | Verifies permissions in the parent container (e.g. workspace or page). |
+| Action Type            | Examples                                                               | Input Mapping                                                   | Policy Parameter                    | Purpose                                                                |
+| :--------------------- | :--------------------------------------------------------------------- | :-------------------------------------------------------------- | :---------------------------------- | :--------------------------------------------------------------------- |
+| **Instance Actions**   | `page.view`, `page.update`, `comment.delete`, `workspaceMember.remove` | `mapTarget: ({ params, query, body, c }) => ResourceTarget<R>`  | `resource: ResourceAttributes<R>`   | Verifies access to a specific, existing entity instance.               |
+| **Collection Actions** | `page.create`, `page.list`, `workspaceMember.list`, `comment.create`   | `mapContainer?: ({ params, query, c }) => ResourceContainer<R>` | `container: ContainerAttributes<R>` | Verifies permissions in the parent container (e.g. workspace or page). |
 
 ### 6.4 Route Definition via `createAuthorizedRoute`
 
@@ -613,7 +614,7 @@ export const getPageByIdRoute = createAuthorizedRoute({
   authorization: {
     resource: "page",
     action: "view",
-    mapInput: ({ params }) => ({ pageId: params.pageId, workspaceId: params.id }),
+    mapTarget: ({ params }) => ({ pageId: params.pageId }),
   },
   request: {
     params: z.object({ id: workspaceId, pageId: pageId }),
@@ -630,7 +631,7 @@ export const createPageRoute = createAuthorizedRoute({
   authorization: {
     resource: "page",
     action: "create",
-    mapScope: ({ params }) => ({ workspaceId: params.id }),
+    mapContainer: ({ params }) => ({ workspaceId: params.id }),
   },
   request: {
     params: z.object({ id: workspaceId }),
@@ -641,7 +642,7 @@ export const createPageRoute = createAuthorizedRoute({
 ```
 
 - `createAuthorizedRoute` automatically injects `currentUserMiddleware` and `requirePermission(...)`.
-- `mapInput` and `mapScope` contextually receive strictly-typed `params`, `query`, and `body` directly from `request`.
+- `mapTarget` and `mapContainer` contextually receive strictly-typed `params`, `query`, and `body` directly from `request`.
 - Route handlers continue to access validated inputs via `c.req.valid('param')`, `c.req.valid('query')`, and `c.req.valid('json')`.
 
 ### 6.5 Real-Time Permission Invalidation
@@ -680,6 +681,15 @@ Just like Durable Objects, Queue producers should be abstracted behind port inte
 2. **Server Adapter**: Implement the adapter in `apps/server/src/lib/` using `c.env.QUEUE_NAME.send(...)` and inject it into the service in `context.ts`.
 3. **Queue Consumer**: Implement the Worker's `queue(batch, env, ctx)` export in `apps/server/src/index.ts` to process batched messages with automatic retries and error reporting.
 
+### 7.2 Stateless Workers Execution & Ban on In-Memory Caches
+
+Cloudflare Workers operate in short-lived, horizontally-scaled V8 isolates across the global edge network.
+
+- **No In-Memory Caches (`Map`, Object caches)**: Any cache stored in a JavaScript `Map` or global variable is local to only that single isolate invocation. It leads to severe cache inconsistencies, stale authorization decisions across requests, and memory leaks.
+- **Persistent Caching via KV**: Use Cloudflare KV (`KVAuthorizationCache`) with explicit TTLs (`Math.max(ttlSeconds, 60)`) for cross-isolate data caching and authorization invalidations.
+- **Coordination via Durable Objects**: Use Durable Objects (`DOTION_*_DO`) when strong serialization, mutexes, or in-memory collaborative state (Yjs CRDTs) are necessary.
+- **Background Tasks via Queues**: Use Cloudflare Queues for asynchronous background jobs (asset cleanup, indexing, email) rather than long-running Worker tasks.
+
 ---
 
 ## 8. Code Quality Preferences
@@ -691,6 +701,13 @@ Just like Durable Objects, Queue producers should be abstracted behind port inte
 - Prefer `interface` over `type` for object shapes; use `type` for unions and aliases.
 - Use `satisfies` when asserting a literal matches a type without widening it.
 - Export types with `export type { ... }` — avoids unintentional value imports.
+- **Avoid Aggressive and Redundant Optional Properties (`?:`)**:
+  - Never mark properties as optional (`?:`) when the value is known, mandatory, or can be explicitly typed as nullable (`T | null`).
+  - Distinguish strictly between "optional field" (`foo?: T`, which allows omitting the key) and "nullable field" (`foo: T | null`, which requires explicitly providing `null` or a value). Use `T | null` for domain columns and payloads that can be absent.
+  - **No Duplicate Alias Optionals**: When refactoring or updating parameter names (e.g. `container` vs `scope`, `resource` vs `data`, `target` vs `id`), never leave duplicate optional properties on parameter objects. Standardize strictly on the canonical name.
+  - **Domain Scope Loaders**: Domain service scope loaders (`load*ScopeData`) must require non-optional domain IDs (`workspaceId: WorkspaceId`, `pageId: PageId`). Validate container IDs upfront in the attribute loader before invoking domain services.
+  - **Domain Events & Outbox**: Event payloads and notification schemas must strictly type mandatory identifiers and metadata (`requestId: string`, `role: PagePermissionRole`, `pageTitle: string`, `updatedByName: string`, `pageIcon: string | null`) rather than making them optional with `?:`.
+  - **Component & Presenter Props**: Presenter component props must not make data collections or view-models optional (`pendingInvitations: WorkspaceInvitation[]` instead of `pendingInvitations?: ...`).
 
 ### Naming
 
@@ -750,13 +767,13 @@ Use this checklist when a full new domain (e.g. "notifications") is requested.
 - [ ] Define Drizzle table(s) in `packages/db/src/schema/<domain>.ts` and export from `schema/index.ts`.
 - [ ] Define Drizzle relations in `packages/db/src/schema/relations.ts` (bounded strictly to domain tables).
 - [ ] Define Zod schemas and branded types in `packages/shared/src/<domain>/schema.ts` and `types.ts`.
-- [ ] Register resource, actions, `ResourceInput`, `ResourceData`, `ScopeData` in `packages/shared/src/authorization/schema.ts`.
+- [ ] Register resource, actions, `ResourceTarget`, `ResourceContainer`, `ResourceAttributes`, `ContainerAttributes` in `packages/shared/src/authorization/schema.ts`.
 - [ ] Create `packages/db/src/repositories/<domain>.repo.ts` (class, Result-returning methods, strict domain table isolation with ZERO cross-domain joins).
 - [ ] Export repository from `packages/db/src/repositories/index.ts`.
 - [ ] Create `packages/services/src/<domain>.service.ts` (class, transaction-aware methods, uses `Result.allAsync` for concurrent Result operations, injects own repository + other domain services for cross-domain needs, injects publishers/invalidators from `realtime.types.ts`).
-- [ ] Expose dedicated attribute-loading methods on the service (`load<Domain>ResourceData`, `load<Domain>ScopeData`) for authorization.
+- [ ] Expose dedicated attribute-loading methods on the service (`load<Domain>ResourceData`, `load<Domain>ScopeData` with non-optional domain IDs) for authorization.
 - [ ] Export service from `packages/services/src/index.ts`.
-- [ ] Define pure domain policy in `packages/services/src/authorization/policies/<domain>.policy.ts` and register in `packages/services/src/authorization/authorization.service.ts`.
+- [ ] Define pure domain policy in `packages/services/src/authorization/policies/<domain>.policy.ts` (`{ user, resource }` for instance actions, `{ user, container }` for collection actions) and register in `packages/services/src/authorization/authorization.service.ts`.
 - [ ] Add attribute loading branches in `packages/services/src/authorization/loader.ts` calling the domain service methods.
 - [ ] Define any publisher/queue port interfaces in `packages/services/src/realtime.types.ts` and implement adapters in `apps/server/src/lib/realtime-publishers.ts`.
 - [ ] Instantiate repository, adapters, and service in `apps/server/src/context.ts` (`buildRepositories`, `buildServices`).

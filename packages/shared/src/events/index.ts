@@ -101,7 +101,7 @@ export const PageAccessRequestedEventSchema = z.object({
     requesterEmail: z.string(),
     recipientUserId: userId,
     requestedRole: PagePermissionRoleSchema.default("editor"),
-    requestId: z.string().optional(),
+    requestId: z.string(),
   }),
 });
 
@@ -112,13 +112,13 @@ export const PageAccessRequestResolvedEventSchema = z.object({
     workspaceId,
     pageId,
     pageTitle: z.string(),
-    pageIcon: z.string().nullable().optional(),
+    pageIcon: z.string().nullable(),
     requesterId: userId,
     reviewerId: userId,
     reviewerName: z.string(),
     status: z.enum(["approved", "rejected"]),
-    role: PagePermissionRoleSchema.optional(),
-    requestId: z.string().optional(),
+    role: PagePermissionRoleSchema,
+    requestId: z.string(),
   }),
 });
 
@@ -131,8 +131,8 @@ export const PagePermissionUpdatedEventSchema = z.object({
     targetUserId: userId,
     role: AllPageRoleSchema,
     updatedByUserId: userId,
-    pageTitle: z.string().optional(),
-    updatedByName: z.string().optional(),
+    pageTitle: z.string(),
+    updatedByName: z.string(),
   }),
 });
 

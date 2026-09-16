@@ -8,12 +8,16 @@ import { MembersEmpty } from './members-empty'
 import { InviteMemberModal } from './invite-member-modal'
 import { InfiniteScroll } from '@/components/ui/infinite-scroll'
 import * as m from '@/paraglide/messages'
-import type { WorkspaceMember, WorkspaceInvitation } from '../types'
+import type {
+  WorkspaceMember,
+  WorkspaceInvitation,
+  WorkspaceId,
+} from '../types'
 
 interface MembersPresenterProps {
-  workspaceId: string
+  workspaceId: WorkspaceId
   members: WorkspaceMember[]
-  pendingInvitations?: WorkspaceInvitation[]
+  pendingInvitations: WorkspaceInvitation[]
   canManage: boolean
   hasNextPage?: boolean
   fetchNextPage?: () => void
@@ -23,7 +27,7 @@ interface MembersPresenterProps {
 export function MembersPresenter({
   workspaceId,
   members,
-  pendingInvitations = [],
+  pendingInvitations,
   canManage,
   hasNextPage,
   fetchNextPage,
@@ -37,7 +41,6 @@ export function MembersPresenter({
 
   return (
     <div className="space-y-6">
-      {/* Header with Invite Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
         <div>
           <div className="flex items-center gap-2">
@@ -65,7 +68,6 @@ export function MembersPresenter({
         ) : null}
       </div>
 
-      {/* Invite Member Modal (Dialog on desktop / Sheet on mobile) */}
       {canManage ? (
         <InviteMemberModal
           workspaceId={workspaceId}
@@ -74,7 +76,6 @@ export function MembersPresenter({
         />
       ) : null}
 
-      {/* Pending Invitations Section */}
       {pendingInvitations.length > 0 ? (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -97,7 +98,6 @@ export function MembersPresenter({
         </div>
       ) : null}
 
-      {/* Active Members Section */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />

@@ -37,7 +37,8 @@ export function DocumentBackgroundLayer({
     ? getBackgroundColorConfig(color)
     : activeColorConfig
 
-  const hasPattern = presetConfig.id !== 'none' && Boolean(presetConfig.svgDataUri)
+  const hasPattern =
+    presetConfig.id !== 'none' && Boolean(presetConfig.svgDataUri)
   const hasGlow = Boolean(colorConfig.glowClass)
 
   if (!hasPattern && !hasGlow) {
@@ -65,16 +66,18 @@ export function DocumentBackgroundLayer({
             colorConfig.patternClass,
             className,
           )}
-          style={{
-            maskImage: `url("${presetConfig.svgDataUri}")`,
-            WebkitMaskImage: `url("${presetConfig.svgDataUri}")`,
-            maskSize: presetConfig.backgroundSize,
-            WebkitMaskSize: presetConfig.backgroundSize,
-            maskRepeat: 'repeat',
-            WebkitMaskRepeat: 'repeat',
-            ['--doc-bg-op-light' as any]: opacity ?? presetConfig.opacityLight,
-            ['--doc-bg-op-dark' as any]: opacity ?? presetConfig.opacityDark,
-          }}
+          style={
+            {
+              maskImage: `url("${presetConfig.svgDataUri}")`,
+              WebkitMaskImage: `url("${presetConfig.svgDataUri}")`,
+              maskSize: presetConfig.backgroundSize,
+              WebkitMaskSize: presetConfig.backgroundSize,
+              maskRepeat: 'repeat',
+              WebkitMaskRepeat: 'repeat',
+              '--doc-bg-op-light': opacity ?? presetConfig.opacityLight,
+              '--doc-bg-op-dark': opacity ?? presetConfig.opacityDark,
+            } as React.CSSProperties
+          }
           aria-hidden="true"
         />
       )}

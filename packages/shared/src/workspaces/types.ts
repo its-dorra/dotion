@@ -25,9 +25,7 @@ export type WorkspaceRole = z.infer<typeof WorkspaceMemberRoleSchema>;
 export type CreateWorkspaceMemberInput = z.infer<
   typeof CreateWorkspaceMemberSchema
 >;
-export type WorkspaceMemberDetail = z.infer<
-  typeof WorkspaceMemberDetailSchema
->;
+export type WorkspaceMemberDetail = z.infer<typeof WorkspaceMemberDetailSchema>;
 export type UpdateMemberRoleInput = z.infer<typeof UpdateMemberRoleSchema>;
 export type WorkspaceInvitation = z.infer<typeof WorkspaceInvitationSchema>;
 export type CreateWorkspaceInvitationInput = z.infer<

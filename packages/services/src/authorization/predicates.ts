@@ -7,7 +7,7 @@ import type { WorkspaceRole } from "@dotion/shared/workspaces/types";
 import type { PagePermissionRole } from "@dotion/shared/pages/types";
 
 export const isWorkspaceMemberPredicate = (
-  userRole: WorkspaceRole | null | undefined,
+  userRole: WorkspaceRole | null,
 ): Decision => {
   return userRole != null
     ? allow("User is a workspace member")
@@ -16,7 +16,7 @@ export const isWorkspaceMemberPredicate = (
 
 export const hasWorkspaceRolePredicate = (
   roles: WorkspaceRole[],
-  userRole: WorkspaceRole | null | undefined,
+  userRole: WorkspaceRole | null,
 ): Decision => {
   if (!userRole) {
     return deny("User is not a member of this workspace");
@@ -28,20 +28,14 @@ export const hasWorkspaceRolePredicate = (
 };
 
 export const isWorkspaceOwnerPredicate = (
-  userRole: WorkspaceRole | null | undefined,
-): Decision => {
-  return hasWorkspaceRolePredicate(["owner"], userRole);
-};
-
-export const isWorkspaceAdminOrOwnerPredicate = (
-  userRole: WorkspaceRole | null | undefined,
+  userRole: WorkspaceRole | null,
 ): Decision => {
   return hasWorkspaceRolePredicate(["owner"], userRole);
 };
 
 export const isPageEditorPredicate = (
-  userWorkspaceRole: WorkspaceRole | null | undefined,
-  userPageRole: PagePermissionRole | null | undefined,
+  userWorkspaceRole: WorkspaceRole | null,
+  userPageRole: PagePermissionRole | null,
 ): Decision => {
   if (userWorkspaceRole === "owner") {
     return allow("Workspace owner has full page edit access");
@@ -55,8 +49,8 @@ export const isPageEditorPredicate = (
 };
 
 export const isPageCommenterOrEditorPredicate = (
-  userWorkspaceRole: WorkspaceRole | null | undefined,
-  userPageRole: PagePermissionRole | null | undefined,
+  userWorkspaceRole: WorkspaceRole | null,
+  userPageRole: PagePermissionRole | null,
 ): Decision => {
   if (userWorkspaceRole === "owner") {
     return allow("Workspace owner has full page comment access");
@@ -70,8 +64,8 @@ export const isPageCommenterOrEditorPredicate = (
 };
 
 export const isPageViewerPredicate = (
-  userWorkspaceRole: WorkspaceRole | null | undefined,
-  userPageRole?: PagePermissionRole | null | undefined,
+  userWorkspaceRole: WorkspaceRole | null,
+  userPageRole: PagePermissionRole | null,
 ): Decision => {
   if (userWorkspaceRole != null) {
     return allow("All workspace members have page view access");

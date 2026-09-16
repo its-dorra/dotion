@@ -7,9 +7,11 @@ import {
   markNotificationAsReadInCache,
   markAllNotificationsAsReadInCache,
 } from '../utils'
-import { updatePageAccessRequestStatusInCache } from '@/features/pages/utils'
-import { pagesKeys } from '@/features/pages/query-options'
-import { authorizationKeys } from '@/features/authorization/query-options'
+import {
+  updatePageAccessRequestStatusInCache,
+  updatePagePermissionInCache,
+} from '@/features/pages/utils'
+import type { PagePermissionRole } from '@dotion/shared/pages/types'
 import { m } from '@/paraglide/messages'
 
 import type { UserWsMessage } from '@dotion/shared/notifications/ws.schema'
@@ -79,15 +81,13 @@ export function useUserRealtime() {
                 meta.pageId,
                 { hasPendingRequest: false, request: null },
               )
-              queryClient.invalidateQueries({
-                queryKey: pagesKeys.permissions(meta.workspaceId, meta.pageId),
-              })
-              queryClient.invalidateQueries({
-                queryKey: pagesKeys.detail(meta.pageId),
-              })
-              queryClient.invalidateQueries({
-                queryKey: authorizationKeys.all,
-              })
+              updatePagePermissionInCache(
+                queryClient,
+                meta.workspaceId,
+                meta.pageId,
+                notif.userId,
+                meta.newRole as PagePermissionRole,
+              )
             } else if (notif.metadata.type === 'page_access_request_resolved') {
               const meta = notif.metadata
               if (meta.status === 'approved') {
@@ -100,6 +100,13 @@ export function useUserRealtime() {
                         ? m.page_role_commenter()
                         : m.page_role_editor(),
                   }),
+                )
+                updatePagePermissionInCache(
+                  queryClient,
+                  meta.workspaceId,
+                  meta.pageId,
+                  notif.userId,
+                  meta.role as PagePermissionRole,
                 )
               } else {
                 toast.info(
@@ -115,15 +122,6 @@ export function useUserRealtime() {
                 meta.pageId,
                 { hasPendingRequest: false, request: null },
               )
-              queryClient.invalidateQueries({
-                queryKey: pagesKeys.permissions(meta.workspaceId, meta.pageId),
-              })
-              queryClient.invalidateQueries({
-                queryKey: pagesKeys.detail(meta.pageId),
-              })
-              queryClient.invalidateQueries({
-                queryKey: authorizationKeys.all,
-              })
             } else if (notif.metadata.type === 'page_invitation') {
               const meta = notif.metadata
               toast.info(

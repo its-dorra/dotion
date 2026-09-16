@@ -15,8 +15,10 @@ import {
   forbiddenSchema,
   internalServerErrorSchema,
   notFoundErrorSchema,
+  tooManyRequestsSchema,
   unauthorizedSchema,
 } from "#/lib/http-response-helpers";
+import { standardApiRateLimit } from "#/middlewares/rate-limit-middleware";
 
 const tags = ["Pages"];
 
@@ -24,6 +26,7 @@ export const listRoute = createAuthorizedRoute({
   tags,
   method: "get",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "list",
@@ -57,6 +60,10 @@ export const listRoute = createAuthorizedRoute({
       forbiddenSchema,
       HttpStatusPhrases.FORBIDDEN,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -68,6 +75,7 @@ export const getByIdRoute = createAuthorizedRoute({
   tags,
   method: "get",
   path: "/{pageId}",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "view",
@@ -99,6 +107,10 @@ export const getByIdRoute = createAuthorizedRoute({
       notFoundErrorSchema,
       HttpStatusPhrases.NOT_FOUND,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -112,6 +124,7 @@ export const createRoute = createAuthorizedRoute({
   description: "Creates a page in a workspace for the authenticated user.",
   method: "post",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "create",
@@ -154,6 +167,10 @@ export const createRoute = createAuthorizedRoute({
       forbiddenSchema,
       HttpStatusPhrases.FORBIDDEN,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -168,6 +185,7 @@ export const listTrashRoute = createAuthorizedRoute({
     "Returns all pages currently marked as inTrash in the workspace.",
   method: "get",
   path: "/trash",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "listTrash",
@@ -191,6 +209,10 @@ export const listTrashRoute = createAuthorizedRoute({
       forbiddenSchema,
       HttpStatusPhrases.FORBIDDEN,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -205,6 +227,7 @@ export const emptyTrashRoute = createAuthorizedRoute({
     "Permanently deletes all pages currently marked as inTrash in the workspace.",
   method: "delete",
   path: "/trash",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "emptyTrash",
@@ -228,6 +251,10 @@ export const emptyTrashRoute = createAuthorizedRoute({
       forbiddenSchema,
       HttpStatusPhrases.FORBIDDEN,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -241,6 +268,7 @@ export const moveToTrashRoute = createAuthorizedRoute({
   description: "Marks a page and its descendants as inTrash.",
   method: "post",
   path: "/{pageId}/trash",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "delete",
@@ -272,6 +300,10 @@ export const moveToTrashRoute = createAuthorizedRoute({
       notFoundErrorSchema,
       HttpStatusPhrases.NOT_FOUND,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -285,6 +317,7 @@ export const restoreFromTrashRoute = createAuthorizedRoute({
   description: "Restores a trashed page back to the workspace tree.",
   method: "post",
   path: "/{pageId}/restore",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "restore",
@@ -316,6 +349,10 @@ export const restoreFromTrashRoute = createAuthorizedRoute({
       notFoundErrorSchema,
       HttpStatusPhrases.NOT_FOUND,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -330,6 +367,7 @@ export const deletePermanentlyRoute = createAuthorizedRoute({
     "Permanently deletes a page from the database and cleans up assets.",
   method: "delete",
   path: "/{pageId}",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "deletePermanently",
@@ -360,6 +398,10 @@ export const deletePermanentlyRoute = createAuthorizedRoute({
     [HttpStatusCodes.NOT_FOUND]: jsonContent(
       notFoundErrorSchema,
       HttpStatusPhrases.NOT_FOUND,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,

@@ -17,6 +17,13 @@ route.get("/ws", currentUserMiddleware, async (c) => {
   const stub = c.env.DOTION_USERS_DO.get(id);
 
   return await stub.fetch(c.req.raw);
+  const headers = new Headers(c.req.raw.headers);
+  headers.set("X-User-Id", userId);
+  headers.set("X-Permissions", "user:view,user:update");
+
+  return await stub.fetch(c.req.raw, {
+    headers,
+  });
 });
 
 export default route;

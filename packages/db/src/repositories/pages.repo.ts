@@ -675,11 +675,11 @@ export class PagesRepository {
   async restoreFromTrash({
     pageId,
     parentId,
-    descendantIds = [],
+    descendantIds,
   }: {
     pageId: PageId;
     parentId: PageId | null;
-    descendantIds?: PageId[];
+    descendantIds: PageId[];
   }): Promise<Result<Page, DatabaseError | NotFoundError>> {
     try {
       const [updated] = await this.db

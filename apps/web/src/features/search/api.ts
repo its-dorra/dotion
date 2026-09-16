@@ -36,25 +36,32 @@ export class SearchApi {
 
       if (!response.ok) {
         return matchExhaustive(response.status, {
-          '400': () =>
+          [400]: () =>
             Result.err(new SearchError({ message: 'Invalid search query.' })),
-          '401': () =>
+          [401]: () =>
             Result.err(
               new AuthenticationError({
                 message: 'You must be logged in to search workspace documents.',
               }),
             ),
-          '403': () =>
+          [403]: () =>
             Result.err(
               new AuthorizationError({
                 message: 'You do not have permission to search this workspace.',
               }),
             ),
-          '500': () =>
+          [500]: () =>
             Result.err(
               new AppError({
                 source: 'Search',
                 message: 'Search query execution failed.',
+              }),
+            ),
+          default: () =>
+            Result.err(
+              new AppError({
+                source: 'Search',
+                message: `Failed to search workspace documents: ${response.status}`,
               }),
             ),
         })

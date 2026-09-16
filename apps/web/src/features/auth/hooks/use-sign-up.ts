@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useBetterAuth } from './use-better-auth'
 import type { AuthClient } from '../types'
 import { useNavigate } from '@tanstack/react-router'
-import { authQueryKeys } from '../query-options'
+import { authQueryOptions } from '../query-options'
 
 type SignUpVariables = {
   method: 'email'
@@ -10,7 +10,8 @@ type SignUpVariables = {
 }
 
 export const useSignUp = () => {
-  const { signUp } = useBetterAuth()
+  const authClient = useBetterAuth()
+  const { signUp } = authClient
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
@@ -30,8 +31,13 @@ export const useSignUp = () => {
       }
       return data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: authQueryKeys.session })
+    onSuccess: async () => {
+      const session = await authClient.getSession({
+        fetchOptions: { throw: false },
+      })
+      if (session.data) {
+        queryClient.setQueryData(authQueryOptions().queryKey, session.data)
+      }
       navigate({ to: '/app' })
     },
   })

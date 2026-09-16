@@ -20,6 +20,7 @@ import type {
   UpdateWorkspaceInput,
   Workspace,
   WorkspaceId,
+  WorkspaceInvitationId,
 } from './types'
 import type {
   PaginationQuery,
@@ -368,8 +369,8 @@ export class WorkspacesApi {
   }
 
   async cancelWorkspaceInvitation(
-    workspaceId: string,
-    invitationId: string,
+    workspaceId: WorkspaceId,
+    invitationId: WorkspaceInvitationId,
   ): Promise<
     Result<true, WorkspaceNotFoundError | AuthenticationError | AppError>
   > {
@@ -379,8 +380,8 @@ export class WorkspacesApi {
         ':invitationId'
       ].$delete({
         param: {
-          id: workspaceId as WorkspaceId,
-          invitationId: invitationId as any,
+          id: workspaceId,
+          invitationId: invitationId,
         },
       })
 
@@ -433,7 +434,7 @@ export class WorkspacesApi {
       const response = await apiClient.api.v1.workspaces.invitations[
         ':invitationId'
       ].accept.$post({
-        param: { invitationId: input.invitationId as any },
+        param: { invitationId: input.invitationId },
       })
 
       if (!response.ok) {
@@ -479,7 +480,7 @@ export class WorkspacesApi {
       const response = await apiClient.api.v1.workspaces.invitations[
         ':invitationId'
       ].decline.$post({
-        param: { invitationId: input.invitationId as any },
+        param: { invitationId: input.invitationId },
       })
 
       if (!response.ok) {
@@ -531,7 +532,7 @@ export class WorkspacesApi {
       ].$patch({
         param: {
           id: input.workspaceId,
-          memberId: input.memberId as any,
+          memberId: input.memberId,
         },
         json: {
           role: input.role,
@@ -594,7 +595,7 @@ export class WorkspacesApi {
       ].$delete({
         param: {
           id: input.workspaceId,
-          memberId: input.memberId as any,
+          memberId: input.memberId,
         },
       })
 
@@ -638,14 +639,14 @@ export class WorkspacesApi {
     page = 1,
     limit = 20,
   }: {
-    workspaceId: string
+    workspaceId: WorkspaceId
     query: string
     page?: number
     limit?: number
   }): Promise<Result<PaginatedData<UserSearchResult>, AppError>> {
     try {
       const apiClient = getApiClient()
-      const response = await (apiClient.api.v1.workspaces as any)[':id'][
+      const response = await apiClient.api.v1.workspaces[':id'][
         'candidate-users'
       ].$get({
         param: { id: workspaceId },

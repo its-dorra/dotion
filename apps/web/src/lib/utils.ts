@@ -23,7 +23,13 @@ export function formatRelativeTime(isoDate: string): string {
 
 export function matchExhaustive<
   T extends PropertyKey,
-  C extends Record<T, () => unknown>,
->(value: T, cases: C & { default?: () => unknown }): ReturnType<C[T]> {
-  return (cases[value]?.() ?? cases.default?.()) as ReturnType<C[T]>
+  C extends
+    | (Record<T, () => unknown> & { default?: () => unknown })
+    | (Partial<Record<T, () => unknown>> & { default: () => unknown }),
+>(value: T, cases: C): C[keyof C] extends () => infer R ? R : unknown {
+  const casesRecord = cases as Record<PropertyKey, (() => unknown) | undefined>
+  const handler = casesRecord[value] ?? casesRecord.default
+  return (handler ? handler() : undefined) as C[keyof C] extends () => infer R
+    ? R
+    : unknown
 }

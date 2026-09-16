@@ -163,7 +163,7 @@ export class DurableObjectWorkspaceEventPublisher implements WorkspaceEventPubli
   async broadcastPageMovedToTrash(
     workspaceId: WorkspaceId,
     pageId: PageId,
-    pageIds?: PageId[],
+    pageIds: PageId[],
   ): Promise<void> {
     try {
       const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
@@ -200,7 +200,7 @@ export class DurableObjectWorkspaceEventPublisher implements WorkspaceEventPubli
   async broadcastPageDeletedPermanently(
     workspaceId: WorkspaceId,
     pageId: PageId,
-    pageIds?: PageId[],
+    pageIds: PageId[],
   ): Promise<void> {
     try {
       const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
@@ -335,7 +335,7 @@ export class DurableObjectUserCreditsManager implements UserCreditsManager {
 
   async checkTokenQuota(
     userId: UserId,
-    params?: { minTokens: number },
+    params: { minTokens: number },
   ): Promise<{
     allowed: boolean;
     remainingTokens: number;

@@ -12,7 +12,9 @@ import {
   forbiddenSchema,
   badRequestErrorSchema,
   notFoundErrorSchema,
+  tooManyRequestsSchema,
 } from "#/lib/http-response-helpers";
+import { standardApiRateLimit } from "#/middlewares/rate-limit-middleware";
 import {
   PaginationQuerySchema,
   createPaginatedDataSchema,
@@ -30,6 +32,7 @@ export const listCommentsRoute = createAuthorizedRoute({
   summary: "Get all comments for a page",
   method: "get",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "comment",
     action: "list",
@@ -57,6 +60,10 @@ export const listCommentsRoute = createAuthorizedRoute({
       forbiddenSchema,
       HttpStatusPhrases.FORBIDDEN,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -69,6 +76,7 @@ export const createCommentRoute = createAuthorizedRoute({
   summary: "Create a top-level comment or reply",
   method: "post",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "comment",
     action: "create",
@@ -107,6 +115,10 @@ export const createCommentRoute = createAuthorizedRoute({
       notFoundErrorSchema,
       HttpStatusPhrases.NOT_FOUND,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -119,6 +131,7 @@ export const resolveCommentRoute = createAuthorizedRoute({
   summary: "Resolve a comment",
   method: "patch",
   path: "/{commentId}/resolve",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "comment",
     action: "resolve",
@@ -148,6 +161,10 @@ export const resolveCommentRoute = createAuthorizedRoute({
       badRequestErrorSchema,
       HttpStatusPhrases.BAD_REQUEST,
     ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,
       HttpStatusPhrases.INTERNAL_SERVER_ERROR,
@@ -160,6 +177,7 @@ export const deleteCommentRoute = createAuthorizedRoute({
   summary: "Delete a comment or reply",
   method: "delete",
   path: "/{commentId}",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "comment",
     action: "delete",
@@ -198,6 +216,10 @@ export const deleteCommentRoute = createAuthorizedRoute({
     [HttpStatusCodes.NOT_FOUND]: jsonContent(
       notFoundErrorSchema,
       HttpStatusPhrases.NOT_FOUND,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.INTERNAL_SERVER_ERROR]: jsonContent(
       internalServerErrorSchema,

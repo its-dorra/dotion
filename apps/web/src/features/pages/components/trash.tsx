@@ -50,7 +50,7 @@ export function Trash({ workspaceId }: TrashProps) {
         <Can
           resource="page"
           action="emptyTrash"
-          scope={{ workspaceId: workspaceId as WorkspaceId }}
+          container={{ workspaceId: workspaceId as WorkspaceId }}
         >
           <Button
             variant="destructive"

@@ -1,5 +1,5 @@
 import { allow, deny } from "@dotion/shared/authorization/decisions";
-import { defineResourcePolicy } from "../policy";
+import { defineResourcePolicy } from "@dotion/shared/authorization/policy";
 
 export const userPolicy = defineResourcePolicy("user", {
   list: () => allow("Authenticated users can search/list users"),

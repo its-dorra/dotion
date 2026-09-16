@@ -16,7 +16,7 @@ export class InsufficientPagePermissionError extends TaggedError(
   'InsufficientPagePermissionError',
 )<{
   message: string
-  requiredRole: 'commenter' | 'editor'
+  requiredRole: 'owner' | 'editor' | 'commenter' | 'viewer'
 }> {}
 
 export class PageMemberAlreadyExistsError extends TaggedError(

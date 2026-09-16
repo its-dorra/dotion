@@ -1,8 +1,10 @@
 import { createAuthorizedRoute } from "#/lib/create-authorized-route";
+import { standardApiRateLimit } from "#/middlewares/rate-limit-middleware";
 import {
   badRequestErrorSchema,
   forbiddenSchema,
   internalServerErrorSchema,
+  tooManyRequestsSchema,
   unauthorizedSchema,
 } from "#/lib/http-response-helpers";
 import { jsonContent, jsonContentRequired } from "stoker/openapi/helpers";
@@ -24,6 +26,7 @@ export const listRoute = createAuthorizedRoute({
   description: "Returns all workspaces for the authenticated user.",
   method: "get",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspace",
     action: "list",
@@ -32,6 +35,10 @@ export const listRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       zodSuccessResponse(zodList(WorkspaceSchema)),
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.UNAUTHORIZED]: jsonContent(
       unauthorizedSchema,
@@ -55,6 +62,7 @@ export const createRoute = createAuthorizedRoute({
     "Creates a new workspace and adds the authenticated user as the owner.",
   method: "post",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspace",
     action: "create",
@@ -66,6 +74,10 @@ export const createRoute = createAuthorizedRoute({
     [HttpStatusCodes.CREATED]: jsonContent(
       zodSuccessResponse(WorkspaceSchema),
       HttpStatusPhrases.CREATED,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(
       badRequestErrorSchema,
@@ -96,6 +108,7 @@ export const getByIdRoute = createAuthorizedRoute({
   description: "Returns a workspace by ID for the authenticated user.",
   method: "get",
   path: "/{id}",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "workspace",
     action: "view",
@@ -110,6 +123,10 @@ export const getByIdRoute = createAuthorizedRoute({
     [HttpStatusCodes.OK]: jsonContent(
       zodSuccessResponse(WorkspaceSchema),
       HttpStatusPhrases.OK,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.NOT_FOUND]: jsonContent(
       badRequestErrorSchema,

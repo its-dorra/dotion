@@ -164,7 +164,7 @@ export class CommentsRepository {
       pageId: PageId;
       authorId: UserId;
       body: string;
-      parentId?: CommentId | null;
+      parentId: CommentId | null;
     };
   }): Promise<Result<Comment, DatabaseError>> {
     try {

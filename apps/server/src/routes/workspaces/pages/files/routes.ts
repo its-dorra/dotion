@@ -1,4 +1,5 @@
 import { createAuthorizedRoute } from "#/lib/create-authorized-route";
+import { standardApiRateLimit } from "#/middlewares/rate-limit-middleware";
 import { workspaceId } from "@dotion/shared/workspaces/schema";
 import { pageId } from "@dotion/shared/pages/schema";
 import { FileUploadResponseSchema } from "@dotion/shared/files/schema";
@@ -11,6 +12,7 @@ import {
   forbiddenSchema,
   internalServerErrorSchema,
   notFoundErrorSchema,
+  tooManyRequestsSchema,
   unauthorizedSchema,
 } from "#/lib/http-response-helpers";
 import { z } from "zod";
@@ -21,6 +23,7 @@ export const uploadRoute = createAuthorizedRoute({
   tags,
   method: "post",
   path: "/",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "update",
@@ -39,6 +42,10 @@ export const uploadRoute = createAuthorizedRoute({
     [HttpStatusCodes.CREATED]: jsonContent(
       zodSuccessResponse(FileUploadResponseSchema),
       HttpStatusPhrases.CREATED,
+    ),
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(
       badRequestErrorSchema,
@@ -63,6 +70,7 @@ export const getRoute = createAuthorizedRoute({
   tags,
   method: "get",
   path: "/{fileKey}",
+  rateLimit: standardApiRateLimit,
   authorization: {
     resource: "page",
     action: "view",
@@ -104,6 +112,10 @@ export const getRoute = createAuthorizedRoute({
     [HttpStatusCodes.NOT_MODIFIED]: {
       description: "Not Modified",
     },
+    [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
+      tooManyRequestsSchema,
+      HttpStatusPhrases.TOO_MANY_REQUESTS,
+    ),
     [HttpStatusCodes.UNAUTHORIZED]: jsonContent(
       unauthorizedSchema,
       HttpStatusPhrases.UNAUTHORIZED,

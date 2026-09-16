@@ -7,8 +7,8 @@ import { resourceSchemas } from "@dotion/shared/authorization/schema";
 import type {
   ResourceType,
   ResourceAction,
-  ResourceInput,
-  ScopeInput,
+  ResourceTarget,
+  ResourceContainer,
   CollectionLevelAction,
   InstanceLevelAction,
 } from "@dotion/shared/authorization/types";
@@ -20,10 +20,14 @@ export interface CollectionAuthorizeOptions<
 > {
   resource: R;
   action: A;
+  mapContainer?: (context: {
+    params: TParams;
+    c: HonoContext;
+  }) => ResourceContainer<R> | Promise<ResourceContainer<R>>;
   mapScope?: (context: {
     params: TParams;
     c: HonoContext;
-  }) => ScopeInput<R> | Promise<ScopeInput<R>>;
+  }) => ResourceContainer<R> | Promise<ResourceContainer<R>>;
 }
 
 export interface InstanceAuthorizeOptions<
@@ -33,10 +37,14 @@ export interface InstanceAuthorizeOptions<
 > {
   resource: R;
   action: A;
-  mapInput: (context: {
+  mapTarget?: (context: {
     params: TParams;
     c: HonoContext;
-  }) => ResourceInput<R> | Promise<ResourceInput<R>>;
+  }) => ResourceTarget<R> | Promise<ResourceTarget<R>>;
+  mapInput?: (context: {
+    params: TParams;
+    c: HonoContext;
+  }) => ResourceTarget<R> | Promise<ResourceTarget<R>>;
 }
 
 export type AuthorizeMiddlewareOptions<
@@ -89,16 +97,16 @@ export function requirePermission<
         TParams
       >;
 
-      const scopeInput = collectionOpts.mapScope
-        ? await collectionOpts.mapScope({ params: routeParams, c })
+      const mapper = collectionOpts.mapContainer ?? collectionOpts.mapScope;
+      const container = mapper
+        ? await mapper({ params: routeParams, c })
         : undefined;
 
       const authResult = await c.var.services.authorization.authorize({
         user: currentUser,
         resource,
         action,
-        scope: scopeInput,
-        context: { timestamp: new Date() },
+        container,
       } as any);
 
       if (authResult.isErr()) {
@@ -124,12 +132,15 @@ export function requirePermission<
         TParams
       >;
 
-      const resourceInput = await instanceOpts.mapInput({
-        params: routeParams,
-        c,
-      });
+      const mapper = instanceOpts.mapTarget ?? instanceOpts.mapInput;
+      const target = mapper
+        ? await mapper({
+            params: routeParams,
+            c,
+          })
+        : undefined;
 
-      if (!resourceInput) {
+      if (!target) {
         return c.json(
           errorResponseJson(HttpStatusPhrases.BAD_REQUEST),
           HttpStatusCodes.BAD_REQUEST,
@@ -140,10 +151,9 @@ export function requirePermission<
         user: currentUser,
         resource: {
           type: resource,
-          id: resourceInput,
+          target,
         },
         action,
-        context: { timestamp: new Date() },
       } as any);
 
       if (authResult.isErr()) {

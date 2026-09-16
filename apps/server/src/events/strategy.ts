@@ -31,7 +31,7 @@ export class DomainEventRouter implements DomainEventDispatcher {
     DomainEventStrategy<any>[]
   >();
 
-  constructor(private readonly executionCtx?: ExecutionContextLike) {}
+  constructor(private readonly executionCtx: ExecutionContextLike) {}
 
   register<T extends DomainEventType>(strategy: DomainEventStrategy<T>): this {
     const list = this.strategies.get(strategy.eventType) ?? [];
@@ -60,11 +60,7 @@ export class DomainEventRouter implements DomainEventDispatcher {
   async dispatch(event: DomainEvent): Promise<Result<void, never>> {
     const task = Promise.all(this.dispatchSingle(event));
 
-    if (this.executionCtx) {
-      this.executionCtx.waitUntil(task);
-    } else {
-      await task;
-    }
+    this.executionCtx.waitUntil(task);
 
     return Result.ok(undefined);
   }
@@ -78,11 +74,7 @@ export class DomainEventRouter implements DomainEventDispatcher {
         .flatMap((promises) => promises),
     );
 
-    if (this.executionCtx) {
-      this.executionCtx.waitUntil(task);
-    } else {
-      await task;
-    }
+    this.executionCtx.waitUntil(task);
 
     return Result.ok(undefined);
   }

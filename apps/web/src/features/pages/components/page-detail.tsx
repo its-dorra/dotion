@@ -61,7 +61,7 @@ export function PageDetail({
     canQueryOptions({
       resource: 'comment',
       action: 'create',
-      scope: { pageId },
+      container: { pageId },
     }),
   )
   const canComment = commentPerm?.allowed ?? false

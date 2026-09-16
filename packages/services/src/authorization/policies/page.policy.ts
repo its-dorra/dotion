@@ -1,5 +1,5 @@
 import { deny } from "@dotion/shared/authorization/decisions";
-import { defineResourcePolicy } from "../policy";
+import { defineResourcePolicy } from "@dotion/shared/authorization/policy";
 import {
   isPageEditorPredicate,
   isPageViewerPredicate,
@@ -8,32 +8,32 @@ import {
 } from "../predicates";
 
 export const pagePolicy = defineResourcePolicy("page", {
-  create: ({ scope }) => {
-    if (!scope?.workspaceId) {
+  create: ({ container }) => {
+    if (!container?.workspaceId) {
       return deny("Workspace ID is required to create a page");
     }
-    return isWorkspaceOwnerPredicate(scope.userWorkspaceRole);
+    return isWorkspaceOwnerPredicate(container.userWorkspaceRole);
   },
 
-  list: ({ scope }) => {
-    if (!scope?.workspaceId) {
+  list: ({ container }) => {
+    if (!container?.workspaceId) {
       return deny("Workspace ID is required to list pages");
     }
-    return isWorkspaceMemberPredicate(scope.userWorkspaceRole);
+    return isWorkspaceMemberPredicate(container.userWorkspaceRole);
   },
 
-  listTrash: ({ scope }) => {
-    if (!scope?.workspaceId) {
+  listTrash: ({ container }) => {
+    if (!container?.workspaceId) {
       return deny("Workspace ID is required to view trash");
     }
-    return isWorkspaceMemberPredicate(scope.userWorkspaceRole);
+    return isWorkspaceMemberPredicate(container.userWorkspaceRole);
   },
 
-  emptyTrash: ({ scope }) => {
-    if (!scope?.workspaceId) {
+  emptyTrash: ({ container }) => {
+    if (!container?.workspaceId) {
       return deny("Workspace ID is required to empty trash");
     }
-    return isWorkspaceOwnerPredicate(scope.userWorkspaceRole);
+    return isWorkspaceOwnerPredicate(container.userWorkspaceRole);
   },
 
   view: ({ resource }) =>

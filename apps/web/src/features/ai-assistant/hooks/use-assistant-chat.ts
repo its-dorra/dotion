@@ -5,10 +5,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import type { AssistantThreadId, ChatMessage, ToolPart } from '../types'
-import { assistantKeys } from '../query-options'
 import {
   getUIMessageText,
   optimisticallyUpdateThreadMessagesCache,
+  touchThreadInCache,
 } from '../utils'
 import { useCreateAssistantThread } from './use-create-assistant-thread'
 
@@ -88,12 +88,11 @@ export function useAssistantChat({
 
       chat.setMessages([])
 
-      setTimeout(() => {
-        void queryClient.invalidateQueries({
-          queryKey: assistantKeys.threads(workspaceId),
-          refetchType: 'active',
-        })
-      }, 1500)
+      touchThreadInCache({
+        queryClient,
+        workspaceId,
+        threadId,
+      })
     },
     onError: (error) => {
       console.error('useAssistantChat error:', error)

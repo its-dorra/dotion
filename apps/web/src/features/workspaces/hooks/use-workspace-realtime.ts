@@ -15,8 +15,8 @@ import {
   handleTrashEmptiedWsMessage,
   updatePagePermissionInCache,
 } from '@/features/pages/utils'
-import type { Page, PageId } from '@dotion/shared/pages/types'
-import type { PagePermissionRole, TrashedPage } from '@/features/pages/types'
+import type { PageId } from '@dotion/shared/pages/types'
+import type { PagePermissionRole } from '@/features/pages/types'
 import {
   handleMemberJoinedWsMessage,
   handleMemberRemovedWsMessage,
@@ -24,10 +24,11 @@ import {
   handleInvitationDeclinedWsMessage,
   handleInvitationCancelledWsMessage,
 } from '../utils'
-import type { Workspace } from '../types'
-import { workspacesKeys } from '../query-options'
-import { authorizationKeys } from '@/features/authorization/query-options'
-import { pagesKeys } from '@/features/pages/query-options'
+import { workspacesListQueryOptions } from '../query-options'
+import {
+  pageDetailQueryOptions,
+  trashedPagesQueryOptions,
+} from '@/features/pages/query-options'
 import { m } from '@/paraglide/messages'
 
 function getTranslatedRole(role: string) {
@@ -108,11 +109,14 @@ export const useWorkspaceRealtime = () => {
           const activePageId = activePageIdRef.current
           let isCurrentlyOnTrashedPage = false
           if (activePageId) {
-            const pageData = queryClient.getQueryData<Page>(
-              pagesKeys.detail(activePageId),
+            const pageData = queryClient.getQueryData(
+              pageDetailQueryOptions(
+                data.payload.workspaceId,
+                activePageId as PageId,
+              ).queryKey,
             )
-            const trashedPages = queryClient.getQueryData<TrashedPage[]>(
-              pagesKeys.trash(data.payload.workspaceId),
+            const trashedPages = queryClient.getQueryData(
+              trashedPagesQueryOptions(data.payload.workspaceId).queryKey,
             )
             if (
               pageData?.inTrash ||
@@ -126,7 +130,10 @@ export const useWorkspaceRealtime = () => {
 
           if (isCurrentlyOnTrashedPage && activePageId) {
             queryClient.removeQueries({
-              queryKey: pagesKeys.detail(activePageId),
+              queryKey: pageDetailQueryOptions(
+                data.payload.workspaceId,
+                activePageId as PageId,
+              ).queryKey,
             })
             navigate({
               to: '/app/workspaces/$workspaceId/trash',
@@ -157,12 +164,6 @@ export const useWorkspaceRealtime = () => {
             data.payload.role as PagePermissionRole,
           )
           if (data.payload.userId === currentUserId) {
-            queryClient.invalidateQueries({
-              queryKey: authorizationKeys.all,
-            })
-            queryClient.invalidateQueries({
-              queryKey: pagesKeys.detail(data.payload.pageId),
-            })
             toast.info(
               m.toast_page_role_updated({
                 role: getTranslatedRole(data.payload.role),
@@ -209,8 +210,8 @@ export const useWorkspaceRealtime = () => {
         case 'workspace.member_removed': {
           if (data.payload.userId === currentUserId) {
             toast.error(m.toast_workspace_removed())
-            queryClient.setQueryData<Workspace[]>(
-              workspacesKeys.list(),
+            queryClient.setQueryData(
+              workspacesListQueryOptions().queryKey,
               (old) => old?.filter((w) => w.id !== workspaceId),
             )
             navigate({ to: '/app/workspaces' })

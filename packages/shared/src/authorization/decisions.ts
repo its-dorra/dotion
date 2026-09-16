@@ -1,4 +1,4 @@
-export type DecisionType = "ALLOW" | "DENY" | "ABSTAIN";
+export type DecisionType = "ALLOW" | "DENY";
 
 export interface Decision {
   readonly type: DecisionType;
@@ -15,16 +15,8 @@ export const deny = (reason?: string): Decision => ({
   ...(reason ? { reason } : {}),
 });
 
-export const abstain = (reason?: string): Decision => ({
-  type: "ABSTAIN",
-  ...(reason ? { reason } : {}),
-});
-
 export const isAllowed = (decision: Decision): boolean =>
   decision.type === "ALLOW";
 
 export const isDenied = (decision: Decision): boolean =>
   decision.type === "DENY";
-
-export const isAbstain = (decision: Decision): boolean =>
-  decision.type === "ABSTAIN";

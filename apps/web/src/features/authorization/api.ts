@@ -1,11 +1,11 @@
 import { Result } from 'better-result'
 import { getApiClient } from '@/lib/api-client'
 import { AppError, AuthenticationError } from '@/lib/errors'
-import type { CanParams } from './types'
 import type {
   CheckPermissionResponse,
   ResourceType,
   ResourceAction,
+  CanParams,
 } from '@dotion/shared/authorization/types'
 
 export class AuthorizationApi {
@@ -15,9 +15,10 @@ export class AuthorizationApi {
     try {
       const apiClient = getApiClient()
       const query = this.buildQueryParams(params)
-
       const response = await apiClient.api.v1.authorization.check.$get({
-        query: query as any,
+        query: query as Parameters<
+          typeof apiClient.api.v1.authorization.check.$get
+        >[0]['query'],
       })
 
       if (!response.ok) {
@@ -59,8 +60,9 @@ export class AuthorizationApi {
         resource: params.resource,
         action: String(params.action),
       }
-      if ('scope' in params && params.scope) {
-        for (const [key, value] of Object.entries(params.scope)) {
+      const containerObj = 'container' in params ? params.container : undefined
+      if (containerObj) {
+        for (const [key, value] of Object.entries(containerObj)) {
           if (value !== undefined) {
             query[key] = String(value)
           }

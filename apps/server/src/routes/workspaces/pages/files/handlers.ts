@@ -13,7 +13,14 @@ export const uploadHandler: AppRouteHandler<UploadRoute> = async (c) => {
     ? Number(contentLengthHeader)
     : undefined;
 
-  if (contentLength !== undefined && contentLength > MAX_FILE_SIZE) {
+  if (contentLength === undefined || Number.isNaN(contentLength)) {
+    return c.json(
+      errorResponseJson("File size must be specified for upload"),
+      HttpStatusCodes.BAD_REQUEST,
+    );
+  }
+
+  if (contentLength > MAX_FILE_SIZE) {
     const maxMb = MAX_FILE_SIZE / (1024 * 1024);
     return c.json(
       errorResponseJson(

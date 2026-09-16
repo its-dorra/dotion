@@ -6,19 +6,17 @@ import type { z } from "zod";
 import type { MiddlewareHandler } from "hono";
 import type { HonoContext } from "#/lib/types";
 import { currentUserMiddleware } from "#/middlewares/current-user-middleware";
-import {
-  requirePermission,
-  type CollectionAuthorizeOptions,
-  type InstanceAuthorizeOptions,
-} from "#/middlewares/authorize-middleware";
+import { requirePermission } from "#/middlewares/authorize-middleware";
 import type {
   ResourceType,
   ResourceAction,
-  ResourceInput,
-  ScopeInput,
+  ResourceTarget,
+  ResourceContainer,
   CollectionLevelAction,
   InstanceLevelAction,
 } from "@dotion/shared/authorization/types";
+import type { RateLimitOptions } from "#/middlewares/rate-limit-middleware";
+import { rateLimit } from "#/middlewares/rate-limit-middleware";
 
 export type JsonRequestBody<TSchema extends z.ZodType = z.ZodType> = {
   content: {
@@ -77,6 +75,7 @@ export type AuthorizedRouteConfig<
   operationId?: string;
   externalDocs?: RouteConfig["externalDocs"];
   middleware?: readonly MiddlewareHandler[];
+  rateLimit?: RateLimitOptions;
   hide?: boolean;
   request?: {
     params?: TParams;
@@ -89,6 +88,15 @@ export type AuthorizedRouteConfig<
     ? {
         resource: R;
         action: A;
+        mapContainer?: (context: {
+          params: TParams extends z.ZodType
+            ? z.infer<TParams>
+            : Record<string, string>;
+          query: TQuery extends z.ZodType
+            ? z.infer<TQuery>
+            : Record<string, string>;
+          c: HonoContext;
+        }) => ResourceContainer<R> | Promise<ResourceContainer<R>>;
         mapScope?: (context: {
           params: TParams extends z.ZodType
             ? z.infer<TParams>
@@ -97,12 +105,12 @@ export type AuthorizedRouteConfig<
             ? z.infer<TQuery>
             : Record<string, string>;
           c: HonoContext;
-        }) => ScopeInput<R> | Promise<ScopeInput<R>>;
+        }) => ResourceContainer<R> | Promise<ResourceContainer<R>>;
       }
     : {
         resource: R;
         action: A;
-        mapInput: (context: {
+        mapTarget?: (context: {
           params: TParams extends z.ZodType
             ? z.infer<TParams>
             : Record<string, string>;
@@ -111,7 +119,17 @@ export type AuthorizedRouteConfig<
             : Record<string, string>;
           body: TBodySchema extends z.ZodType ? z.infer<TBodySchema> : unknown;
           c: HonoContext;
-        }) => ResourceInput<R> | Promise<ResourceInput<R>>;
+        }) => ResourceTarget<R> | Promise<ResourceTarget<R>>;
+        mapInput?: (context: {
+          params: TParams extends z.ZodType
+            ? z.infer<TParams>
+            : Record<string, string>;
+          query: TQuery extends z.ZodType
+            ? z.infer<TQuery>
+            : Record<string, string>;
+          body: TBodySchema extends z.ZodType ? z.infer<TBodySchema> : unknown;
+          c: HonoContext;
+        }) => ResourceTarget<R> | Promise<ResourceTarget<R>>;
       };
   responses: TResponses;
 };
@@ -166,35 +184,41 @@ export function createAuthorizedRoute<
   TResponses,
   TBody
 > {
-  const { authorization, middleware = [], ...restConfig } = config;
+  const {
+    authorization,
+    middleware = [],
+    rateLimit: rateLimitConfig,
+    ...restConfig
+  } = config;
 
   let authMiddleware: MiddlewareHandler;
 
-  if ("mapInput" in authorization) {
+  if ("mapTarget" in authorization || "mapInput" in authorization) {
+    const auth = authorization as any;
     authMiddleware = requirePermission({
       resource: authorization.resource,
       action: authorization.action as Extract<A, InstanceLevelAction<R>>,
-      mapInput: authorization.mapInput as InstanceAuthorizeOptions<
-        R,
-        Extract<A, InstanceLevelAction<R>>,
-        TParams extends z.ZodType ? z.infer<TParams> : Record<string, string>
-      >["mapInput"],
+      mapTarget: auth.mapTarget ?? auth.mapInput,
+      mapInput: auth.mapTarget ?? auth.mapInput,
     });
   } else {
+    const auth = authorization as any;
     authMiddleware = requirePermission({
       resource: authorization.resource,
       action: authorization.action as Extract<A, CollectionLevelAction<R>>,
-      mapScope: authorization.mapScope as CollectionAuthorizeOptions<
-        R,
-        Extract<A, CollectionLevelAction<R>>,
-        TParams extends z.ZodType ? z.infer<TParams> : Record<string, string>
-      >["mapScope"],
+      mapContainer: auth.mapContainer ?? auth.mapScope,
+      mapScope: auth.mapContainer ?? auth.mapScope,
     });
+  }
+
+  const extraMiddlewares: MiddlewareHandler[] = [...middleware];
+  if (rateLimitConfig) {
+    extraMiddlewares.push(rateLimit(rateLimitConfig));
   }
 
   return createOpenApiRoute({
     ...(restConfig as RouteConfig),
-    middleware: [currentUserMiddleware, authMiddleware, ...middleware],
+    middleware: [currentUserMiddleware, authMiddleware, ...extraMiddlewares],
   }) as unknown as ConstructedRoute<
     P,
     TMethod,

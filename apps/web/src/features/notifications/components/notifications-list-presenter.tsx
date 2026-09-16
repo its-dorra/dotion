@@ -33,13 +33,13 @@ export function NotificationsListPresenter({
 
   const activeInvitation: WorkspaceInvitation | null = activeNotification
     ? {
-        id: activeNotification.metadata.workspaceInvitationId as any,
+        id: activeNotification.metadata.workspaceInvitationId,
         workspaceId: activeNotification.metadata.workspaceId,
         workspaceName: activeNotification.metadata.workspaceName,
         workspaceIcon: activeNotification.metadata.workspaceIcon ?? null,
         invitedByUserId: activeNotification.metadata.invitedByUserId,
         invitedByName: activeNotification.metadata.invitedByName,
-        invitedUserId: '' as any,
+        invitedUserId: activeNotification.userId,
         invitedUserEmail: '',
         invitedUserName: '',
         status: 'pending',

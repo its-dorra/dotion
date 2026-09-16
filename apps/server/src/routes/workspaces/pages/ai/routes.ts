@@ -8,6 +8,7 @@ import {
   badRequestErrorSchema,
   forbiddenSchema,
   internalServerErrorSchema,
+  tooManyRequestsSchema,
   unauthorizedSchema,
 } from "#/lib/http-response-helpers";
 import type { BlockNoteToolDefinitions } from "@dotion/services";
@@ -54,6 +55,11 @@ export const streamTextRoute = createAuthorizedRoute({
     "Handles streaming AI interactions for editing and generating BlockNote content with token quota management.",
   method: "post",
   path: "/streamText",
+  rateLimit: {
+    limiter: (env) => env.AI_RATE_LIMITER,
+    keyGenerator: (c) => `ai:${c.var.currentUser.id}`,
+    errorMessage: "Too many AI generation requests. Please slow down.",
+  },
   authorization: {
     resource: "page",
     action: "update",
@@ -77,7 +83,7 @@ export const streamTextRoute = createAuthorizedRoute({
       description: "AI streaming response",
     },
     [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
-      TooManyRequestsErrorSchema,
+      tooManyRequestsSchema,
       HttpStatusPhrases.TOO_MANY_REQUESTS,
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(

@@ -7,6 +7,7 @@ import { WorkspaceNotFoundError } from '@/features/workspaces/errors'
 import { NotFoundError } from '@/lib/errors'
 import { GeneralSettingsError } from '@/features/workspaces/components/general-settings-error'
 import { SettingsNotFound } from '@/features/workspaces/components/settings-not-found'
+import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 
 export const Route = createFileRoute('/app/workspaces/$workspaceId/settings/')({
   loader: async ({ context: { queryClient }, params }) => {
@@ -32,7 +33,7 @@ function WorkspaceSettingsPage() {
   return (
     <div className="h-full overflow-y-auto">
       <Suspense fallback={<GeneralSettingsLoading />}>
-        <WorkspaceSettings workspaceId={workspaceId} />
+        <WorkspaceSettings workspaceId={workspaceId as WorkspaceId} />
       </Suspense>
     </div>
   )

@@ -45,7 +45,7 @@ export function RequestAccessButton({
     ...canQueryOptions({
       resource: 'comment',
       action: 'create',
-      scope: { pageId },
+      container: { pageId },
     }),
     enabled: currentRole === undefined,
   })

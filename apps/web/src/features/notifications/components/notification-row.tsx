@@ -134,8 +134,14 @@ export const NotificationRow = memo(function NotificationRow({
     )
   }
 
-  const meta = notification.metadata as any
-  if (meta?.pageId && meta?.workspaceId) {
+  const meta = notification.metadata
+  if (
+    meta &&
+    'pageId' in meta &&
+    'workspaceId' in meta &&
+    meta.pageId &&
+    meta.workspaceId
+  ) {
     return (
       <Link
         to="/app/workspaces/$workspaceId/pages/$pageId"

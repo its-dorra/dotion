@@ -1,13 +1,13 @@
-import type { InfiniteData, QueryClient } from '@tanstack/react-query'
-import type { Notification, PaginatedData } from './types'
-import { notificationsKeys } from './query-options'
+import type { QueryClient } from '@tanstack/react-query'
+import type { Notification } from './types'
+import { notificationsInfiniteQueryOptions } from './query-options'
 
 export const markNotificationAsReadInCache = (
   queryClient: QueryClient,
   notificationId: string,
 ) => {
-  queryClient.setQueriesData<InfiniteData<PaginatedData<Notification>>>(
-    { queryKey: notificationsKeys.all },
+  queryClient.setQueryData(
+    notificationsInfiniteQueryOptions().queryKey,
     (oldData) => {
       if (!oldData) return oldData
       return {
@@ -27,8 +27,8 @@ export const markAllNotificationsAsReadInCache = (
   queryClient: QueryClient,
   workspaceId?: string,
 ) => {
-  queryClient.setQueriesData<InfiniteData<PaginatedData<Notification>>>(
-    { queryKey: notificationsKeys.all },
+  queryClient.setQueryData(
+    notificationsInfiniteQueryOptions().queryKey,
     (oldData) => {
       if (!oldData) return oldData
       return {
@@ -55,8 +55,8 @@ export const addNotificationToCache = (
   queryClient: QueryClient,
   notification: Notification,
 ) => {
-  queryClient.setQueriesData<InfiniteData<PaginatedData<Notification>>>(
-    { queryKey: notificationsKeys.all },
+  queryClient.setQueryData(
+    notificationsInfiniteQueryOptions().queryKey,
     (oldData) => {
       if (!oldData) return oldData
       const [firstPage, ...restPages] = oldData.pages
@@ -83,6 +83,31 @@ export const addNotificationToCache = (
           },
           ...restPages,
         ],
+      }
+    },
+  )
+}
+
+export const removeNotificationByInvitationIdFromCache = (
+  queryClient: QueryClient,
+  invitationId: string,
+) => {
+  queryClient.setQueryData(
+    notificationsInfiniteQueryOptions().queryKey,
+    (oldData) => {
+      if (!oldData) return oldData
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page) => ({
+          ...page,
+          payload: page.payload.filter(
+            (n) =>
+              !(
+                n.metadata?.type === 'workspace_invitation' &&
+                n.metadata.workspaceInvitationId === invitationId
+              ),
+          ),
+        })),
       }
     },
   )

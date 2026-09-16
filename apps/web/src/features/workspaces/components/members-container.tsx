@@ -6,10 +6,10 @@ import {
 import { MembersPresenter } from './members-presenter'
 import { MembersLoading } from './members-loading'
 import { MembersError } from './members-error'
-import type { WorkspaceRole } from '../types'
+import type { WorkspaceId, WorkspaceRole } from '../types'
 
 interface MembersContainerProps {
-  workspaceId: string
+  workspaceId: WorkspaceId
   canManage: boolean
   currentUserRole: WorkspaceRole
 }
