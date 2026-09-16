@@ -1,4 +1,4 @@
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface LastEditedIndicatorProps {
   lastEditedAt: Date
@@ -17,12 +17,16 @@ function formatRelativeTime(date: Date) {
   const diffDays = Math.round(diffHours / 24)
   if (diffDays < 7) return `${diffDays}d`
 
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return new Date(date).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 export function LastEditedIndicator({
   lastEditedAt,
 }: LastEditedIndicatorProps) {
+  console.log({ lastEditedAt })
   const relativeTime = formatRelativeTime(lastEditedAt)
 
   return (

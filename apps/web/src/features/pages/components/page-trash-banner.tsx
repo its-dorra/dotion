@@ -6,7 +6,7 @@ import { useRestoreFromTrash } from '../hooks/use-restore-from-trash'
 import { DeletePermanentlyDialog } from './delete-permanently-dialog'
 import type { PageId } from '@dotion/shared/pages/types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface PageTrashBannerProps {
   workspaceId: WorkspaceId

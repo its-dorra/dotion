@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { notificationsApi } from '../api'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function useMarkAsRead() {
   return useMutation(

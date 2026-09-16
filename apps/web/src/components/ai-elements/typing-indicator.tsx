@@ -1,6 +1,6 @@
 import { Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface TypingIndicatorProps {
   className?: string

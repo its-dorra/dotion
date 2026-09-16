@@ -4,7 +4,7 @@ import { pagesApi } from '../api'
 import { pagePermissionsInfiniteQueryOptions } from '../query-options'
 import { updatePagePermissionInCache } from '../utils'
 import { toast } from 'sonner'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { UpdatePagePermissionInput } from '../types'
 
 export function useUpdatePagePermission() {

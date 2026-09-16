@@ -2,7 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import SignInForm from './sign-in-form'
 import SignUpForm from './sign-up-form'
 import { SocialAuthButtons } from './social-auth-buttons'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function AuthForm() {
   return (

@@ -1,7 +1,7 @@
 import { Link, useParams } from '@tanstack/react-router'
 import { FolderX, LayoutGrid, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export interface TrashNotFoundProps {
   workspaceId?: string

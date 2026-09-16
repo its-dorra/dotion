@@ -11,7 +11,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Can } from '@/features/authorization/components/can'
 import { buildTrashTree } from '../lib/build-page-tree'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface TrashProps {
   workspaceId: string

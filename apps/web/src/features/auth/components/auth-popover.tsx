@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/popover'
 import { useAuthPopover } from '../hooks/use-auth-popover'
 
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface AuthPopoverProps {
   children?: React.ReactNode

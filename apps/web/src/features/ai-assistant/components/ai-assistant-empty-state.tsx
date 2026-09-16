@@ -1,6 +1,6 @@
 import { Bot } from 'lucide-react'
 import { Suggestions } from '@/components/ai-elements'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface AiAssistantEmptyStateProps {
   onSelectSuggestion: (prompt: string) => void

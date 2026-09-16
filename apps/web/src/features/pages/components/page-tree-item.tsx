@@ -22,7 +22,7 @@ import { hasDescendant } from '../lib/build-page-tree'
 import type { PageTreeNodeWithChildren } from '../lib/build-page-tree'
 import type { PageId } from '@dotion/shared/pages/types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface PageTreeItemProps {
   node: PageTreeNodeWithChildren

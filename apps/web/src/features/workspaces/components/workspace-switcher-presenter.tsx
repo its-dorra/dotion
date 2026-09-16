@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { WorkspaceIcon } from './workspace-icon'
 import type { Workspace } from '@dotion/shared/workspaces/types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface WorkspaceSwitcherPresenterProps {
   currentWorkspace?: Workspace

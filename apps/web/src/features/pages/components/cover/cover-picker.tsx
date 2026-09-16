@@ -20,7 +20,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { CoverUnsplashTab } from './cover-unsplash-tab'
 import { CoverGalleryTab } from './cover-gallery-tab'
 import { CoverLinkTab } from './cover-link-tab'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface CoverPickerDialogProps {
   cover?: string | null

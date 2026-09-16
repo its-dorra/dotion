@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { workspacesApi } from '../api'
 import type { UpdateMemberRoleInput } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function useUpdateMemberRole() {
   return useMutation(

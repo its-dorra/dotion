@@ -5,7 +5,7 @@ import { workspacesApi } from '../api'
 import { workspacesListQueryOptions } from '../query-options'
 import { removeNotificationByInvitationIdFromCache } from '@/features/notifications/utils'
 import type { AcceptInvitationInput } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function useAcceptInvitation() {
   const queryClient = useQueryClient()

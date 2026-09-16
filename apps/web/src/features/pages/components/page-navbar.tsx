@@ -8,7 +8,7 @@ import type { CollaborativeUser } from '../hooks/use-page-awareness'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { MessageSquare } from 'lucide-react'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '@/features/workspaces/types'
 
 interface PageNavbarProps {

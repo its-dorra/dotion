@@ -1,5 +1,5 @@
 import { Plus, Building2 } from 'lucide-react'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface WorkspaceSwitcherEmptyProps {
   onCreateWorkspace: () => void

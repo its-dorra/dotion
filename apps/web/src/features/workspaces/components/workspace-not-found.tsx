@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { FolderX, LayoutGrid, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export interface WorkspaceNotFoundProps {
   workspaceId?: string

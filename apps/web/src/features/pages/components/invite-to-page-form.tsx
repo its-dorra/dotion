@@ -13,7 +13,7 @@ import { useInviteToPage } from '../hooks/use-invite-to-page'
 import type { PagePermissionRole } from '../types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import type { PageId } from '@dotion/shared/pages/types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 const inviteToPageSchema = z.object({
   email: z.string().trim().email(),

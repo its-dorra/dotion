@@ -5,7 +5,7 @@ import { workspacesApi } from '../api'
 import { workspacesListQueryOptions } from '../query-options'
 import { toast } from 'sonner'
 import { useNavigate } from '@tanstack/react-router'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function useCreateWorkspace() {
   const navigate = useNavigate()

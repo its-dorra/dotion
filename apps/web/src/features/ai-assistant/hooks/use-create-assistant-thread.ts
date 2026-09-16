@@ -3,7 +3,7 @@ import { resultMutationOptions } from '@/integrations/tanstack-query/better-resu
 import { aiAssistantApi } from '../api'
 import { addThreadToCache } from '../utils'
 import { toast } from 'sonner'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 
 export function useCreateAssistantThread(workspaceId: WorkspaceId) {

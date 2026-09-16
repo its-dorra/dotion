@@ -4,7 +4,7 @@ import { resultMutationOptions } from '@/integrations/tanstack-query/better-resu
 import { workspacesApi } from '../api'
 import { removeNotificationByInvitationIdFromCache } from '@/features/notifications/utils'
 import type { DeclineInvitationInput } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function useDeclineInvitation() {
   const queryClient = useQueryClient()

@@ -6,7 +6,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { InviteMemberForm } from './invite-member-form'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 import type { WorkspaceId } from '../types'
 

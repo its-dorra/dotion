@@ -6,7 +6,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { CreateWorkspaceForm } from './create-workspace-form'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface CreateWorkspaceDrawerProps {
   open: boolean

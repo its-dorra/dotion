@@ -2,7 +2,7 @@ import { CheckCircle2, Loader2, Mail } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { InfiniteScroll } from '@/components/ui/infinite-scroll'
 import type { UserSearchResult } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface InviteMemberSearchResultsProps {
   isOpen: boolean

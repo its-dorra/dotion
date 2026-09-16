@@ -12,7 +12,7 @@ import {
 import { assistantThreadsInfiniteQueryOptions } from '../query-options'
 import { useCreateAssistantThread } from '../hooks/use-create-assistant-thread'
 import { useDeleteAssistantThread } from '../hooks/use-delete-assistant-thread'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import type { AssistantThreadId } from '../types'
 

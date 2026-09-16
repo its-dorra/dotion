@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { useEmptyTrash } from '../hooks/use-empty-trash'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 
 interface EmptyTrashDialogProps {

@@ -10,7 +10,7 @@ import {
 } from '../lib/document-background'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function DocumentBackgroundPicker() {
   const {
@@ -126,7 +126,9 @@ export function DocumentBackgroundPicker() {
               <button
                 key={col.id}
                 type="button"
-                onClick={() => setBackgroundColor(col.id as DocumentBackgroundColor)}
+                onClick={() =>
+                  setBackgroundColor(col.id as DocumentBackgroundColor)
+                }
                 className={cn(
                   'group relative flex h-8 items-center gap-2 rounded-full border px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   isSelected
@@ -179,7 +181,9 @@ export function DocumentBackgroundPicker() {
             <button
               key={preset.id}
               type="button"
-              onClick={() => setBackground(preset.id as DocumentBackgroundPreset)}
+              onClick={() =>
+                setBackground(preset.id as DocumentBackgroundPreset)
+              }
               className={cn(
                 'group relative flex flex-col items-start gap-2.5 rounded-xl border p-2.5 text-left transition-all duration-150 hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
                 isSelected

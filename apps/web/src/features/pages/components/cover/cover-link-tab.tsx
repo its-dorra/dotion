@@ -2,7 +2,7 @@ import { useAppForm } from '@/integrations/tanstack-form/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface CoverLinkTabProps {
   onSelect: (url: string) => void

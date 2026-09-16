@@ -1,4 +1,4 @@
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import {
   Sparkles,
   Heart,

@@ -7,7 +7,7 @@ import { workspaceDetailQueryOptions } from '../query-options'
 import { canQueryOptions } from '@/features/authorization/query-options'
 import { useUpdateWorkspace } from '../hooks/use-update-workspace'
 import { WorkspaceIcon } from './workspace-icon'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '../types'
 
 interface GeneralSettingsProps {

@@ -7,7 +7,7 @@ import {
   pageDetailQueryOptions,
 } from '../query-options'
 import { toast } from 'sonner'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { EmptyTrashInput, PageId } from '../types'
 
 export function useEmptyTrash() {

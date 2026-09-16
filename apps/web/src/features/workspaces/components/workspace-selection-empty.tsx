@@ -9,7 +9,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface WorkspaceSelectionEmptyProps {
   onCreateWorkspace: () => void

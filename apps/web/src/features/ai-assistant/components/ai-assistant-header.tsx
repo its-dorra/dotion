@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { Sparkles } from 'lucide-react'
 import { SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { AiAssistantThreadSelector } from './ai-assistant-thread-selector'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import type { AssistantThreadId } from '../types'
 

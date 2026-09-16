@@ -12,7 +12,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import { unsplashInfiniteQueryOptions } from '../../unsplash/query-options'
 import { unsplashApi } from '../../unsplash/api'
 import type { UnsplashPhoto } from '../../unsplash/types'

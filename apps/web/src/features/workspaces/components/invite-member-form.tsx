@@ -9,7 +9,7 @@ import { workspaceCandidateUsersInfiniteQueryOptions } from '../query-options'
 import { useInviteMember } from '../hooks/use-invite-member'
 import { InviteMemberSelectedUser } from './invite-member-selected-user'
 import { InviteMemberSearchResults } from './invite-member-search-results'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { UserSearchResult } from '@dotion/shared/users/types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 

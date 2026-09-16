@@ -5,7 +5,7 @@ import { workspaceDetailQueryOptions } from '../query-options'
 import { canQueryOptions } from '@/features/authorization/query-options'
 import { GeneralSettings } from './general-settings'
 import { MembersContainer } from './members-container'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId, WorkspaceRole } from '../types'
 
 interface WorkspaceSettingsProps {

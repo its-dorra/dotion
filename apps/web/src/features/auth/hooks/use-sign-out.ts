@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useBetterAuth } from './use-better-auth'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import { authQueryOptions } from '../query-options'
 
 export const useSignOut = () => {

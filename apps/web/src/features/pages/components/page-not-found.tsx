@@ -1,7 +1,7 @@
 import { Link, useParams } from '@tanstack/react-router'
 import { FileX, LayoutGrid, Trash2, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export interface PageNotFoundProps {
   workspaceId?: string

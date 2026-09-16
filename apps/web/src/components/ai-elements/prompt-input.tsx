@@ -2,7 +2,7 @@ import * as React from 'react'
 import { ArrowUp, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface PromptInputProps {
   value: string

@@ -20,7 +20,7 @@ import { usePwaInstall } from '@/hooks/use-pwa-install'
 import { PwaInstallDialog } from '@/components/pwa/pwa-install-dialog'
 import type { User } from '../types'
 import { useSignOut } from '../hooks/use-sign-out'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 type UserButtonProps = {
   user: User

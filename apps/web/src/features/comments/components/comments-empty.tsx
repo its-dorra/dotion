@@ -8,7 +8,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { CommentComposer } from './comment-composer'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '@/features/workspaces/types'
 import type { PageId } from '@dotion/shared/pages/types'
 

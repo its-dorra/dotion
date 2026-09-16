@@ -11,7 +11,7 @@ import { WorkspaceIcon } from './workspace-icon'
 import { Can } from '@/features/authorization/components/can'
 import { workspaceDetailQueryOptions } from '../query-options'
 import { pageTreeQueryOptions } from '@/features/pages/query-options'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 
 interface WorkspaceDashboardProps {

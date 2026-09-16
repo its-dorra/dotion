@@ -7,7 +7,7 @@ import {
   workspaceDetailQueryOptions,
 } from '../query-options'
 import type { UpdateWorkspaceInput } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function useUpdateWorkspace() {
   const queryClient = useQueryClient()

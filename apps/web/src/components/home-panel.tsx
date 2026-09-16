@@ -6,7 +6,7 @@ import { WorkspaceIcon } from '@/features/workspaces/components/workspace-icon'
 import { workspacesListQueryOptions } from '@/features/workspaces/query-options'
 import { cn } from '@/lib/utils'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 import { SearchTrigger } from '@/features/search/components/search-trigger'
 

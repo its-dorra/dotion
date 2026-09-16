@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/empty'
 import { useCreatePage } from '../hooks/use-create-page'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface PageTreeEmptyProps {
   workspaceId: WorkspaceId

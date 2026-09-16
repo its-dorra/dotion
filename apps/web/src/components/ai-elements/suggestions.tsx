@@ -1,6 +1,6 @@
 import { Sparkles, ArrowUpRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export interface SuggestionItem {
   id: string

@@ -3,7 +3,7 @@ import { resultMutationOptions } from '@/integrations/tanstack-query/better-resu
 import { pagesApi } from '../api'
 import { updatePageAccessRequestStatusInCache } from '../utils'
 import { toast } from 'sonner'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { PageId } from '@dotion/shared/pages/types'
 import type { WorkspaceId } from '@/features/workspaces/types'
 

@@ -11,7 +11,7 @@ import { WorkspaceIcon } from './workspace-icon'
 import { useAcceptInvitation } from '../hooks/use-accept-invitation'
 import { useDeclineInvitation } from '../hooks/use-decline-invitation'
 import type { WorkspaceInvitation } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface InvitationDialogProps {
   invitation: WorkspaceInvitation

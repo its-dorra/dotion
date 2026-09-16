@@ -4,7 +4,7 @@ import { useAppForm } from '@/integrations/tanstack-form/form'
 import type { SignUpSchemaType } from '../types'
 import { SignUpSchema } from '../schema'
 import { useSignUp } from '../hooks/use-sign-up'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export default function SignUpForm() {
   const signUpMutation = useSignUp()

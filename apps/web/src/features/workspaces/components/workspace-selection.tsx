@@ -8,7 +8,7 @@ import { workspacesListQueryOptions } from '../query-options'
 import { WorkspaceCard } from './workspace-card'
 import { WorkspaceSelectionEmpty } from './workspace-selection-empty'
 import { CreateWorkspaceModal } from './create-workspace-modal'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function WorkspaceSelection() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)

@@ -1,5 +1,5 @@
 import type { WorkspaceInvitationNotification } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function WorkspaceInvitationContent({
   notification,

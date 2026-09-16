@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { workspacesApi } from '../api'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 import type { WorkspaceId, WorkspaceInvitationId } from '../types'
 

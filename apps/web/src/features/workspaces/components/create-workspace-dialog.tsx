@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { CreateWorkspaceForm } from './create-workspace-form'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface CreateWorkspaceDialogProps {
   open: boolean

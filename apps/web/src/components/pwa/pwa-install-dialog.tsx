@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface PwaInstallDialogProps {
   open: boolean

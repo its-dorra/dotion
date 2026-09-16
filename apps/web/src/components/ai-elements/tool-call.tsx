@@ -13,7 +13,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { ToolPart } from '@/features/ai-assistant/types'
 
 export interface ToolCallProps {

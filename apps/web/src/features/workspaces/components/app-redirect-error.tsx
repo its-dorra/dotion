@@ -2,7 +2,7 @@ import type { ErrorComponentProps } from '@tanstack/react-router'
 import { Link } from '@tanstack/react-router'
 import { AlertTriangle, RefreshCw, LayoutGrid } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export interface AppRedirectErrorProps extends Partial<ErrorComponentProps> {
   message?: string

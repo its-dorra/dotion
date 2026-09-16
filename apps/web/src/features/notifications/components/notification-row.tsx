@@ -7,7 +7,7 @@ import { PageInvitationContent } from './page-invitation-content'
 import { PermissionChangeContent } from './permission-change-content'
 import { PageAccessRequestContent } from './page-access-request-content'
 import { useMarkAsRead } from '../hooks/use-mark-as-read'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type {
   Notification,
   WorkspaceInvitationNotification,

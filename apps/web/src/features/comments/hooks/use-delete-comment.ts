@@ -5,7 +5,7 @@ import type { DeleteCommentInput } from '../types'
 import { commentsInfiniteQueryOptions } from '../query-options'
 import { handleCommentDeletedWsMessage } from '../utils'
 import { toast } from 'sonner'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export type DeleteCommentVariables = DeleteCommentInput
 

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface PageTitleProps {
   title: string

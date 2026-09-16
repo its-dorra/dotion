@@ -1,7 +1,7 @@
 import type { ErrorComponentProps } from '@tanstack/react-router'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export interface LandingErrorProps extends Partial<ErrorComponentProps> {
   message?: string

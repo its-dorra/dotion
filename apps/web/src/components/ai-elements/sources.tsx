@@ -1,7 +1,7 @@
 import { FileText, Hash, ExternalLink } from 'lucide-react'
 import type { AssistantCitation } from '@dotion/shared/assistant/types'
 import { cn } from '@/lib/utils'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface SourcesProps {
   citations: AssistantCitation[]

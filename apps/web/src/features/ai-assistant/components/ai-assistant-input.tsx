@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { PromptInput } from '@/components/ai-elements'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface AiAssistantInputProps {
   onSendMessage: (content: string) => Promise<void>

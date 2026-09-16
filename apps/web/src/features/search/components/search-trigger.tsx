@@ -1,6 +1,6 @@
 import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface SearchTriggerProps {
   onClick: () => void

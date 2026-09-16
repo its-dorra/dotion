@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Share2 } from 'lucide-react'
 import { PagePermissionRow } from './page-permission-row'
 import type { Page, PageMemberPermission } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface ShareDropdownPresenterProps {
   page: Page

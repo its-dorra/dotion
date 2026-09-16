@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/dialog'
 import { SearchContent } from './search-content'
 import { SearchSheet } from './search-sheet'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 
 export interface SearchDialogProps {

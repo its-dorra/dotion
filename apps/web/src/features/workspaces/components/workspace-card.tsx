@@ -1,7 +1,7 @@
 import { Users } from 'lucide-react'
 import { WorkspaceIcon } from './workspace-icon'
 import type { Workspace } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface WorkspaceCardProps {
   workspace: Workspace

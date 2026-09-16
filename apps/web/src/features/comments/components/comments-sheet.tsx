@@ -5,7 +5,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { CommentsContainer } from './comments-container'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '@/features/workspaces/types'
 import type { PageId } from '@dotion/shared/pages/types'
 import type { PagePermissionRole } from '@/features/pages/types'

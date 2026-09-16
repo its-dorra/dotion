@@ -5,7 +5,7 @@ import { InfiniteScroll } from '@/components/ui/infinite-scroll'
 import type { Comment } from '../types'
 import type { WorkspaceId } from '@/features/workspaces/types'
 import type { PageId } from '@dotion/shared/pages/types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface CommentsPanelPresenterProps {
   comments: Comment[]

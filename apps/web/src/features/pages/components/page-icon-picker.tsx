@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Smile, Trash2 } from 'lucide-react'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface PageIconPickerProps {
   icon?: string | null

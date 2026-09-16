@@ -1,7 +1,7 @@
 import { ImageIcon, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CoverPicker } from './cover/cover-picker'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export { CoverPicker as CoverPickerDialog } from './cover/cover-picker'
 

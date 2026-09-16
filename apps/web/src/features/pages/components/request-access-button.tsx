@@ -17,7 +17,7 @@ import {
 import { canQueryOptions } from '@/features/authorization/query-options'
 import { pageAccessRequestStatusQueryOptions } from '../query-options'
 import { useRequestPageAccess } from '../hooks/use-request-page-access'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { AllPageRole, PageId } from '@dotion/shared/pages/types'
 import type { WorkspaceId } from '@/features/workspaces/types'
 

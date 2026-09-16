@@ -3,7 +3,7 @@ import { resultMutationOptions } from '@/integrations/tanstack-query/better-resu
 import { pagesApi } from '../api'
 import { addPageMemberPermissionToCache } from '../utils'
 import { toast } from 'sonner'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { InviteToPageInput } from '../types'
 
 export function useInviteToPage() {

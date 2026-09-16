@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { usePwaInstall } from '@/hooks/use-pwa-install'
 import { PwaInstallDialog } from '@/components/pwa/pwa-install-dialog'
 import { useSignOut } from '../hooks/use-sign-out'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { User } from '../types'
 
 interface UserMenuPresenterProps {

@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { FileQuestion, Home, LayoutGrid } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export interface NotFoundProps {
   children?: React.ReactNode

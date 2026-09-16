@@ -8,7 +8,7 @@ import {
 } from '../query-options'
 import { addOrUpdatePageInTree, removePageFromTrash } from '../utils'
 import { toast } from 'sonner'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { RestoreFromTrashInput } from '../types'
 
 export function useRestoreFromTrash() {

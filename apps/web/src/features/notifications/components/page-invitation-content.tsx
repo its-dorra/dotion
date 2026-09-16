@@ -1,5 +1,5 @@
 import type { PageInvitationNotification } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 function getTranslatedRole(role: string) {
   switch (role) {

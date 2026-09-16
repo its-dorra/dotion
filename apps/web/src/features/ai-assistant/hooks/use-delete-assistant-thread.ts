@@ -4,7 +4,7 @@ import { aiAssistantApi } from '../api'
 import { assistantThreadsInfiniteQueryOptions } from '../query-options'
 import { removeThreadFromCache } from '../utils'
 import { toast } from 'sonner'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import type { AssistantThreadId } from '@dotion/shared/ids'
 

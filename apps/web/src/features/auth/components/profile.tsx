@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useSession } from '../hooks/use-session'
 import { DocumentBackgroundPicker } from '@/features/pages/components/document-background-picker'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 function getInitials(name: string) {
   return name

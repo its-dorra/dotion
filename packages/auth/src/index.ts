@@ -4,6 +4,7 @@ import * as schema from "@dotion/db/schema";
 import { betterAuth, type SecondaryStorage } from "better-auth";
 import { openAPI } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { i18n, locales } from "@better-auth/i18n";
 
 interface AuthEnv {
   BETTER_AUTH_SECRET: string;
@@ -63,8 +64,13 @@ export function createAuth(
       openAPI({
         disableDefaultReference: true,
       }),
+      i18n({
+        translations: locales,
+        detection: ["cookie", "header"],
+        localeCookie: "DOTION_LANG",
+      }),
     ],
-  });
+  }) as unknown as ReturnType<typeof betterAuth>;
 }
 
 export type User = Omit<

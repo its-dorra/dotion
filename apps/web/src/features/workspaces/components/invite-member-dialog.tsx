@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { InviteMemberForm } from './invite-member-form'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 import type { WorkspaceId } from '../types'
 

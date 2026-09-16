@@ -13,7 +13,7 @@ import { Can } from '@/features/authorization/components/can'
 import { useRemoveMember } from '../hooks/use-remove-member'
 import type { WorkspaceMember, WorkspaceId } from '../types'
 import type { UserId } from '@dotion/shared/users/types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface MemberRowProps {
   workspaceId: string

@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { useDeletePermanently } from '../hooks/use-delete-permanently'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { PageId } from '@dotion/shared/pages/types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 

@@ -2,7 +2,7 @@ import { FaGithub as Github } from 'react-icons/fa'
 import { FcGoogle as Google } from 'react-icons/fc'
 import { Button } from '@/components/ui/button'
 import { useSignIn } from '../hooks/use-sign-in'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function SocialAuthButtons() {
   const signInMutation = useSignIn()

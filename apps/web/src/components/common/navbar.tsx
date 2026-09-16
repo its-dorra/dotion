@@ -3,7 +3,7 @@ import ThemeToggle from './theme-toggle'
 import { Button } from '../ui/button'
 import DotionMark from './dotion-mark'
 import AuthButton from '@/features/auth/components/auth-button'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export default function Navbar() {
   const navItems = [

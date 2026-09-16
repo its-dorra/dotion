@@ -7,7 +7,7 @@ import { PendingInvitationRow } from './pending-invitation-row'
 import { MembersEmpty } from './members-empty'
 import { InviteMemberModal } from './invite-member-modal'
 import { InfiniteScroll } from '@/components/ui/infinite-scroll'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type {
   WorkspaceMember,
   WorkspaceInvitation,

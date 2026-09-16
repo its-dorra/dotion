@@ -8,7 +8,7 @@ import { useRestoreFromTrash } from '../hooks/use-restore-from-trash'
 import type { TrashedPageTreeNode } from '../lib/build-page-tree'
 import type { PageId } from '@dotion/shared/pages/types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface TrashedPageTreeItemProps {
   node: TrashedPageTreeNode

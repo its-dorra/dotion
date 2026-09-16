@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface SharePermissionsErrorProps {
   message: string

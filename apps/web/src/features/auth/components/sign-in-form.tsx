@@ -4,7 +4,7 @@ import { useAppForm } from '@/integrations/tanstack-form/form'
 import type { SignInSchemaType } from '../types'
 import { SignInSchema } from '../schema'
 import { useSignIn } from '../hooks/use-sign-in'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export default function SignInForm() {
   const signInMutation = useSignIn()

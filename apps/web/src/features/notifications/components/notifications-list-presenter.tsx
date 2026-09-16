@@ -6,7 +6,7 @@ import { useMarkAllAsRead } from '../hooks/use-mark-all-as-read'
 import { InvitationResponseModal } from '@/features/workspaces/components/invitation-response-modal'
 import type { WorkspaceInvitation } from '@/features/workspaces/types'
 import type { Notification, WorkspaceInvitationNotification } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface NotificationsListPresenterProps {
   notifications: Notification[]

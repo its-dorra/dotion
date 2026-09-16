@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceRole } from '../types'
 
 function getRoleLabel(role: WorkspaceRole): string {

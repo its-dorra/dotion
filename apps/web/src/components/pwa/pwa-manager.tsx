@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useServiceWorker } from '@/hooks/use-service-worker'
 import { useOnlineStatus } from '@/hooks/use-online-status'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function PwaManager() {
   const { updateAvailable, updateServiceWorker } = useServiceWorker()

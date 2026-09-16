@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Check, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface CodeBlockProps {
   language?: string

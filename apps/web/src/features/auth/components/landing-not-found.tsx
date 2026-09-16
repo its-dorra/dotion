@@ -1,7 +1,7 @@
 import { Link, type NotFoundRouteProps } from '@tanstack/react-router'
 import { Home, FileQuestion } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 export function LandingNotFound(_props: Partial<NotFoundRouteProps> = {}) {
   return (

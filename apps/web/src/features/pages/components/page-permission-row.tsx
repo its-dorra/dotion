@@ -10,7 +10,7 @@ import { useUpdatePagePermission } from '../hooks/use-update-page-permission'
 import type { PageMemberPermission, PagePermissionRole } from '../types'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import type { PageId } from '@dotion/shared/pages/types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 function getTranslatedRole(role: string) {
   switch (role) {

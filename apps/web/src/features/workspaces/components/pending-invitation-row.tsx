@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Can } from '@/features/authorization/components/can'
 import { useCancelWorkspaceInvitation } from '../hooks/use-cancel-workspace-invitation'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { WorkspaceInvitation } from '../types'
 import type { WorkspaceInvitationId } from '@dotion/shared/workspaces/types'
 

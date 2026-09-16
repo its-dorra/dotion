@@ -1,6 +1,6 @@
 import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 interface AiAssistantTriggerProps {
   onClick: () => void

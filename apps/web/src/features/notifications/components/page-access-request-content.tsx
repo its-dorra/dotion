@@ -3,7 +3,7 @@ import { useApprovePageAccess } from '@/features/pages/hooks/use-approve-page-ac
 import { useRejectPageAccess } from '@/features/pages/hooks/use-reject-page-access'
 import { useMarkAsRead } from '../hooks/use-mark-as-read'
 import type { PageAccessRequestNotification } from '../types'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 
 function getTranslatedRole(role: string) {
   switch (role) {

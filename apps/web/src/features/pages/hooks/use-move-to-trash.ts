@@ -9,7 +9,7 @@ import {
 } from '../query-options'
 import { removePageAndDescendantsFromTree, addPageToTrash } from '../utils'
 import { toast } from 'sonner'
-import * as m from '@/paraglide/messages'
+import { m } from '@/paraglide/messages'
 import type { MoveToTrashInput } from '../types'
 
 export function useMoveToTrash() {
