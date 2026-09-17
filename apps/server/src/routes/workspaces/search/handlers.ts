@@ -1,6 +1,6 @@
 import * as HttpStatusCodes from "stoker/http-status-codes";
 import type { AppRouteHandler } from "#/lib/types";
-import { errorResponseJson } from "#/lib/utils";
+import { errorResponseJson, successResponseJson } from "#/lib/utils";
 import type { SearchRoute } from "./routes";
 
 export const searchHandler: AppRouteHandler<SearchRoute> = async (c) => {
@@ -16,12 +16,19 @@ export const searchHandler: AppRouteHandler<SearchRoute> = async (c) => {
   });
 
   if (result.isErr()) {
-    console.error("Search error:", result.error);
-    return c.json(
-      errorResponseJson("Failed to execute search"),
-      HttpStatusCodes.INTERNAL_SERVER_ERROR,
-    );
+    return result.error.match({
+      DatabaseError: () =>
+        c.json(
+          errorResponseJson("Failed to execute search"),
+          HttpStatusCodes.INTERNAL_SERVER_ERROR,
+        ),
+      EmbeddingError: () =>
+        c.json(
+          errorResponseJson("Failed to generate query embedding"),
+          HttpStatusCodes.INTERNAL_SERVER_ERROR,
+        ),
+    });
   }
 
-  return c.json(result.value, HttpStatusCodes.OK);
+  return c.json(successResponseJson(result.value), HttpStatusCodes.OK);
 };

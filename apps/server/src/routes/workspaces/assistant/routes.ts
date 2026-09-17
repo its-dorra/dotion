@@ -21,6 +21,8 @@ import {
 } from "#/lib/http-response-helpers";
 import { z } from "zod";
 
+import { zodSuccessResponse } from "#/lib/zod-helpers";
+
 const tags = ["AI Assistant"];
 
 export const listThreadsRoute = createAuthorizedRoute({
@@ -46,7 +48,7 @@ export const listThreadsRoute = createAuthorizedRoute({
   },
   responses: {
     [HttpStatusCodes.OK]: jsonContent(
-      paginatedThreadsResponseSchema,
+      zodSuccessResponse(paginatedThreadsResponseSchema),
       HttpStatusPhrases.OK,
     ),
     [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
@@ -89,7 +91,7 @@ export const createThreadRoute = createAuthorizedRoute({
   },
   responses: {
     [HttpStatusCodes.CREATED]: jsonContent(
-      assistantThreadSchema,
+      zodSuccessResponse(assistantThreadSchema),
       HttpStatusPhrases.CREATED,
     ),
     [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
@@ -133,7 +135,7 @@ export const deleteThreadRoute = createAuthorizedRoute({
   },
   responses: {
     [HttpStatusCodes.OK]: jsonContent(
-      z.object({ success: z.literal(true) }),
+      zodSuccessResponse(z.object({ success: z.literal(true) })),
       HttpStatusPhrases.OK,
     ),
     [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
@@ -178,7 +180,7 @@ export const listMessagesRoute = createAuthorizedRoute({
   },
   responses: {
     [HttpStatusCodes.OK]: jsonContent(
-      paginatedMessagesResponseSchema,
+      zodSuccessResponse(paginatedMessagesResponseSchema),
       HttpStatusPhrases.OK,
     ),
     [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(

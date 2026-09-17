@@ -1,7 +1,7 @@
 import * as HttpStatusCodes from "stoker/http-status-codes";
 import { createUIMessageStreamResponse, toUIMessageStream } from "ai";
 import type { AppRouteHandler } from "#/lib/types";
-import { errorResponseJson } from "#/lib/utils";
+import { errorResponseJson, successResponseJson } from "#/lib/utils";
 import type {
   ListThreadsRoute,
   CreateThreadRoute,
@@ -33,7 +33,7 @@ export const listThreadsHandler: AppRouteHandler<ListThreadsRoute> = async (
     });
   }
 
-  return c.json(result.value, HttpStatusCodes.OK);
+  return c.json(successResponseJson(result.value), HttpStatusCodes.OK);
 };
 
 export const createThreadHandler: AppRouteHandler<CreateThreadRoute> = async (
@@ -57,7 +57,7 @@ export const createThreadHandler: AppRouteHandler<CreateThreadRoute> = async (
     });
   }
 
-  return c.json(result.value, HttpStatusCodes.CREATED);
+  return c.json(successResponseJson(result.value), HttpStatusCodes.CREATED);
 };
 
 export const deleteThreadHandler: AppRouteHandler<DeleteThreadRoute> = async (
@@ -77,7 +77,10 @@ export const deleteThreadHandler: AppRouteHandler<DeleteThreadRoute> = async (
     });
   }
 
-  return c.json({ success: true as const }, HttpStatusCodes.OK);
+  return c.json(
+    successResponseJson({ success: true as const }),
+    HttpStatusCodes.OK,
+  );
 };
 
 export const listMessagesHandler: AppRouteHandler<ListMessagesRoute> = async (
@@ -101,7 +104,7 @@ export const listMessagesHandler: AppRouteHandler<ListMessagesRoute> = async (
     });
   }
 
-  return c.json(result.value, HttpStatusCodes.OK);
+  return c.json(successResponseJson(result.value), HttpStatusCodes.OK);
 };
 
 export const streamAssistantChatHandler: AppRouteHandler<
@@ -120,7 +123,6 @@ export const streamAssistantChatHandler: AppRouteHandler<
   });
 
   if (result.isErr()) {
-    console.error("Error in Assistant stream chat:", result.error);
     return result.error.match({
       QuotaExceededError: (err) =>
         c.json(

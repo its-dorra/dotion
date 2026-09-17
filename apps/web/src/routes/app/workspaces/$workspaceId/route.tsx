@@ -44,7 +44,7 @@ function RouteComponent() {
   }, [])
 
   return (
-    <WorkspaceWsProvider workspaceId={workspaceId}>
+    <WorkspaceWsProvider workspaceId={workspaceId as WorkspaceId}>
       <HandleWsRealtime />
       <Outlet />
       <SearchDialog

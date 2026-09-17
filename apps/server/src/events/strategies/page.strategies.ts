@@ -314,6 +314,7 @@ export class PageAccessRequestResolvedStrategy implements DomainEventStrategy<"p
     private readonly notificationsService: NotificationsService,
     private readonly cacheInvalidator: PermissionCacheInvalidator,
     private readonly workspacePublisher: WorkspaceEventPublisher,
+    private readonly pagePublisher: PageEventPublisher,
   ) {}
 
   async handle(
@@ -354,6 +355,11 @@ export class PageAccessRequestResolvedStrategy implements DomainEventStrategy<"p
               userId: event.payload.requesterId,
               role: event.payload.role ?? "editor",
             },
+          ),
+          this.pagePublisher.updateUserRole(
+            event.payload.pageId,
+            event.payload.requesterId,
+            event.payload.role ?? "editor",
           ),
         );
       }

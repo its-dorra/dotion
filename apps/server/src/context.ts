@@ -165,6 +165,7 @@ function buildServices(
         notifications,
         kvCache,
         workspacePublisher,
+        pagePublisher,
       ),
     )
     .register(

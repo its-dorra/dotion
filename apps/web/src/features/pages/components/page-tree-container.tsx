@@ -7,6 +7,7 @@ import { PageTreeLoading } from './page-tree-loading'
 import { PageTreeError } from './page-tree-error'
 import { PageTreeEmpty } from './page-tree-empty'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
+import { Can } from '@/features/authorization/components/can'
 
 interface PageTreeContainerProps {
   workspaceId: WorkspaceId
@@ -38,7 +39,11 @@ export function PageTreeContainer({
   }
 
   if (query.data.length === 0) {
-    return <PageTreeEmpty workspaceId={workspaceId} />
+    return (
+      <Can resource="page" action="create">
+        <PageTreeEmpty workspaceId={workspaceId} />
+      </Can>
+    )
   }
 
   return (

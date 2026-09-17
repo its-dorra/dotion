@@ -12,6 +12,11 @@ export const SYNC_STEP_1 = 0;
 export const SYNC_STEP_2 = 1;
 export const SYNC_UPDATE = 2;
 
+export const WS_MSG_SYNC_STEP_1 = "yjs:sync:step1";
+export const WS_MSG_SYNC_STEP_2 = "yjs:sync:step2";
+export const WS_MSG_SYNC_UPDATE = "yjs:sync:update";
+export const WS_MSG_AWARENESS = "yjs:awareness";
+
 export type YjsProtocolResult = {
   reply?: Uint8Array;
   broadcastData?: Uint8Array;

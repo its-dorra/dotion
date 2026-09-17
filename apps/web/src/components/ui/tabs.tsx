@@ -5,9 +5,6 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { Tabs as TabsPrimitive } from 'radix-ui'
 
 import { cn } from '@/lib/utils'
-import { getTextDirection } from '@/paraglide/runtime'
-
-const dir = getTextDirection()
 
 function Tabs({
   className,
@@ -54,7 +51,6 @@ function TabsList({
       data-variant={variant}
       className={cn(tabsListVariants({ variant }), className)}
       {...props}
-      dir={dir}
     />
   )
 }

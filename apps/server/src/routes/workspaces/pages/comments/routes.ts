@@ -161,6 +161,10 @@ export const resolveCommentRoute = createAuthorizedRoute({
       badRequestErrorSchema,
       HttpStatusPhrases.BAD_REQUEST,
     ),
+    [HttpStatusCodes.NOT_FOUND]: jsonContent(
+      notFoundErrorSchema,
+      HttpStatusPhrases.NOT_FOUND,
+    ),
     [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(
       tooManyRequestsSchema,
       HttpStatusPhrases.TOO_MANY_REQUESTS,

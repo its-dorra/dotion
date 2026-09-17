@@ -20,7 +20,6 @@ export const streamTextHandler: AppRouteHandler<StreamTextRoute> = async (
   });
 
   if (result.isErr()) {
-    console.error("Error in AI stream generation:", result.error);
     return result.error.match({
       QuotaExceededError: (err) =>
         c.json(

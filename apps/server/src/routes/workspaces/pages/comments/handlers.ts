@@ -34,43 +34,35 @@ export const listCommentsHandler: AppRouteHandler<ListCommentsRoute> = async (
 export const createCommentHandler: AppRouteHandler<CreateCommentRoute> = async (
   c,
 ) => {
-  try {
-    const { pageId } = c.req.valid("param");
-    const body = c.req.valid("json");
-    const currentUser = c.var.currentUser;
+  const { pageId } = c.req.valid("param");
+  const body = c.req.valid("json");
+  const currentUser = c.var.currentUser;
 
-    const result = await c.var.services.comments.createComment({
-      userId: currentUser.id,
-      pageId,
-      body: body.body,
-      parentId: body.parentId ?? null,
+  const result = await c.var.services.comments.createComment({
+    userId: currentUser.id,
+    pageId,
+    body: body.body,
+    parentId: body.parentId ?? null,
+  });
+
+  if (result.isErr()) {
+    return result.error.match({
+      DatabaseError: () =>
+        c.json(
+          errorResponseJson("Failed to create comment"),
+          HttpStatusCodes.INTERNAL_SERVER_ERROR,
+        ),
+      NotFoundError: () =>
+        c.json(
+          errorResponseJson("Parent comment not found"),
+          HttpStatusCodes.NOT_FOUND,
+        ),
     });
-
-    if (result.isErr()) {
-      return result.error.match({
-        DatabaseError: () =>
-          c.json(
-            errorResponseJson("Failed to create comment"),
-            HttpStatusCodes.INTERNAL_SERVER_ERROR,
-          ),
-        NotFoundError: () =>
-          c.json(
-            errorResponseJson("Parent comment not found"),
-            HttpStatusCodes.NOT_FOUND,
-          ),
-      });
-    }
-
-    const comment = result.value;
-
-    return c.json(successResponseJson(comment), HttpStatusCodes.CREATED);
-  } catch (e) {
-    console.error("Error creating comment:", e);
-    return c.json(
-      errorResponseJson("Failed to create comment"),
-      HttpStatusCodes.INTERNAL_SERVER_ERROR,
-    );
   }
+
+  const comment = result.value;
+
+  return c.json(successResponseJson(comment), HttpStatusCodes.CREATED);
 };
 
 export const resolveCommentHandler: AppRouteHandler<
@@ -83,10 +75,18 @@ export const resolveCommentHandler: AppRouteHandler<
     commentId,
   });
   if (result.isErr()) {
-    return c.json(
-      errorResponseJson("Failed to resolve comment"),
-      HttpStatusCodes.INTERNAL_SERVER_ERROR,
-    );
+    return result.error.match({
+      DatabaseError: () =>
+        c.json(
+          errorResponseJson("Failed to resolve comment"),
+          HttpStatusCodes.INTERNAL_SERVER_ERROR,
+        ),
+      NotFoundError: () =>
+        c.json(
+          errorResponseJson("Comment not found"),
+          HttpStatusCodes.NOT_FOUND,
+        ),
+    });
   }
 
   return c.json(successResponseJson(null), HttpStatusCodes.OK);

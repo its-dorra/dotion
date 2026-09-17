@@ -6,9 +6,9 @@ import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
 import {
   MSG_SYNC,
-  SYNC_STEP_1,
-  SYNC_STEP_2,
-  SYNC_UPDATE,
+  WS_MSG_SYNC_STEP_1,
+  WS_MSG_SYNC_STEP_2,
+  WS_MSG_SYNC_UPDATE,
 } from "../../yjs-protocol";
 
 export interface YjsSyncPayload {
@@ -21,7 +21,7 @@ export class YjsSyncStep1Strategy implements WsStrategy<
   PageWsContext,
   YjsSyncPayload
 > {
-  readonly messageType = SYNC_STEP_1;
+  readonly messageType = WS_MSG_SYNC_STEP_1;
   readonly requiredPermission: PermissionKey = "page:view";
 
   handle(ctx: PageWsContext, payload: YjsSyncPayload): void {
@@ -49,7 +49,7 @@ export class YjsSyncStep2Strategy implements WsStrategy<
   PageWsContext,
   YjsSyncPayload
 > {
-  readonly messageType = SYNC_STEP_2;
+  readonly messageType = WS_MSG_SYNC_STEP_2;
   readonly requiredPermission: PermissionKey = "page:view";
 
   handle(ctx: PageWsContext, payload: YjsSyncPayload): void {
@@ -77,7 +77,7 @@ export class YjsSyncUpdateStrategy implements WsStrategy<
   PageWsContext,
   YjsSyncPayload
 > {
-  readonly messageType = SYNC_UPDATE;
+  readonly messageType = WS_MSG_SYNC_UPDATE;
   readonly requiredPermission: PermissionKey = "page:update";
 
   handle(ctx: PageWsContext, payload: YjsSyncPayload): void {

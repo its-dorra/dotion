@@ -4,7 +4,11 @@ import type { PageWsContext } from "../types";
 import * as awarenessProtocol from "y-protocols/awareness";
 import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
-import { MSG_AWARENESS, YjsProtocol } from "../../yjs-protocol";
+import {
+  MSG_AWARENESS,
+  WS_MSG_AWARENESS,
+  YjsProtocol,
+} from "../../yjs-protocol";
 
 export interface YjsAwarenessPayload {
   readonly decoder: decoding.Decoder;
@@ -14,7 +18,7 @@ export class YjsAwarenessStrategy implements WsStrategy<
   PageWsContext,
   YjsAwarenessPayload
 > {
-  readonly messageType = MSG_AWARENESS;
+  readonly messageType = WS_MSG_AWARENESS;
   readonly requiredPermission: PermissionKey = "page:view";
 
   handle(ctx: PageWsContext, payload: YjsAwarenessPayload): void {

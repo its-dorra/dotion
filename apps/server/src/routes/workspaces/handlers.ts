@@ -26,38 +26,30 @@ export const listHandler: AppRouteHandler<ListRoute> = async (c) => {
 };
 
 export const createHandler: AppRouteHandler<CreateRoute> = async (c) => {
-  try {
-    const currentUser = c.var.currentUser;
-    const input = c.req.valid("json");
+  const currentUser = c.var.currentUser;
+  const input = c.req.valid("json");
 
-    const result = await c.var.services.workspaces.createWorkspace({
-      input,
-      userId: currentUser.id,
+  const result = await c.var.services.workspaces.createWorkspace({
+    input,
+    userId: currentUser.id,
+  });
+
+  if (result.isErr()) {
+    return result.error.match({
+      DatabaseError: () =>
+        c.json(
+          errorResponseJson(HttpStatusPhrases.INTERNAL_SERVER_ERROR),
+          HttpStatusCodes.INTERNAL_SERVER_ERROR,
+        ),
+      UniqueConstraintViolationError: () =>
+        c.json(
+          errorResponseJson("A workspace with this name already exists"),
+          HttpStatusCodes.UNPROCESSABLE_ENTITY,
+        ),
     });
-
-    if (result.isErr()) {
-      return result.error.match({
-        DatabaseError: () =>
-          c.json(
-            errorResponseJson(HttpStatusPhrases.INTERNAL_SERVER_ERROR),
-            HttpStatusCodes.INTERNAL_SERVER_ERROR,
-          ),
-        UniqueConstraintViolationError: () =>
-          c.json(
-            errorResponseJson("A workspace with this name already exists"),
-            HttpStatusCodes.UNPROCESSABLE_ENTITY,
-          ),
-      });
-    }
-
-    return c.json(successResponseJson(result.value), HttpStatusCodes.CREATED);
-  } catch (e) {
-    console.error("Error creating workspace:", e);
-    return c.json(
-      errorResponseJson(HttpStatusPhrases.INTERNAL_SERVER_ERROR),
-      HttpStatusCodes.INTERNAL_SERVER_ERROR,
-    );
   }
+
+  return c.json(successResponseJson(result.value), HttpStatusCodes.CREATED);
 };
 
 export const getByIdHandler: AppRouteHandler<GetByIdRoute> = async (c) => {

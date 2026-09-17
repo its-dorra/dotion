@@ -20,7 +20,6 @@ export const listHandler: AppRouteHandler<ListRoute> = async (c) => {
   const result = await c.var.services.pages.getPagesTree({ workspaceId });
 
   if (result.isErr()) {
-    console.error("Error fetching pages:", result.error);
     return result.error.match({
       DatabaseError: () =>
         c.json(
@@ -42,7 +41,6 @@ export const getByIdHandler: AppRouteHandler<GetByIdRoute> = async (c) => {
   });
 
   if (result.isErr()) {
-    console.error("Error fetching page:", result.error);
     return result.error.match({
       DatabaseError: () =>
         c.json(
@@ -90,7 +88,6 @@ export const listTrashHandler: AppRouteHandler<ListTrashRoute> = async (c) => {
   const result = await c.var.services.pages.getTrashedPages({ workspaceId });
 
   if (result.isErr()) {
-    console.error("Error fetching trashed pages:", result.error);
     return result.error.match({
       DatabaseError: () =>
         c.json(
@@ -114,7 +111,6 @@ export const moveToTrashHandler: AppRouteHandler<MoveToTrashRoute> = async (
   });
 
   if (result.isErr()) {
-    console.error("Error moving page to trash:", result.error);
     return result.error.match({
       DatabaseError: () =>
         c.json(
@@ -140,7 +136,6 @@ export const restoreFromTrashHandler: AppRouteHandler<
   });
 
   if (result.isErr()) {
-    console.error("Error restoring page from trash:", result.error);
     return result.error.match({
       DatabaseError: () =>
         c.json(
@@ -166,7 +161,6 @@ export const deletePermanentlyHandler: AppRouteHandler<
   });
 
   if (result.isErr()) {
-    console.error("Error permanently deleting page:", result.error);
     return result.error.match({
       DatabaseError: () =>
         c.json(
@@ -189,7 +183,6 @@ export const emptyTrashHandler: AppRouteHandler<EmptyTrashRoute> = async (
   const result = await c.var.services.pages.emptyTrash({ workspaceId });
 
   if (result.isErr()) {
-    console.error("Error emptying trash:", result.error);
     return result.error.match({
       DatabaseError: () =>
         c.json(

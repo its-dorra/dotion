@@ -48,12 +48,6 @@ export async function handleScheduledOutbox(
           console.log(
             `OutboxPoller: successfully redelivered ${entry.type} for ${entry.aggregateId}.`,
           );
-        } else if (entry.type === "page_indexing" && env.PAGE_INDEXING_QUEUE) {
-          await env.PAGE_INDEXING_QUEUE.send(entry.payload);
-          await services.outbox.markCompleted({
-            type: entry.type,
-            aggregateId: entry.aggregateId,
-          });
         } else {
           console.warn(
             `OutboxPoller: unmatched schema for event ${entry.type}:`,

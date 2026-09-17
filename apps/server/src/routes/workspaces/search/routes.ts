@@ -8,6 +8,7 @@ import {
 import * as HttpStatusCodes from "stoker/http-status-codes";
 import * as HttpStatusPhrases from "stoker/http-status-phrases";
 import { jsonContent } from "stoker/openapi/helpers";
+import { zodSuccessResponse } from "#/lib/zod-helpers";
 import {
   badRequestErrorSchema,
   forbiddenSchema,
@@ -42,7 +43,7 @@ export const searchRoute = createAuthorizedRoute({
   },
   responses: {
     [HttpStatusCodes.OK]: jsonContent(
-      searchResponseSchema,
+      zodSuccessResponse(searchResponseSchema),
       HttpStatusPhrases.OK,
     ),
     [HttpStatusCodes.TOO_MANY_REQUESTS]: jsonContent(

@@ -16,7 +16,6 @@ export const listPermissionsHandler: AppRouteHandler<
   });
 
   if (result.isErr()) {
-    console.error("Error fetching page permissions:", result.error);
     return result.error.match({
       DatabaseError: () =>
         c.json(
@@ -45,7 +44,6 @@ export const updatePermissionHandler: AppRouteHandler<
   });
 
   if (result.isErr()) {
-    console.error("Error updating page permission:", result.error);
     return result.error.match({
       NotFoundError: () =>
         c.json(

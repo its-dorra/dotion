@@ -26,7 +26,6 @@ function formatRelativeTime(date: Date) {
 export function LastEditedIndicator({
   lastEditedAt,
 }: LastEditedIndicatorProps) {
-  console.log({ lastEditedAt })
   const relativeTime = formatRelativeTime(lastEditedAt)
 
   return (

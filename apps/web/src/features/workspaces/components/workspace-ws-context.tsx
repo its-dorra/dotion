@@ -1,10 +1,13 @@
 import type { MessageSource, WebSocketStatus } from '@/lib/web-socket-client'
-import type { WorkspaceWsMessage } from '@dotion/shared/workspaces/types'
+import type {
+  WorkspaceWsMessage,
+  WorkspaceId,
+} from '@dotion/shared/workspaces/types'
 import { createContext, useContext, useMemo } from 'react'
 import { useWorkspaceWs } from '../hooks/use-workspace-ws'
 
 type WorkspaceWebSocketContextValue = {
-  workspaceId: string
+  workspaceId: WorkspaceId
   status: WebSocketStatus
 
   subscribe: (
@@ -25,7 +28,7 @@ export default function WorkspaceWsProvider({
   workspaceId,
   children,
 }: {
-  workspaceId: string
+  workspaceId: WorkspaceId
   children: React.ReactNode
 }) {
   const { status, subscribe, send } = useWorkspaceWs(workspaceId)

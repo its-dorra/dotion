@@ -55,25 +55,18 @@ export class AuthorizationService {
   private readonly cache: AuthorizationCache;
   private readonly loader: AttributeLoader;
 
-  constructor(
-    services: DomainServices,
-    cache: AuthorizationCache,
-    engine?: PolicyEngine,
-  ) {
+  constructor(services: DomainServices, cache: AuthorizationCache) {
     this.cache = cache;
     this.loader = new AttributeLoader(services);
-    if (engine) {
-      this.engine = engine;
-    } else {
-      this.engine = new PolicyEngine()
-        .register(workspacePolicy)
-        .register(workspaceMemberPolicy)
-        .register(workspaceInvitationPolicy)
-        .register(pagePolicy)
-        .register(pagePermissionPolicy)
-        .register(commentPolicy)
-        .register(userPolicy);
-    }
+
+    this.engine = new PolicyEngine()
+      .register(workspacePolicy)
+      .register(workspaceMemberPolicy)
+      .register(workspaceInvitationPolicy)
+      .register(pagePolicy)
+      .register(pagePermissionPolicy)
+      .register(commentPolicy)
+      .register(userPolicy);
   }
 
   async authorize<R extends ResourceType, A extends ResourceAction<R>>(
@@ -151,7 +144,7 @@ export class AuthorizationService {
       }
 
       if (cacheKey) {
-        const ttl = decision.type === "ALLOW" ? 60 : 15;
+        const ttl = decision.type === "ALLOW" ? 15 * 60 : 60;
         await this.cache.set(cacheKey, decision, ttl);
       }
 

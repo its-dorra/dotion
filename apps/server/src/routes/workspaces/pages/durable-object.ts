@@ -11,7 +11,18 @@ import { PageClientWsMessageSchema } from "@dotion/shared/pages/schema";
 import { DurableObject } from "cloudflare:workers";
 import { PageDocument } from "./page-document";
 import { PagePersistence } from "./page-persistence";
-import { YjsProtocol, MSG_SYNC, MSG_AWARENESS } from "./yjs-protocol";
+import {
+  MSG_SYNC,
+  MSG_AWARENESS,
+  SYNC_STEP_1,
+  SYNC_STEP_2,
+  SYNC_UPDATE,
+  WS_MSG_SYNC_STEP_1,
+  WS_MSG_SYNC_STEP_2,
+  WS_MSG_SYNC_UPDATE,
+  WS_MSG_AWARENESS,
+  YjsProtocol,
+} from "./yjs-protocol";
 import * as decoding from "lib0/decoding";
 import { createAppContext } from "#/context";
 import { WsRouter } from "#/lib/ws-router";
@@ -31,6 +42,12 @@ const ROLE_PERMISSIONS_MAP: Record<AllPageRole, Set<PermissionKey>> = {
   editor: new Set(["page:view", "page:update", "comment:create"]),
   commenter: new Set(["page:view", "comment:create"]),
   viewer: new Set(["page:view"]),
+};
+
+const SYNC_STRATEGY_MAP: Record<number, string> = {
+  [SYNC_STEP_1]: WS_MSG_SYNC_STEP_1,
+  [SYNC_STEP_2]: WS_MSG_SYNC_STEP_2,
+  [SYNC_UPDATE]: WS_MSG_SYNC_UPDATE,
 };
 
 const STORAGE_PAGE_ID = "pageId";
@@ -279,13 +296,18 @@ export class PagesDO extends DurableObject<Env> {
       const syncDecoder = decoding.createDecoder(data);
       decoding.readVarUint(syncDecoder);
 
-      await this.router.dispatch(ctx, syncType, {
-        syncType,
-        syncDecoder,
-        rawData: data,
-      });
+      const strategyKey = SYNC_STRATEGY_MAP[syncType];
+      if (strategyKey) {
+        await this.router.dispatch(ctx, strategyKey, {
+          syncType,
+          syncDecoder,
+          rawData: data,
+        });
+      } else {
+        console.warn(`PagesDO: unhandled sync message subtype ${syncType}`);
+      }
     } else if (messageType === MSG_AWARENESS) {
-      await this.router.dispatch(ctx, MSG_AWARENESS, { decoder });
+      await this.router.dispatch(ctx, WS_MSG_AWARENESS, { decoder });
     } else {
       console.warn(`PagesDO: unhandled binary message type ${messageType}`);
     }

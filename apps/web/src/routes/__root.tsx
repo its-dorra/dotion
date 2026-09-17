@@ -21,6 +21,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { authQueryOptions } from '@/features/auth/query-options'
 import { AuthPopoverProvider } from '@/features/auth/hooks/use-auth-popover'
 import { PwaManager } from '@/components/pwa/pwa-manager'
+import { DirectionProvider } from '@/components/ui/direction'
 
 export interface RouterAppContext {
   queryClient: QueryClient
@@ -117,11 +118,13 @@ function RootDocument() {
       <body>
         <ThemeProvider defaultTheme="light" storageKey="theme">
           <DocumentBackgroundProvider>
-            <TooltipProvider>
-              <AuthPopoverProvider>
-                <Outlet />
-              </AuthPopoverProvider>
-            </TooltipProvider>
+            <DirectionProvider dir={dir}>
+              <TooltipProvider>
+                <AuthPopoverProvider>
+                  <Outlet />
+                </AuthPopoverProvider>
+              </TooltipProvider>
+            </DirectionProvider>
           </DocumentBackgroundProvider>
         </ThemeProvider>
         <Toaster richColors />
