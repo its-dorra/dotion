@@ -22,12 +22,12 @@ export function useRequestPageAccess() {
         requestedRole?: PagePermissionRole
       }) => pagesApi.createAccessRequest(workspaceId, pageId, requestedRole),
       onSuccess: (data, vars) => {
-        updatePageAccessRequestStatusInCache(
+        updatePageAccessRequestStatusInCache({
           queryClient,
-          vars.workspaceId,
-          vars.pageId,
-          { hasPendingRequest: true, request: data },
-        )
+          workspaceId: vars.workspaceId,
+          pageId: vars.pageId,
+          status: { hasPendingRequest: true, request: data },
+        })
         toast.success(m.page_request_access_success())
       },
       onError: (error) => {

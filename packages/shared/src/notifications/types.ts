@@ -7,6 +7,7 @@ import type {
   PageInvitationNotificationMetadataSchema,
   PermissionChangeNotificationMetadataSchema,
   PageAccessRequestNotificationMetadataSchema,
+  PageAccessRequestResolvedNotificationMetadataSchema,
   NotificationSchema,
   CreateNotificationSchema,
   PaginatedNotificationsDataSchema,
@@ -26,6 +27,9 @@ export type PermissionChangeNotificationMetadata = z.infer<
 >;
 export type PageAccessRequestNotificationMetadata = z.infer<
   typeof PageAccessRequestNotificationMetadataSchema
+>;
+export type PageAccessRequestResolvedNotificationMetadata = z.infer<
+  typeof PageAccessRequestResolvedNotificationMetadataSchema
 >;
 
 export type Notification = z.infer<typeof NotificationSchema>;

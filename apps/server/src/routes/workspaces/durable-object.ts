@@ -124,4 +124,14 @@ export class WorkspacesDO extends DurableObject<Env> {
       ws.send(jsonData);
     }
   }
+
+  disconnectUser(userId: UserId, reason = "Removed from workspace"): void {
+    for (const ws of this.ctx.getWebSockets()) {
+      const attachment =
+        ws.deserializeAttachment() as WorkspaceWsAttachment | null;
+      if (attachment && attachment.userId === userId) {
+        ws.close(4403, reason);
+      }
+    }
+  }
 }

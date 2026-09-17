@@ -7,7 +7,11 @@ import type {
 } from "@dotion/services";
 import type { WorkspaceId, PageId } from "@dotion/shared/ids";
 import type { UserId } from "@dotion/shared/users/types";
-import type { Page, PagePermissionRole } from "@dotion/shared/pages/types";
+import type {
+  Page,
+  PagePermissionRole,
+  AllPageRole,
+} from "@dotion/shared/pages/types";
 import type {
   WorkspaceMemberDetail,
   WorkspaceInvitationWithDetails,
@@ -232,6 +236,20 @@ export class DurableObjectWorkspaceEventPublisher implements WorkspaceEventPubli
       console.error("Failed to broadcast trash.emptied:", error);
     }
   }
+
+  async disconnectUser(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    reason?: string,
+  ): Promise<void> {
+    try {
+      const doId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
+      const stub = this.env.DOTION_WORKSPACE_DO.get(doId);
+      await stub.disconnectUser(userId, reason);
+    } catch (error) {
+      console.error("Failed to disconnect user in WorkspacesDO:", error);
+    }
+  }
 }
 
 export class DurableObjectPageEventPublisher implements PageEventPublisher {
@@ -286,6 +304,34 @@ export class DurableObjectPageEventPublisher implements PageEventPublisher {
       });
     } catch (error) {
       console.error("Failed to broadcast comment.deleted:", error);
+    }
+  }
+
+  async updateUserRole(
+    pageId: PageId,
+    userId: UserId,
+    role: AllPageRole,
+  ): Promise<void> {
+    try {
+      const doId = this.env.DOTION_PAGES_DO.idFromName(pageId);
+      const stub = this.env.DOTION_PAGES_DO.get(doId);
+      await stub.updateUserRole(userId, role);
+    } catch (error) {
+      console.error("Failed to update user role in PagesDO:", error);
+    }
+  }
+
+  async disconnectUser(
+    pageId: PageId,
+    userId: UserId,
+    reason?: string,
+  ): Promise<void> {
+    try {
+      const doId = this.env.DOTION_PAGES_DO.idFromName(pageId);
+      const stub = this.env.DOTION_PAGES_DO.get(doId);
+      await stub.disconnectUser(userId, reason);
+    } catch (error) {
+      console.error("Failed to disconnect user in PagesDO:", error);
     }
   }
 }

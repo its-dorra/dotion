@@ -2,6 +2,7 @@ import type { UserId } from "@dotion/shared/users/types";
 import type {
   PageId,
   UpdatePageMetadataInput,
+  AllPageRole,
 } from "@dotion/shared/pages/types";
 import type { WorkspaceId } from "@dotion/shared/workspaces/types";
 import type { CommentWsMessage } from "@dotion/shared/comments/types";
@@ -25,6 +26,12 @@ import { PageMetadataUpdateStrategy } from "./ws/strategies/page-metadata.strate
 
 export type { PageWsAttachment, PageWsContext };
 export type WsAttachment = PageWsAttachment;
+
+const ROLE_PERMISSIONS_MAP: Record<AllPageRole, Set<PermissionKey>> = {
+  editor: new Set(["page:view", "page:update", "comment:create"]),
+  commenter: new Set(["page:view", "comment:create"]),
+  viewer: new Set(["page:view"]),
+};
 
 const STORAGE_PAGE_ID = "pageId";
 const STORAGE_WORKSPACE_ID = "workspaceId";
@@ -364,6 +371,27 @@ export class PagesDO extends DurableObject<Env> {
     const data = JSON.stringify(event);
     for (const socket of this.ctx.getWebSockets()) {
       socket.send(data);
+    }
+  }
+
+  updateUserRole(userId: UserId, role: AllPageRole): void {
+    const permissions =
+      ROLE_PERMISSIONS_MAP[role] ?? new Set<PermissionKey>([]);
+    for (const ws of this.ctx.getWebSockets()) {
+      const attachment = ws.deserializeAttachment() as PageWsAttachment | null;
+      if (attachment && attachment.userId === userId) {
+        attachment.permissions = permissions;
+        ws.serializeAttachment(attachment);
+      }
+    }
+  }
+
+  disconnectUser(userId: UserId, reason = "Permission revoked"): void {
+    for (const ws of this.ctx.getWebSockets()) {
+      const attachment = ws.deserializeAttachment() as PageWsAttachment | null;
+      if (attachment && attachment.userId === userId) {
+        ws.close(4403, reason);
+      }
     }
   }
 

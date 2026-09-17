@@ -37,9 +37,9 @@ export function useUserRealtime() {
         switch (data.type) {
           case 'notification.created': {
             const notif = data.payload
-            addNotificationToCache(queryClient, notif)
+            addNotificationToCache({ queryClient, notification: notif })
 
-            if (notif.metadata.type === 'workspace_invitation') {
+            if (notif.metadata.type === 'workspace.invitation_created') {
               const meta = notif.metadata
               toast.info(
                 m.notification_workspace_invited({
@@ -47,7 +47,7 @@ export function useUserRealtime() {
                   workspace: meta.workspaceName,
                 }),
               )
-            } else if (notif.metadata.type === 'page_access_request') {
+            } else if (notif.metadata.type === 'page.access_requested') {
               const meta = notif.metadata
               const roleName =
                 meta.requestedRole === 'commenter'
@@ -60,7 +60,7 @@ export function useUserRealtime() {
                   role: roleName,
                 }),
               )
-            } else if (notif.metadata.type === 'permission_change') {
+            } else if (notif.metadata.type === 'page.permission_updated') {
               const meta = notif.metadata
               const roleName =
                 meta.newRole === 'editor'
@@ -75,20 +75,20 @@ export function useUserRealtime() {
                   role: roleName,
                 }),
               )
-              updatePageAccessRequestStatusInCache(
+              updatePageAccessRequestStatusInCache({
                 queryClient,
-                meta.workspaceId,
-                meta.pageId,
-                { hasPendingRequest: false, request: null },
-              )
-              updatePagePermissionInCache(
+                workspaceId: meta.workspaceId,
+                pageId: meta.pageId,
+                status: { hasPendingRequest: false, request: null },
+              })
+              updatePagePermissionInCache({
                 queryClient,
-                meta.workspaceId,
-                meta.pageId,
-                notif.userId,
-                meta.newRole as PagePermissionRole,
-              )
-            } else if (notif.metadata.type === 'page_access_request_resolved') {
+                workspaceId: meta.workspaceId,
+                pageId: meta.pageId,
+                userId: notif.userId,
+                role: meta.newRole as PagePermissionRole,
+              })
+            } else if (notif.metadata.type === 'page.access_request_resolved') {
               const meta = notif.metadata
               if (meta.status === 'approved') {
                 toast.success(
@@ -101,13 +101,13 @@ export function useUserRealtime() {
                         : m.page_role_editor(),
                   }),
                 )
-                updatePagePermissionInCache(
+                updatePagePermissionInCache({
                   queryClient,
-                  meta.workspaceId,
-                  meta.pageId,
-                  notif.userId,
-                  meta.role as PagePermissionRole,
-                )
+                  workspaceId: meta.workspaceId,
+                  pageId: meta.pageId,
+                  userId: notif.userId,
+                  role: meta.role as PagePermissionRole,
+                })
               } else {
                 toast.info(
                   m.notification_access_rejected({
@@ -116,13 +116,13 @@ export function useUserRealtime() {
                   }),
                 )
               }
-              updatePageAccessRequestStatusInCache(
+              updatePageAccessRequestStatusInCache({
                 queryClient,
-                meta.workspaceId,
-                meta.pageId,
-                { hasPendingRequest: false, request: null },
-              )
-            } else if (notif.metadata.type === 'page_invitation') {
+                workspaceId: meta.workspaceId,
+                pageId: meta.pageId,
+                status: { hasPendingRequest: false, request: null },
+              })
+            } else if (notif.metadata.type === 'page.invitation_created') {
               const meta = notif.metadata
               toast.info(
                 m.notification_page_invited({
@@ -142,17 +142,17 @@ export function useUserRealtime() {
             break
           }
           case 'notification.read': {
-            markNotificationAsReadInCache(
+            markNotificationAsReadInCache({
               queryClient,
-              data.payload.notificationId,
-            )
+              notificationId: data.payload.notificationId,
+            })
             break
           }
           case 'notification.all_read': {
-            markAllNotificationsAsReadInCache(
+            markAllNotificationsAsReadInCache({
               queryClient,
-              data.payload.workspaceId,
-            )
+              workspaceId: data.payload.workspaceId,
+            })
             break
           }
         }

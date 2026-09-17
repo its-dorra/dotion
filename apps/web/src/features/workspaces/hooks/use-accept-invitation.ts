@@ -15,10 +15,10 @@ export function useAcceptInvitation() {
       mutationFn: (input: AcceptInvitationInput) =>
         workspacesApi.acceptInvitation(input),
       onSuccess: (workspace, variables) => {
-        removeNotificationByInvitationIdFromCache(
+        removeNotificationByInvitationIdFromCache({
           queryClient,
-          variables.invitationId,
-        )
+          invitationId: variables.invitationId,
+        })
         queryClient.setQueryData(
           workspacesListQueryOptions().queryKey,
           (old) => (old ? [...old, workspace] : [workspace]),

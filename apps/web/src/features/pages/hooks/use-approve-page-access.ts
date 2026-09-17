@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { pagesApi } from '../api'
+import { pagesKeys } from '../query-options'
+import { authorizationKeys } from '@/features/authorization/query-options'
 import { updatePageAccessRequestStatusInCache } from '../utils'
 import { toast } from 'sonner'
 import { m } from '@/paraglide/messages'
@@ -22,12 +24,18 @@ export function useApprovePageAccess() {
         requestId: string
       }) => pagesApi.approveAccessRequest(workspaceId, pageId, requestId),
       onSuccess: (_permission, vars) => {
-        updatePageAccessRequestStatusInCache(
+        updatePageAccessRequestStatusInCache({
           queryClient,
-          vars.workspaceId,
-          vars.pageId,
-          { hasPendingRequest: false, request: null },
-        )
+          workspaceId: vars.workspaceId,
+          pageId: vars.pageId,
+          status: { hasPendingRequest: false, request: null },
+        })
+        void queryClient.invalidateQueries({
+          queryKey: pagesKeys.permissions(vars.workspaceId, vars.pageId),
+        })
+        void queryClient.invalidateQueries({
+          queryKey: authorizationKeys.all,
+        })
         toast.success(m.toast_access_request_approved())
       },
       onError: (error) => {

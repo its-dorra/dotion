@@ -503,37 +503,22 @@ export class PagesService {
       const pageTitle = pageResult.isOk() ? pageResult.value.title : "a page";
 
       yield* Result.await(
-        this.eventDispatcher.dispatchBatch([
-          {
-            type: "page.access_request_resolved",
-            aggregateId: requestId,
-            payload: {
-              workspaceId,
-              pageId,
-              pageTitle,
-              pageIcon: null,
-              requesterId,
-              reviewerId: approver.id,
-              reviewerName: approver.name,
-              status: "approved",
-              role: grantedRole,
-              requestId,
-            },
+        this.eventDispatcher.dispatch({
+          type: "page.access_request_resolved",
+          aggregateId: requestId,
+          payload: {
+            workspaceId,
+            pageId,
+            pageTitle,
+            pageIcon: null,
+            requesterId,
+            reviewerId: approver.id,
+            reviewerName: approver.name,
+            status: "approved",
+            role: grantedRole,
+            requestId,
           },
-          {
-            type: "page.permission_updated",
-            aggregateId: pageId,
-            payload: {
-              workspaceId,
-              pageId,
-              targetUserId: requesterId,
-              role: grantedRole,
-              updatedByUserId: approver.id,
-              pageTitle,
-              updatedByName: approver.name,
-            },
-          },
-        ]),
+        }),
       );
 
       return Result.ok(request);

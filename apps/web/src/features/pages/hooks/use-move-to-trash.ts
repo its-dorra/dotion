@@ -48,19 +48,25 @@ export function useMoveToTrash() {
         queryClient.setQueryData(
           pageTreeQueryOptions(variables.workspaceId).queryKey,
           (oldTree) =>
-            removePageAndDescendantsFromTree(oldTree, variables.pageId),
+            removePageAndDescendantsFromTree({
+              oldTree,
+              pageId: variables.pageId,
+            }),
         )
 
         queryClient.setQueryData(
           trashedPagesQueryOptions(variables.workspaceId).queryKey,
           (oldTrash) =>
-            addPageToTrash(oldTrash, {
-              id: variables.pageId,
-              parentId: previousDetail?.parentId ?? null,
-              title: previousDetail?.title ?? 'Untitled',
-              icon: previousDetail?.icon ?? undefined,
-              deletedAt: new Date().toISOString(),
-              deletedByName: 'A member',
+            addPageToTrash({
+              oldTrash,
+              trashed: {
+                id: variables.pageId,
+                parentId: previousDetail?.parentId ?? null,
+                title: previousDetail?.title ?? 'Untitled',
+                icon: previousDetail?.icon ?? undefined,
+                deletedAt: new Date().toISOString(),
+                deletedByName: 'A member',
+              },
             }),
         )
 

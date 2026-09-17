@@ -2,10 +2,13 @@ import type { QueryClient } from '@tanstack/react-query'
 import type { Notification } from './types'
 import { notificationsInfiniteQueryOptions } from './query-options'
 
-export const markNotificationAsReadInCache = (
-  queryClient: QueryClient,
-  notificationId: string,
-) => {
+export const markNotificationAsReadInCache = ({
+  queryClient,
+  notificationId,
+}: {
+  queryClient: QueryClient
+  notificationId: string
+}) => {
   queryClient.setQueryData(
     notificationsInfiniteQueryOptions().queryKey,
     (oldData) => {
@@ -23,10 +26,13 @@ export const markNotificationAsReadInCache = (
   )
 }
 
-export const markAllNotificationsAsReadInCache = (
-  queryClient: QueryClient,
-  workspaceId?: string,
-) => {
+export const markAllNotificationsAsReadInCache = ({
+  queryClient,
+  workspaceId,
+}: {
+  queryClient: QueryClient
+  workspaceId?: string
+}) => {
   queryClient.setQueryData(
     notificationsInfiniteQueryOptions().queryKey,
     (oldData) => {
@@ -51,10 +57,13 @@ export const markAllNotificationsAsReadInCache = (
   )
 }
 
-export const addNotificationToCache = (
-  queryClient: QueryClient,
-  notification: Notification,
-) => {
+export const addNotificationToCache = ({
+  queryClient,
+  notification,
+}: {
+  queryClient: QueryClient
+  notification: Notification
+}) => {
   queryClient.setQueryData(
     notificationsInfiniteQueryOptions().queryKey,
     (oldData) => {
@@ -88,10 +97,13 @@ export const addNotificationToCache = (
   )
 }
 
-export const removeNotificationByInvitationIdFromCache = (
-  queryClient: QueryClient,
-  invitationId: string,
-) => {
+export const removeNotificationByInvitationIdFromCache = ({
+  queryClient,
+  invitationId,
+}: {
+  queryClient: QueryClient
+  invitationId: string
+}) => {
   queryClient.setQueryData(
     notificationsInfiniteQueryOptions().queryKey,
     (oldData) => {
@@ -103,7 +115,7 @@ export const removeNotificationByInvitationIdFromCache = (
           payload: page.payload.filter(
             (n) =>
               !(
-                n.metadata?.type === 'workspace_invitation' &&
+                n.metadata?.type === 'workspace.invitation_created' &&
                 n.metadata.workspaceInvitationId === invitationId
               ),
           ),

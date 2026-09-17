@@ -6,6 +6,7 @@ import { WorkspaceInvitationContent } from './workspace-invitation-content'
 import { PageInvitationContent } from './page-invitation-content'
 import { PermissionChangeContent } from './permission-change-content'
 import { PageAccessRequestContent } from './page-access-request-content'
+import { PageAccessRequestResolvedContent } from './page-access-request-resolved-content'
 import { useMarkAsRead } from '../hooks/use-mark-as-read'
 import { m } from '@/paraglide/messages'
 import type {
@@ -14,6 +15,7 @@ import type {
   PageInvitationNotification,
   PermissionChangeNotification,
   PageAccessRequestNotification,
+  PageAccessRequestResolvedNotification,
 } from '../types'
 
 function formatRelativeTime(isoDate: string | Date) {
@@ -58,28 +60,34 @@ export const NotificationRow = memo(function NotificationRow({
 
   const content = (() => {
     switch (notification.metadata.type) {
-      case 'workspace_invitation':
+      case 'workspace.invitation_created':
         return (
           <WorkspaceInvitationContent
             notification={notification as WorkspaceInvitationNotification}
           />
         )
-      case 'page_invitation':
+      case 'page.invitation_created':
         return (
           <PageInvitationContent
             notification={notification as PageInvitationNotification}
           />
         )
-      case 'permission_change':
+      case 'page.permission_updated':
         return (
           <PermissionChangeContent
             notification={notification as PermissionChangeNotification}
           />
         )
-      case 'page_access_request':
+      case 'page.access_requested':
         return (
           <PageAccessRequestContent
             notification={notification as PageAccessRequestNotification}
+          />
+        )
+      case 'page.access_request_resolved':
+        return (
+          <PageAccessRequestResolvedContent
+            notification={notification as PageAccessRequestResolvedNotification}
           />
         )
     }
@@ -108,7 +116,7 @@ export const NotificationRow = memo(function NotificationRow({
     </>
   )
 
-  if (notification.metadata.type === 'workspace_invitation') {
+  if (notification.metadata.type === 'workspace.invitation_created') {
     return (
       <div
         role="button"

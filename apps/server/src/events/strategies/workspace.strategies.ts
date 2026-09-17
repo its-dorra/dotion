@@ -31,7 +31,7 @@ export class WorkspaceInvitationCreatedStrategy implements DomainEventStrategy<"
           input: {
             userId: invitedUserId,
             metadata: {
-              type: "workspace_invitation",
+              type: "workspace.invitation_created",
               workspaceInvitationId: invitation.id,
               workspaceId,
               workspaceName: invitation.workspaceName,
@@ -125,6 +125,11 @@ export class WorkspaceMemberRemovedStrategy implements DomainEventStrategy<"work
         this.workspacePublisher.broadcastMemberRemoved(
           event.payload.workspaceId,
           event.payload.userId,
+        ),
+        this.workspacePublisher.disconnectUser(
+          event.payload.workspaceId,
+          event.payload.userId,
+          "Removed from workspace",
         ),
       ]);
       return Result.ok(undefined);

@@ -13,12 +13,12 @@ export function useInviteToPage() {
     resultMutationOptions({
       mutationFn: (input: InviteToPageInput) => pagesApi.inviteToPage(input),
       onSuccess: (permission, variables) => {
-        addPageMemberPermissionToCache(
+        addPageMemberPermissionToCache({
           queryClient,
-          variables.workspaceId,
-          variables.pageId,
+          workspaceId: variables.workspaceId,
+          pageId: variables.pageId,
           permission,
-        )
+        })
         toast.success(m.toast_page_invite_success({ email: variables.email }))
       },
       onError: (error) => {

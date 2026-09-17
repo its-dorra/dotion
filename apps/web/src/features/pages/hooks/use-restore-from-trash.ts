@@ -49,18 +49,22 @@ export function useRestoreFromTrash() {
 
         queryClient.setQueryData(
           trashedPagesQueryOptions(variables.workspaceId).queryKey,
-          (oldTrash) => removePageFromTrash(oldTrash, variables.pageId),
+          (oldTrash) =>
+            removePageFromTrash({ oldTrash, pageId: variables.pageId }),
         )
 
         if (trashedItem) {
           queryClient.setQueryData(
             pageTreeQueryOptions(variables.workspaceId).queryKey,
             (oldTree) =>
-              addOrUpdatePageInTree(oldTree, {
-                id: trashedItem.id,
-                title: trashedItem.title,
-                icon: trashedItem.icon ?? null,
-                parentId: trashedItem.parentId,
+              addOrUpdatePageInTree({
+                oldTree,
+                node: {
+                  id: trashedItem.id,
+                  title: trashedItem.title,
+                  icon: trashedItem.icon ?? null,
+                  parentId: trashedItem.parentId,
+                },
               }),
           )
         }

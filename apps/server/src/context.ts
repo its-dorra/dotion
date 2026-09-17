@@ -160,11 +160,18 @@ function buildServices(
     .register(new PageIndexingLegacyStrategy(env.PAGE_INDEXING_QUEUE))
     .register(new PageMetadataUpdatedStrategy(env.PAGE_INDEXING_QUEUE))
     .register(new PageAccessRequestedStrategy(notifications))
-    .register(new PageAccessRequestResolvedStrategy(notifications))
+    .register(
+      new PageAccessRequestResolvedStrategy(
+        notifications,
+        kvCache,
+        workspacePublisher,
+      ),
+    )
     .register(
       new PagePermissionUpdatedStrategy(
         kvCache,
         workspacePublisher,
+        pagePublisher,
         notifications,
       ),
     )

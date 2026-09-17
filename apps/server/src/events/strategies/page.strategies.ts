@@ -2,6 +2,7 @@ import { Result } from "better-result";
 import { type DomainEventStrategy, EventHandlingError } from "../strategy";
 import type {
   WorkspaceEventPublisher,
+  PageEventPublisher,
   PageCleanupQueue,
   PermissionCacheInvalidator,
   NotificationsService,
@@ -276,7 +277,7 @@ export class PageAccessRequestedStrategy implements DomainEventStrategy<"page.ac
         input: {
           userId: event.payload.recipientUserId,
           metadata: {
-            type: "page_access_request",
+            type: "page.access_requested",
             requestId: event.payload.requestId,
             pageId: event.payload.pageId,
             workspaceId: event.payload.workspaceId,
@@ -309,29 +310,55 @@ export class PageAccessRequestedStrategy implements DomainEventStrategy<"page.ac
 export class PageAccessRequestResolvedStrategy implements DomainEventStrategy<"page.access_request_resolved"> {
   readonly eventType = "page.access_request_resolved" as const;
 
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly cacheInvalidator: PermissionCacheInvalidator,
+    private readonly workspacePublisher: WorkspaceEventPublisher,
+  ) {}
 
   async handle(
     event: DomainEventByType<"page.access_request_resolved">,
   ): Promise<Result<void, EventHandlingError>> {
     try {
-      await this.notificationsService.createNotification({
-        input: {
-          userId: event.payload.requesterId,
-          metadata: {
-            type: "page_access_request_resolved",
-            requestId: event.payload.requestId,
-            pageId: event.payload.pageId,
-            workspaceId: event.payload.workspaceId,
-            pageTitle: event.payload.pageTitle,
-            resolvedByUserId: event.payload.reviewerId,
-            resolvedByName: event.payload.reviewerName,
-            status: event.payload.status,
-            role: event.payload.role ?? "editor",
+      const tasks: Promise<unknown>[] = [
+        this.notificationsService.createNotification({
+          input: {
+            userId: event.payload.requesterId,
+            metadata: {
+              type: "page.access_request_resolved",
+              requestId: event.payload.requestId,
+              pageId: event.payload.pageId,
+              workspaceId: event.payload.workspaceId,
+              pageTitle: event.payload.pageTitle,
+              resolvedByUserId: event.payload.reviewerId,
+              resolvedByName: event.payload.reviewerName,
+              status: event.payload.status,
+              role: event.payload.role ?? "editor",
+            },
+            isRead: false,
           },
-          isRead: false,
-        },
-      });
+        }),
+      ];
+
+      if (event.payload.status === "approved") {
+        tasks.push(
+          this.cacheInvalidator.invalidateUserPermissions({
+            userId: event.payload.requesterId,
+            resourceType: "page",
+            id: event.payload.pageId,
+          }),
+          this.workspacePublisher.broadcastPagePermissionUpdated(
+            event.payload.workspaceId,
+            {
+              pageId: event.payload.pageId,
+              userId: event.payload.requesterId,
+              role: event.payload.role ?? "editor",
+            },
+          ),
+        );
+      }
+
+      await Promise.all(tasks);
       return Result.ok(undefined);
     } catch (error) {
       console.error("PageAccessRequestResolvedStrategy error:", error);
@@ -355,6 +382,7 @@ export class PagePermissionUpdatedStrategy implements DomainEventStrategy<"page.
   constructor(
     private readonly cacheInvalidator: PermissionCacheInvalidator,
     private readonly workspacePublisher: WorkspaceEventPublisher,
+    private readonly pagePublisher: PageEventPublisher,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -376,6 +404,11 @@ export class PagePermissionUpdatedStrategy implements DomainEventStrategy<"page.
             role: event.payload.role,
           },
         ),
+        this.pagePublisher.updateUserRole(
+          event.payload.pageId,
+          event.payload.targetUserId,
+          event.payload.role,
+        ),
       ];
 
       tasks.push(
@@ -383,7 +416,7 @@ export class PagePermissionUpdatedStrategy implements DomainEventStrategy<"page.
           input: {
             userId: event.payload.targetUserId,
             metadata: {
-              type: "permission_change",
+              type: "page.permission_updated",
               pageId: event.payload.pageId,
               workspaceId: event.payload.workspaceId,
               pageTitle: event.payload.pageTitle,

@@ -31,21 +31,6 @@ import {
 } from '@/features/pages/query-options'
 import { m } from '@/paraglide/messages'
 
-function getTranslatedRole(role: string) {
-  switch (role) {
-    case 'owner':
-      return m.workspace_role_owner()
-    case 'editor':
-      return m.page_role_editor()
-    case 'commenter':
-      return m.page_role_commenter()
-    case 'viewer':
-      return m.workspace_role_viewer()
-    default:
-      return role
-  }
-}
-
 export const useWorkspaceRealtime = () => {
   const { workspaceId, subscribe } = useWorkspaceWsContext()
   const { data: session } = useSession()
@@ -66,11 +51,14 @@ export const useWorkspaceRealtime = () => {
       }
       switch (data.type) {
         case 'page.created': {
-          handlePageAddedWsMessage(queryClient, data.payload)
+          handlePageAddedWsMessage({ queryClient, payload: data.payload })
           break
         }
         case 'page.moved_to_trash': {
-          handlePageMovedToTrashWsMessage(queryClient, data.payload)
+          handlePageMovedToTrashWsMessage({
+            queryClient,
+            payload: data.payload,
+          })
           const activePageId = activePageIdRef.current
           const isMoved =
             activePageId &&
@@ -86,11 +74,14 @@ export const useWorkspaceRealtime = () => {
           break
         }
         case 'page.restored': {
-          handlePageRestoredWsMessage(queryClient, data.payload)
+          handlePageRestoredWsMessage({ queryClient, payload: data.payload })
           break
         }
         case 'page.deleted_permanently': {
-          handlePageDeletedPermanentlyWsMessage(queryClient, data.payload)
+          handlePageDeletedPermanentlyWsMessage({
+            queryClient,
+            payload: data.payload,
+          })
           const activePageId = activePageIdRef.current
           const isDeleted =
             activePageId &&
@@ -126,7 +117,7 @@ export const useWorkspaceRealtime = () => {
             }
           }
 
-          handleTrashEmptiedWsMessage(queryClient, data.payload)
+          handleTrashEmptiedWsMessage({ queryClient, payload: data.payload })
 
           if (isCurrentlyOnTrashedPage && activePageId) {
             queryClient.removeQueries({
@@ -144,36 +135,41 @@ export const useWorkspaceRealtime = () => {
           break
         }
         case 'document.title.changed': {
-          handleDocumentTitleChangedWsMessage(queryClient, data.payload)
+          handleDocumentTitleChangedWsMessage({
+            queryClient,
+            payload: data.payload,
+          })
           break
         }
         case 'document.icon.changed': {
-          handleDocumentIconChangedWsMessage(queryClient, data.payload)
+          handleDocumentIconChangedWsMessage({
+            queryClient,
+            payload: data.payload,
+          })
           break
         }
         case 'document.cover.changed': {
-          handleDocumentCoverChangedWsMessage(queryClient, data.payload)
+          handleDocumentCoverChangedWsMessage({
+            queryClient,
+            payload: data.payload,
+          })
           break
         }
         case 'page.permission_updated': {
-          updatePagePermissionInCache(
+          updatePagePermissionInCache({
             queryClient,
-            data.payload.workspaceId,
-            data.payload.pageId,
-            data.payload.userId,
-            data.payload.role as PagePermissionRole,
-          )
-          if (data.payload.userId === currentUserId) {
-            toast.info(
-              m.toast_page_role_updated({
-                role: getTranslatedRole(data.payload.role),
-              }),
-            )
-          }
+            workspaceId: data.payload.workspaceId,
+            pageId: data.payload.pageId,
+            userId: data.payload.userId,
+            role: data.payload.role as PagePermissionRole,
+          })
           break
         }
         case 'workspace.invitation_created': {
-          handleInvitationCreatedWsMessage(queryClient, data.payload)
+          handleInvitationCreatedWsMessage({
+            queryClient,
+            payload: data.payload,
+          })
           if (data.payload.invitedByUserId !== currentUserId) {
             toast.info(
               m.toast_workspace_invited({
@@ -187,17 +183,27 @@ export const useWorkspaceRealtime = () => {
           break
         }
         case 'workspace.invitation_declined': {
-          handleInvitationDeclinedWsMessage(queryClient, data.payload)
+          handleInvitationDeclinedWsMessage({
+            queryClient,
+            payload: data.payload,
+          })
           toast.info(m.toast_workspace_invitation_declined())
           break
         }
         case 'workspace.invitation_cancelled': {
-          handleInvitationCancelledWsMessage(queryClient, data.payload)
+          handleInvitationCancelledWsMessage({
+            queryClient,
+            payload: data.payload,
+          })
           toast.info(m.toast_workspace_invitation_cancelled())
           break
         }
         case 'workspace.member_joined': {
-          handleMemberJoinedWsMessage(queryClient, workspaceId, data.payload)
+          handleMemberJoinedWsMessage({
+            queryClient,
+            workspaceId,
+            payload: data.payload,
+          })
           if (data.payload.member.userId !== currentUserId) {
             toast.info(
               m.toast_workspace_member_joined({
@@ -216,7 +222,10 @@ export const useWorkspaceRealtime = () => {
             )
             navigate({ to: '/app/workspaces' })
           } else {
-            handleMemberRemovedWsMessage(queryClient, data.payload)
+            handleMemberRemovedWsMessage({
+              queryClient,
+              payload: data.payload,
+            })
             toast.info(m.toast_workspace_member_removed())
           }
           break

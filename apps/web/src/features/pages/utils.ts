@@ -12,17 +12,22 @@ import type {
   TrashedPage,
 } from './types'
 import {
+  pagesKeys,
   pageDetailQueryOptions,
   pageTreeQueryOptions,
   trashedPagesQueryOptions,
   pageAccessRequestStatusQueryOptions,
   pagePermissionsInfiniteQueryOptions,
 } from './query-options'
+import { authorizationKeys } from '@/features/authorization/query-options'
 
-export function getDescendantNodeIds(
-  nodes: PageTreeNode[],
-  rootId: PageId,
-): Set<PageId> {
+export function getDescendantNodeIds({
+  nodes,
+  rootId,
+}: {
+  nodes: PageTreeNode[]
+  rootId: PageId
+}): Set<PageId> {
   const descendantIds = new Set<PageId>([rootId])
   let added = true
   while (added) {
@@ -41,23 +46,30 @@ export function getDescendantNodeIds(
   return descendantIds
 }
 
-export function removePageAndDescendantsFromTree(
-  oldTree: PageTreeNode[] | undefined,
-  pageId: PageId,
-  knownDescendantIds?: string[],
-): PageTreeNode[] | undefined {
+export function removePageAndDescendantsFromTree({
+  oldTree,
+  pageId,
+  knownDescendantIds,
+}: {
+  oldTree: PageTreeNode[] | undefined
+  pageId: PageId
+  knownDescendantIds?: string[]
+}): PageTreeNode[] | undefined {
   if (!oldTree) return oldTree
   const idsToRemove =
     knownDescendantIds && knownDescendantIds.length > 0
       ? new Set([pageId, ...knownDescendantIds])
-      : getDescendantNodeIds(oldTree, pageId)
+      : getDescendantNodeIds({ nodes: oldTree, rootId: pageId })
   return oldTree.filter((node) => !idsToRemove.has(node.id))
 }
 
-export function addOrUpdatePageInTree(
-  oldTree: PageTreeNode[] | undefined,
-  node: PageTreeNode,
-): PageTreeNode[] | undefined {
+export function addOrUpdatePageInTree({
+  oldTree,
+  node,
+}: {
+  oldTree: PageTreeNode[] | undefined
+  node: PageTreeNode
+}): PageTreeNode[] | undefined {
   if (!oldTree) return [node]
   const exists = oldTree.some((n) => n.id === node.id)
   if (exists) {
@@ -66,48 +78,60 @@ export function addOrUpdatePageInTree(
   return [...oldTree, node]
 }
 
-export function addPageToTrash(
-  oldTrash: TrashedPage[] | undefined,
-  trashed: TrashedPage,
-): TrashedPage[] | undefined {
+export function addPageToTrash({
+  oldTrash,
+  trashed,
+}: {
+  oldTrash: TrashedPage[] | undefined
+  trashed: TrashedPage
+}): TrashedPage[] | undefined {
   if (!oldTrash) return [trashed]
   if (oldTrash.some((p) => p.id === trashed.id)) return oldTrash
   return [trashed, ...oldTrash]
 }
 
-export function removePageFromTrash(
-  oldTrash: TrashedPage[] | undefined,
-  pageId: PageId,
-): TrashedPage[] | undefined {
+export function removePageFromTrash({
+  oldTrash,
+  pageId,
+}: {
+  oldTrash: TrashedPage[] | undefined
+  pageId: PageId
+}): TrashedPage[] | undefined {
   if (!oldTrash) return oldTrash
   return oldTrash.filter((p) => p.id !== pageId)
 }
 
-export const handlePageAddedWsMessage = (
-  queryClient: QueryClient,
-  payload: Extract<WorkspaceWsMessage, { type: 'page.created' }>['payload'],
-) => {
+export const handlePageAddedWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
+  payload: Extract<WorkspaceWsMessage, { type: 'page.created' }>['payload']
+}) => {
   queryClient.setQueryData(
     pageTreeQueryOptions(payload.workspaceId).queryKey,
-    (oldData) => addOrUpdatePageInTree(oldData, payload),
+    (oldData) => addOrUpdatePageInTree({ oldTree: oldData, node: payload }),
   )
 }
 
-export const handlePageMovedToTrashWsMessage = (
-  queryClient: QueryClient,
+export const handlePageMovedToTrashWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
   payload: Extract<
     WorkspaceWsMessage,
     { type: 'page.moved_to_trash' }
-  >['payload'],
-) => {
+  >['payload']
+}) => {
   queryClient.setQueryData(
     pageTreeQueryOptions(payload.workspaceId).queryKey,
     (oldData) =>
-      removePageAndDescendantsFromTree(
-        oldData,
-        payload.pageId,
-        payload.pageIds,
-      ),
+      removePageAndDescendantsFromTree({
+        oldTree: oldData,
+        pageId: payload.pageId,
+        knownDescendantIds: payload.pageIds,
+      }),
   )
 
   const pageDetail = queryClient.getQueryData(
@@ -116,13 +140,16 @@ export const handlePageMovedToTrashWsMessage = (
   queryClient.setQueryData(
     trashedPagesQueryOptions(payload.workspaceId).queryKey,
     (oldTrash) =>
-      addPageToTrash(oldTrash, {
-        id: payload.pageId,
-        parentId: pageDetail?.parentId ?? null,
-        title: pageDetail?.title ?? 'Untitled',
-        icon: pageDetail?.icon ?? undefined,
-        deletedAt: new Date().toISOString(),
-        deletedByName: 'A member',
+      addPageToTrash({
+        oldTrash,
+        trashed: {
+          id: payload.pageId,
+          parentId: pageDetail?.parentId ?? null,
+          title: pageDetail?.title ?? 'Untitled',
+          icon: pageDetail?.icon ?? undefined,
+          deletedAt: new Date().toISOString(),
+          deletedByName: 'A member',
+        },
       }),
   )
 
@@ -141,23 +168,29 @@ export const handlePageMovedToTrashWsMessage = (
   }
 }
 
-export const handlePageRestoredWsMessage = (
-  queryClient: QueryClient,
-  payload: Extract<WorkspaceWsMessage, { type: 'page.restored' }>['payload'],
-) => {
+export const handlePageRestoredWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
+  payload: Extract<WorkspaceWsMessage, { type: 'page.restored' }>['payload']
+}) => {
   queryClient.setQueryData(
     pageTreeQueryOptions(payload.workspaceId).queryKey,
     (oldData) =>
-      addOrUpdatePageInTree(oldData, {
-        id: payload.id,
-        title: payload.title,
-        icon: payload.icon,
-        parentId: payload.parentId,
+      addOrUpdatePageInTree({
+        oldTree: oldData,
+        node: {
+          id: payload.id,
+          title: payload.title,
+          icon: payload.icon,
+          parentId: payload.parentId,
+        },
       }),
   )
   queryClient.setQueryData(
     trashedPagesQueryOptions(payload.workspaceId).queryKey,
-    (oldTrash) => removePageFromTrash(oldTrash, payload.id),
+    (oldTrash) => removePageFromTrash({ oldTrash, pageId: payload.id }),
   )
   queryClient.setQueryData(
     pageDetailQueryOptions(payload.workspaceId, payload.id).queryKey,
@@ -165,25 +198,28 @@ export const handlePageRestoredWsMessage = (
   )
 }
 
-export const handlePageDeletedPermanentlyWsMessage = (
-  queryClient: QueryClient,
+export const handlePageDeletedPermanentlyWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
   payload: Extract<
     WorkspaceWsMessage,
     { type: 'page.deleted_permanently' }
-  >['payload'],
-) => {
+  >['payload']
+}) => {
   queryClient.setQueryData(
     pageTreeQueryOptions(payload.workspaceId).queryKey,
     (oldData) =>
-      removePageAndDescendantsFromTree(
-        oldData,
-        payload.pageId,
-        payload.pageIds,
-      ),
+      removePageAndDescendantsFromTree({
+        oldTree: oldData,
+        pageId: payload.pageId,
+        knownDescendantIds: payload.pageIds,
+      }),
   )
   queryClient.setQueryData(
     trashedPagesQueryOptions(payload.workspaceId).queryKey,
-    (oldTrash) => removePageFromTrash(oldTrash, payload.pageId),
+    (oldTrash) => removePageFromTrash({ oldTrash, pageId: payload.pageId }),
   )
   queryClient.removeQueries({
     queryKey: pageDetailQueryOptions(payload.workspaceId, payload.pageId)
@@ -193,7 +229,7 @@ export const handlePageDeletedPermanentlyWsMessage = (
     for (const pid of payload.pageIds) {
       queryClient.setQueryData(
         trashedPagesQueryOptions(payload.workspaceId).queryKey,
-        (oldTrash) => removePageFromTrash(oldTrash, pid as PageId),
+        (oldTrash) => removePageFromTrash({ oldTrash, pageId: pid as PageId }),
       )
       queryClient.removeQueries({
         queryKey: pageDetailQueryOptions(payload.workspaceId, pid as PageId)
@@ -203,23 +239,29 @@ export const handlePageDeletedPermanentlyWsMessage = (
   }
 }
 
-export const handleTrashEmptiedWsMessage = (
-  queryClient: QueryClient,
-  payload: Extract<WorkspaceWsMessage, { type: 'trash.emptied' }>['payload'],
-) => {
+export const handleTrashEmptiedWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
+  payload: Extract<WorkspaceWsMessage, { type: 'trash.emptied' }>['payload']
+}) => {
   queryClient.setQueryData(
     trashedPagesQueryOptions(payload.workspaceId).queryKey,
     [],
   )
 }
 
-export const handleDocumentTitleChangedWsMessage = (
-  queryClient: QueryClient,
+export const handleDocumentTitleChangedWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
   payload: Extract<
     WorkspaceWsMessage,
     { type: 'document.title.changed' }
-  >['payload'],
-) => {
+  >['payload']
+}) => {
   queryClient.setQueryData(
     pageTreeQueryOptions(payload.workspaceId).queryKey,
     (oldData) => {
@@ -239,13 +281,16 @@ export const handleDocumentTitleChangedWsMessage = (
   )
 }
 
-export const handleDocumentIconChangedWsMessage = (
-  queryClient: QueryClient,
+export const handleDocumentIconChangedWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
   payload: Extract<
     WorkspaceWsMessage,
     { type: 'document.icon.changed' }
-  >['payload'],
-) => {
+  >['payload']
+}) => {
   queryClient.setQueryData(
     pageTreeQueryOptions(payload.workspaceId).queryKey,
     (oldData) => {
@@ -265,13 +310,16 @@ export const handleDocumentIconChangedWsMessage = (
   )
 }
 
-export const handleDocumentCoverChangedWsMessage = (
-  queryClient: QueryClient,
+export const handleDocumentCoverChangedWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
   payload: Extract<
     WorkspaceWsMessage,
     { type: 'document.cover.changed' }
-  >['payload'],
-) => {
+  >['payload']
+}) => {
   queryClient.setQueryData(
     pageDetailQueryOptions(payload.workspaceId, payload.id).queryKey,
     (oldData) => {
@@ -281,25 +329,36 @@ export const handleDocumentCoverChangedWsMessage = (
   )
 }
 
-export const updatePageAccessRequestStatusInCache = (
-  queryClient: QueryClient,
-  workspaceId: WorkspaceId,
-  pageId: PageId,
-  status: PageAccessRequestStatusResponse,
-) => {
+export const updatePageAccessRequestStatusInCache = ({
+  queryClient,
+  workspaceId,
+  pageId,
+  status,
+}: {
+  queryClient: QueryClient
+  workspaceId: WorkspaceId
+  pageId: PageId
+  status: PageAccessRequestStatusResponse
+}) => {
   queryClient.setQueryData(
     pageAccessRequestStatusQueryOptions(workspaceId, pageId).queryKey,
     status,
   )
 }
 
-export const updatePagePermissionInCache = (
-  queryClient: QueryClient,
-  workspaceId: WorkspaceId,
-  pageId: PageId,
-  userId: string,
-  role: PagePermissionRole,
-) => {
+export const updatePagePermissionInCache = ({
+  queryClient,
+  workspaceId,
+  pageId,
+  userId,
+  role,
+}: {
+  queryClient: QueryClient
+  workspaceId: WorkspaceId
+  pageId: PageId
+  userId: string
+  role: PagePermissionRole
+}) => {
   queryClient.setQueryData(
     pagePermissionsInfiniteQueryOptions(workspaceId, pageId).queryKey,
     (oldData) => {
@@ -315,14 +374,35 @@ export const updatePagePermissionInCache = (
       }
     },
   )
+
+  void queryClient.invalidateQueries({
+    queryKey: authorizationKeys.all,
+  })
+  void queryClient.invalidateQueries({
+    queryKey: pagesKeys.accessRequestStatus(workspaceId, pageId),
+  })
+  void queryClient.invalidateQueries({
+    queryKey: pagesKeys.detail(pageId),
+  })
+  void queryClient.invalidateQueries({
+    queryKey: pagesKeys.tree(workspaceId),
+  })
+  void queryClient.invalidateQueries({
+    queryKey: pagesKeys.permissions(workspaceId, pageId),
+  })
 }
 
-export const addPageMemberPermissionToCache = (
-  queryClient: QueryClient,
-  workspaceId: WorkspaceId,
-  pageId: PageId,
-  permission: PageMemberPermission,
-) => {
+export const addPageMemberPermissionToCache = ({
+  queryClient,
+  workspaceId,
+  pageId,
+  permission,
+}: {
+  queryClient: QueryClient
+  workspaceId: WorkspaceId
+  pageId: PageId
+  permission: PageMemberPermission
+}) => {
   queryClient.setQueryData(
     pagePermissionsInfiniteQueryOptions(workspaceId, pageId).queryKey,
     (oldData) => {

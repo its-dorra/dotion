@@ -27,13 +27,13 @@ export function useUpdatePagePermission() {
             variables.pageId,
           ).queryKey,
         )
-        updatePagePermissionInCache(
+        updatePagePermissionInCache({
           queryClient,
-          variables.workspaceId,
-          variables.pageId,
-          variables.userId,
-          variables.role,
-        )
+          workspaceId: variables.workspaceId,
+          pageId: variables.pageId,
+          userId: variables.userId,
+          role: variables.role,
+        })
         return { previousPermissions }
       },
       onError: (error, variables, context) => {

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { pagesApi } from '../api'
+import { pagesKeys } from '../query-options'
 import { updatePageAccessRequestStatusInCache } from '../utils'
 import { toast } from 'sonner'
 import { m } from '@/paraglide/messages'
@@ -22,12 +23,18 @@ export function useRejectPageAccess() {
         requestId: string
       }) => pagesApi.rejectAccessRequest(workspaceId, pageId, requestId),
       onSuccess: (_data, vars) => {
-        updatePageAccessRequestStatusInCache(
+        updatePageAccessRequestStatusInCache({
           queryClient,
-          vars.workspaceId,
-          vars.pageId,
-          { hasPendingRequest: false, request: null },
-        )
+          workspaceId: vars.workspaceId,
+          pageId: vars.pageId,
+          status: { hasPendingRequest: false, request: null },
+        })
+        void queryClient.invalidateQueries({
+          queryKey: pagesKeys.accessRequestStatus(
+            vars.workspaceId,
+            vars.pageId,
+          ),
+        })
         toast.success(m.toast_access_request_declined())
       },
       onError: (error) => {

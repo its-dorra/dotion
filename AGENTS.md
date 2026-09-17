@@ -460,6 +460,14 @@ There are **four** Durable Object classes, each with a distinct responsibility:
 3. **`UsersDO`** (`c.env.DOTION_USERS_DO`, keyed by `userId`): User-level events (real-time notification delivery, notification read states).
 4. **`UserCreditsDO`** (`c.env.DOTION_USER_CREDITS_DO`, keyed by `userId`): Per-user AI generation token quota tracking, rate limiting, and credit settlement.
 
+### 5.0 Zero `switch` & Zero `if (type === ...)` Rule (Strategy Pattern)
+
+- **Never use `switch` statements or `if (type === ...)` chains**: Branching based on message types, event types, or role strings is a code smell.
+- **Always use the Strategy Pattern**:
+  - For WebSocket routing, use `WsRouter` registering individual `WsStrategy<Context, Payload>` classes.
+  - For domain events, use `DomainEventDispatcher` registering `DomainEventStrategy<EventType>` classes.
+  - For static or dynamic capability/role resolution, use strategy classes or $O(1)$ lookup maps.
+
 ### 5.1 Port / Adapter Pattern for Real-Time & Side-Effects
 
 Domain services in `packages/services` **must never import Cloudflare DO bindings or call DO stubs directly**. Real-time broadcasting and side-effects are decoupled using the Port / Adapter pattern:

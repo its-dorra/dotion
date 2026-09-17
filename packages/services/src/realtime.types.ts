@@ -58,6 +58,11 @@ export interface WorkspaceEventPublisher {
     pageIds: PageId[],
   ): Promise<void>;
   broadcastTrashEmptied(workspaceId: WorkspaceId): Promise<void>;
+  disconnectUser(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    reason?: string,
+  ): Promise<void>;
 }
 
 export interface PageCleanupQueue {
@@ -80,6 +85,16 @@ export interface PageEventPublisher {
       parentId: CommentId | null;
       isRoot: boolean;
     },
+  ): Promise<void>;
+  updateUserRole(
+    pageId: PageId,
+    userId: UserId,
+    role: import("@dotion/shared/pages/types").AllPageRole,
+  ): Promise<void>;
+  disconnectUser(
+    pageId: PageId,
+    userId: UserId,
+    reason?: string,
   ): Promise<void>;
 }
 

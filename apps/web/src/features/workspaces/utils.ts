@@ -9,11 +9,15 @@ import {
   workspaceMembersInfiniteQueryOptions,
 } from './query-options'
 
-export const removeWorkspaceInvitationFromCache = (
-  queryClient: QueryClient,
-  workspaceId: string,
-  invitationId: string,
-) => {
+export const removeWorkspaceInvitationFromCache = ({
+  queryClient,
+  workspaceId,
+  invitationId,
+}: {
+  queryClient: QueryClient
+  workspaceId: string
+  invitationId: string
+}) => {
   queryClient.setQueryData(
     workspaceInvitationsInfiniteQueryOptions(workspaceId).queryKey,
     (oldData) => {
@@ -37,11 +41,15 @@ export const removeWorkspaceInvitationFromCache = (
   )
 }
 
-export const addWorkspaceInvitationToCache = (
-  queryClient: QueryClient,
-  workspaceId: string,
-  invitation: WorkspaceInvitation,
-) => {
+export const addWorkspaceInvitationToCache = ({
+  queryClient,
+  workspaceId,
+  invitation,
+}: {
+  queryClient: QueryClient
+  workspaceId: string
+  invitation: WorkspaceInvitation
+}) => {
   queryClient.setQueryData(
     workspaceInvitationsInfiniteQueryOptions(workspaceId).queryKey,
     (oldData) => {
@@ -75,11 +83,15 @@ export const addWorkspaceInvitationToCache = (
   )
 }
 
-export const addWorkspaceMemberToCache = (
-  queryClient: QueryClient,
-  workspaceId: string,
-  member: WorkspaceMember,
-) => {
+export const addWorkspaceMemberToCache = ({
+  queryClient,
+  workspaceId,
+  member,
+}: {
+  queryClient: QueryClient
+  workspaceId: string
+  member: WorkspaceMember
+}) => {
   queryClient.setQueryData(
     workspaceMembersInfiniteQueryOptions(workspaceId).queryKey,
     (oldData) => {
@@ -113,11 +125,15 @@ export const addWorkspaceMemberToCache = (
   )
 }
 
-export const removeWorkspaceMemberFromCache = (
-  queryClient: QueryClient,
-  workspaceId: string,
-  userId: string,
-) => {
+export const removeWorkspaceMemberFromCache = ({
+  queryClient,
+  workspaceId,
+  userId,
+}: {
+  queryClient: QueryClient
+  workspaceId: string
+  userId: string
+}) => {
   queryClient.setQueryData(
     workspaceMembersInfiniteQueryOptions(workspaceId).queryKey,
     (oldData) => {
@@ -141,12 +157,17 @@ export const removeWorkspaceMemberFromCache = (
   )
 }
 
-export const updateWorkspaceMemberRoleInCache = (
-  queryClient: QueryClient,
-  workspaceId: string,
-  userId: string,
-  role: 'owner' | 'member',
-) => {
+export const updateWorkspaceMemberRoleInCache = ({
+  queryClient,
+  workspaceId,
+  userId,
+  role,
+}: {
+  queryClient: QueryClient
+  workspaceId: string
+  userId: string
+  role: 'owner' | 'member'
+}) => {
   queryClient.setQueryData(
     workspaceMembersInfiniteQueryOptions(workspaceId).queryKey,
     (oldData) => {
@@ -164,73 +185,97 @@ export const updateWorkspaceMemberRoleInCache = (
   )
 }
 
-export const handleInvitationCreatedWsMessage = (
-  queryClient: QueryClient,
+export const handleInvitationCreatedWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
   payload: Extract<
     WorkspaceWsMessage,
     { type: 'workspace.invitation_created' }
-  >['payload'],
-) => {
-  addWorkspaceInvitationToCache(queryClient, payload.workspaceId, payload)
+  >['payload']
+}) => {
+  addWorkspaceInvitationToCache({
+    queryClient,
+    workspaceId: payload.workspaceId,
+    invitation: payload,
+  })
 }
 
-export const handleInvitationDeclinedWsMessage = (
-  queryClient: QueryClient,
+export const handleInvitationDeclinedWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
   payload: Extract<
     WorkspaceWsMessage,
     { type: 'workspace.invitation_declined' }
-  >['payload'],
-) => {
-  removeWorkspaceInvitationFromCache(
+  >['payload']
+}) => {
+  removeWorkspaceInvitationFromCache({
     queryClient,
-    payload.workspaceId,
-    payload.invitationId,
-  )
+    workspaceId: payload.workspaceId,
+    invitationId: payload.invitationId,
+  })
 }
 
-export const handleInvitationCancelledWsMessage = (
-  queryClient: QueryClient,
+export const handleInvitationCancelledWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
   payload: Extract<
     WorkspaceWsMessage,
     { type: 'workspace.invitation_cancelled' }
-  >['payload'],
-) => {
-  removeWorkspaceInvitationFromCache(
+  >['payload']
+}) => {
+  removeWorkspaceInvitationFromCache({
     queryClient,
-    payload.workspaceId,
-    payload.invitationId,
-  )
+    workspaceId: payload.workspaceId,
+    invitationId: payload.invitationId,
+  })
 }
 
-export const handleMemberJoinedWsMessage = (
-  queryClient: QueryClient,
-  workspaceId: string,
+export const handleMemberJoinedWsMessage = ({
+  queryClient,
+  workspaceId,
+  payload,
+}: {
+  queryClient: QueryClient
+  workspaceId: string
   payload: Extract<
     WorkspaceWsMessage,
     { type: 'workspace.member_joined' }
-  >['payload'],
-) => {
+  >['payload']
+}) => {
   const targetWorkspaceId = payload.workspaceId ?? workspaceId
   if (payload.invitationId) {
-    removeWorkspaceInvitationFromCache(
+    removeWorkspaceInvitationFromCache({
       queryClient,
-      targetWorkspaceId,
-      payload.invitationId,
-    )
+      workspaceId: targetWorkspaceId,
+      invitationId: payload.invitationId,
+    })
   }
-  addWorkspaceMemberToCache(queryClient, targetWorkspaceId, payload.member)
+  addWorkspaceMemberToCache({
+    queryClient,
+    workspaceId: targetWorkspaceId,
+    member: payload.member,
+  })
 }
 
-export const handleMemberRemovedWsMessage = (
-  queryClient: QueryClient,
+export const handleMemberRemovedWsMessage = ({
+  queryClient,
+  payload,
+}: {
+  queryClient: QueryClient
   payload: Extract<
     WorkspaceWsMessage,
     { type: 'workspace.member_removed' }
-  >['payload'],
-) => {
-  removeWorkspaceMemberFromCache(
+  >['payload']
+}) => {
+  removeWorkspaceMemberFromCache({
     queryClient,
-    payload.workspaceId,
-    payload.userId,
-  )
+    workspaceId: payload.workspaceId,
+    userId: payload.userId,
+  })
 }

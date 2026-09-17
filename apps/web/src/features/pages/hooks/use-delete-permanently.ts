@@ -29,7 +29,8 @@ export function useDeletePermanently() {
         )
         queryClient.setQueryData(
           trashedPagesQueryOptions(variables.workspaceId).queryKey,
-          (oldTrash) => removePageFromTrash(oldTrash, variables.pageId),
+          (oldTrash) =>
+            removePageFromTrash({ oldTrash, pageId: variables.pageId }),
         )
         queryClient.removeQueries({
           queryKey: pageDetailQueryOptions(

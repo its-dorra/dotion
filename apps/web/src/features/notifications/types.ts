@@ -7,6 +7,7 @@ import type {
   PageInvitationNotificationMetadata,
   PermissionChangeNotificationMetadata,
   PageAccessRequestNotificationMetadata,
+  PageAccessRequestResolvedNotificationMetadata,
   CreateNotificationInput,
   PaginatedNotifications,
 } from '@dotion/shared/notifications/types'
@@ -21,6 +22,7 @@ export type {
   PageInvitationNotificationMetadata,
   PermissionChangeNotificationMetadata,
   PageAccessRequestNotificationMetadata,
+  PageAccessRequestResolvedNotificationMetadata,
   CreateNotificationInput,
   PaginatedNotifications,
   PaginatedData,
@@ -41,6 +43,8 @@ export type PermissionChangeNotification =
   TypedNotification<PermissionChangeNotificationMetadata>
 export type PageAccessRequestNotification =
   TypedNotification<PageAccessRequestNotificationMetadata>
+export type PageAccessRequestResolvedNotification =
+  TypedNotification<PageAccessRequestResolvedNotificationMetadata>
 
 export interface MarkAsReadInput {
   notificationId: string

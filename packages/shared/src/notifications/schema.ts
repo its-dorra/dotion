@@ -14,15 +14,15 @@ import { PagePermissionRoleSchema, AllPageRoleSchema } from "../pages/schema";
 export { notificationId };
 
 export const NotificationTypeSchema = z.enum([
-  "workspace_invitation",
-  "page_invitation",
-  "permission_change",
-  "page_access_request",
-  "page_access_request_resolved",
+  "workspace.invitation_created",
+  "page.invitation_created",
+  "page.permission_updated",
+  "page.access_requested",
+  "page.access_request_resolved",
 ]);
 
 export const WorkspaceInvitationNotificationMetadataSchema = z.object({
-  type: z.literal("workspace_invitation"),
+  type: z.literal("workspace.invitation_created"),
   workspaceInvitationId: workspaceInvitationId,
   workspaceId: workspaceId,
   workspaceName: z.string(),
@@ -32,7 +32,7 @@ export const WorkspaceInvitationNotificationMetadataSchema = z.object({
 });
 
 export const PageInvitationNotificationMetadataSchema = z.object({
-  type: z.literal("page_invitation"),
+  type: z.literal("page.invitation_created"),
   pageId: pageId,
   workspaceId: workspaceId,
   pageTitle: z.string(),
@@ -43,7 +43,7 @@ export const PageInvitationNotificationMetadataSchema = z.object({
 });
 
 export const PermissionChangeNotificationMetadataSchema = z.object({
-  type: z.literal("permission_change"),
+  type: z.literal("page.permission_updated"),
   pageId: pageId,
   workspaceId: workspaceId,
   pageTitle: z.string(),
@@ -53,7 +53,7 @@ export const PermissionChangeNotificationMetadataSchema = z.object({
 });
 
 export const PageAccessRequestNotificationMetadataSchema = z.object({
-  type: z.literal("page_access_request"),
+  type: z.literal("page.access_requested"),
   requestId: z.string(),
   pageId: pageId,
   workspaceId: workspaceId,
@@ -65,7 +65,7 @@ export const PageAccessRequestNotificationMetadataSchema = z.object({
 });
 
 export const PageAccessRequestResolvedNotificationMetadataSchema = z.object({
-  type: z.literal("page_access_request_resolved"),
+  type: z.literal("page.access_request_resolved"),
   requestId: z.string(),
   pageId: pageId,
   workspaceId: workspaceId,

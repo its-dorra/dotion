@@ -14,10 +14,10 @@ export function useDeclineInvitation() {
       mutationFn: (input: DeclineInvitationInput) =>
         workspacesApi.declineInvitation(input),
       onSuccess: (_data, variables) => {
-        removeNotificationByInvitationIdFromCache(
+        removeNotificationByInvitationIdFromCache({
           queryClient,
-          variables.invitationId,
-        )
+          invitationId: variables.invitationId,
+        })
       },
       onError: (error) => {
         toast.error(error?.message ?? m.toast_workspace_decline_failed())
