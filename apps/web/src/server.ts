@@ -15,15 +15,14 @@ export default Sentry.withSentry(
   }),
   wrapFetchWithSentry({
     // @ts-expect-error
-    fetch: (request: Request, env: Env) =>
-      paraglideMiddleware(request, () => {
-        console.log('Request URL:', request.url)
-        const url = new URL(request.url)
-        if (url.pathname.includes('/api')) {
-          return env.BACKEND.fetch(request)
-        }
-
+    fetch: (request: Request, env: Env) => {
+      const url = new URL(request.url)
+      if (url.pathname.startsWith('/api')) {
+        return env.BACKEND.fetch(request)
+      }
+      return paraglideMiddleware(request, () => {
         return handler.fetch(request)
-      }),
+      })
+    },
   }),
 )
