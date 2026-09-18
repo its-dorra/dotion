@@ -42,6 +42,7 @@ Dotion is a full-featured, open-source Notion alternative built as a **modular m
 | [Better Auth](https://www.better-auth.com/)                                                                          | Authentication (email/password, Google, GitHub OAuth)            |
 | [Yjs](https://yjs.dev/)                                                                                              | CRDT real-time document synchronization                          |
 | [Vercel AI SDK 7](https://ai-sdk.dev/)                                                                               | AI streaming, agentic tool calling, RAG orchestration            |
+| [ai-fallback](https://github.com/lucas-reynoso/ai-fallback)                                                          | Resilient multi-provider failover (Google Gemini ⇄ Groq OSS)     |
 | [Zod 4](https://zod.dev/)                                                                                            | Runtime schema validation & branded types                        |
 | [better-result](https://github.com/ArcticZeroo/better-result)                                                        | Result monad & TaggedError for zero-throw error handling         |
 | [Sentry](https://sentry.io/)                                                                                         | Error tracking & performance monitoring                          |
@@ -135,48 +136,89 @@ Service mutation
 
 ### Queues for Background Jobs
 
-Heavy, latency-insensitive work is offloaded to **Cloudflare Queues** with automatic retries:
+Heavy, latency-insensitive work is offloaded to **Cloudflare Queues** with automatic retries and dead-letter queue (DLQ) protection:
 
-| Queue                  | Trigger                          | What it does                                                                                                                                                                                        |
-| ---------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dotion-page-indexing` | Page content or metadata changes | Chunks document content, generates 1536-dim embeddings (Gemini `embedding-001`), computes content hashes for diff detection, and upserts `page_sections` with pgvector HNSW + Lakebase BM25 indexes |
-| `dotion-page-cleanup`  | Page permanent deletion          | Iterates and deletes all R2 storage assets under the page's prefix (`workspaces/{id}/pages/{id}/*`) via cursor-based batch deletion                                                                 |
+| Queue                      | Trigger                          | What it does                                                                                                                                                                                               |
+| -------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dotion-page-indexing`     | Page content or metadata changes | Chunks document content, generates 1536-dim embeddings (Gemini `gemini-embedding-001`), computes content hashes for diff detection, and upserts `page_sections` with pgvector HNSW + Lakebase BM25 indexes |
+| `dotion-page-indexing-dlq` | Indexing failure after 3 retries | Captures failed indexing payloads with stack traces and message IDs for debugging and dead-letter replay                                                                                                   |
+| `dotion-page-cleanup`      | Page permanent deletion          | Iterates and deletes all R2 storage assets under the page's prefix (`workspaces/{id}/pages/{id}/*`) via cursor-based batch deletion                                                                        |
 
-Both queues run with batch size 10, 5-second timeout, and 3 max retries.
+Both queues run with batch size 10, 5-second timeout, and 3 max retries before routing to DLQ.
 
 ### Agentic RAG Assistant
 
-The workspace AI assistant is not a simple prompt-in/text-out chatbot — it's an **agentic RAG system** with full tool-calling access to the entire workspace:
+The workspace AI assistant is not a simple prompt-in/text-out chatbot — it is an **agentic, multi-model RAG system** engineered for high resilience, strict workspace grounding, and low-latency edge inference:
 
 ```
-User question
-  → AI SDK streamText
-  → Agent decides which tools to call
-  → Tool execution (search_workspace, get_page, get_page_hierarchy, read_page_section)
-  → Results fed back as context
-  → Agent reasons over retrieved content
-  → Grounded response with interactive citations
+User Question
+  │
+  ├── 1. Quota Verification (UserCreditsDO SQLite Ledger)
+  │
+  ├── 2. Conversation Window & Progressive Summarization (Gemini 3.1 Flash-Lite ⇄ Groq Compound)
+  │      └─ Threads > 8 messages compressed into rolling memory
+  │
+  ├── 3. Agentic Execution Loop (Vercel AI SDK 7 streamText with Step-Budget Enforcement)
+  │      │
+  │      ├── High-Resilience Model Failover (ai-fallback)
+  │      │     Primary: Google Gemini 3.6 Flash
+  │      │     Secondary: Groq OpenAI OSS 120B (60s auto-reset)
+  │      │
+  │      ├── Dynamic Step Budget & Early Finalization Warning (maxSteps: 10)
+  │      │
+  │      └── 5 Specialized Workspace Retrieval Tools
+  │            ├── searchWorkspace       → Tri-mode search (Balanced RRF / Conceptual / Exact)
+  │            ├── readFullPage          → Complete page read (Indexed sections or Yjs binary CRDT)
+  │            ├── getPageTree           → Full workspace navigation & hierarchy tree
+  │            ├── fetchAdjacentSections → Surrounding section context window
+  │            └── getPageBlocks         → Granular BlockNote inspector (tables, code, checklists)
+  │
+  ├── 4. Grounding & Prompt-Injection Defense
+  │      └─ Workspace content isolated as untrusted DATA; early exit on absent information
+  │
+  └── 5. Streaming Output with Interactive Citations [1][2] + Token Settlement
 ```
 
-**How it works:**
+**Key Pipeline Capabilities:**
 
-1. **Tool-calling agent loop**: Using Vercel AI SDK 7's `streamText` with `isStepCount` stopping conditions, the assistant autonomously decides when to search, what pages to read, and how deeply to explore the workspace hierarchy. It's not limited to a single retrieval — it can chain multiple tool calls to cross-reference documents.
+1. **Multi-Model Edge Fallback (`ai-fallback`)**:
+   - **Primary Model**: Google `gemini-3.6-flash` (via `@ai-sdk/google`) — rapid reasoning and strong tool-calling fidelity.
+   - **Secondary Model**: Groq `openai/gpt-oss-120b` (via `@ai-sdk/groq`) — low-latency edge failover.
+   - **Automatic Failover & Recovery**: Powered by `createFallback`, provider errors or rate limits immediately trigger seamless failover to Groq, resetting back to Gemini after 60 seconds (`modelResetInterval: 60000`).
+   - **Dedicated Summarization Pipeline**: Separate lightweight fallback using Google `gemini-3.1-flash-lite` (primary) and Groq `groq/compound` (secondary) for asynchronous thread title generation and conversation memory compression.
 
-2. **Four workspace tools** give the agent complete read access:
-   - `search_workspace` — Hybrid search (semantic + lexical) across all indexed pages
-   - `get_page` — Retrieve a specific page's full content
-   - `get_page_hierarchy` — Navigate the workspace's page tree structure
-   - `read_page_section` — Read a specific section of a document for fine-grained context
+2. **Ingestion & Semantic Chunking Engine (`ChunkingService`)**:
+   - **BlockNote AST Chunking**: Parses binary Yjs CRDT documents into semantic sections based on heading levels (H1/H2/H3).
+   - **Smart Paragraph-Boundary Splitting**: Flat (headingless) documents break cleanly at double-newline paragraph boundaries rather than arbitrary line breaks.
+   - **Media Metadata Preservation**: Extracts alt text, captions, and file names from image, video, audio, and file blocks into searchable text embeddings (`[image: alt — name — caption]`).
+   - **Sliding Overlap for Retrieval Density**: Prepends 200 characters of preceding section context during embedding generation (`embedBatch`) without bloating stored database text.
+   - **Deduplicated Block Mapping**: Exact mapping between sub-chunks and BlockNote `blockId`s for granular block-level citations.
+   - **1536-Dimensional Embeddings**: Google `gemini-embedding-001` with exponential backoff and task-type awareness (`RETRIEVAL_DOCUMENT` vs. `RETRIEVAL_QUERY`).
 
-3. **Hybrid search backbone**: Search queries combine **pgvector HNSW** cosine similarity (semantic) with **Lakebase BM25** full-text search (lexical), fused via **Reciprocal Rank Fusion (RRF)** with BM25 gating when semantic similarity scores are low.
+3. **Tri-Mode Hybrid Search Backbone**:
+   - `balanced`: **Reciprocal Rank Fusion (RRF, k=60)** combining semantic pgvector HNSW cosine similarity and Lakebase BM25 full-text rank, gated by BM25 scoring when semantic signals are sparse.
+   - `conceptual`: Vector-priority search with relaxed similarity threshold for conceptual and thematic exploration.
+   - `exact`: Lexical BM25 priority search designed for technical identifiers, UUIDs, error traces, and exact code snippets.
 
-4. **Strict RAG grounding**: A system prompt enforces that the assistant only answers based on retrieved workspace content — no hallucination from pre-trained knowledge. Every claim is backed by a citation.
+4. **Five Specialized Workspace Tools**:
+   - `searchWorkspace` — Multi-mode hybrid search with keyword formulation guidelines and score thresholds.
+   - `readFullPage` — Full-document retrieval with dual-path execution (indexed sections or binary Yjs CRDT reconstruction with per-section citations).
+   - `getPageTree` — Inspects hierarchical parent/child navigation tree for workspace structure and subpage discovery.
+   - `fetchAdjacentSections` — Surrounding section window fetching with verified page title metadata for contextual continuity.
+   - `getPageBlocks` — Granular BlockNote block inspector for tables, checklists, code blocks, and specific block IDs with pagination and truncation awareness.
 
-5. **Interactive citations**: Responses include clickable source chips that navigate to the cited page and scroll directly to the specific heading block .
+5. **Agentic Loop & Context Optimization**:
+   - **Step-Budget Awareness**: Dynamic tool injection tracks remaining agentic execution steps (budget default 10) and warns the LLM to finalize answers before step exhaustion.
+   - **Conversation Sliding Window & Progressive Summarization**: Threads exceeding 8 messages are compressed into memory summaries to conserve context window while preserving context continuity.
+   - **Prompt Injection Defense**: Untrusted workspace data isolation ensures the agent treats retrieved documents strictly as data, resisting embedded prompt injections.
+   - **Early-Exit Heuristic**: Prompt instructions prevent speculative multi-hop fishing when information is absent, exiting cleanly with standardized responses.
+   - **Interactive Citations**: Clickable source badges `[N]` linked to specific page headings and block IDs.
 
-6. **Token quota management**: Each user has a daily token allowance (default 90,000) tracked by a dedicated `UserCreditsDO` Durable Object with an append-only SQLite ledger. The agent checks quota before streaming and settles actual token usage on completion.
+6. **Token Quota Management & Edge Ledger**:
+   - Per-user token quotas (default 90,000/day) tracked atomically in `UserCreditsDO` SQLite ledger.
+   - Pre-stream quota checks (`minTokens: 50`) and post-finish settlement of input + output tokens.
 
-7. **Multi-thread conversations**: Users can create, switch between, and delete conversation threads, with full message history (including tool execution traces) persisted in PostgreSQL.
+7. **Multi-Thread Conversations**: Users can create, switch between, and delete conversation threads, with full message history (including tool execution traces) persisted in PostgreSQL.
 
 ### Real-Time Infrastructure (Durable Objects)
 
@@ -366,8 +408,8 @@ A pure **Attribute-Based Access Control** engine with zero I/O in policy evaluat
 ### 🤖 AI-Powered Features
 
 - **In-editor AI**: Contextual writing tools via slash menu or text selection — rewrite, improve, translate (AR/FR/EN), summarize, change tone, brainstorm, continue writing, fix grammar.
-- **Workspace AI chat**: Agentic RAG assistant with tool-calling, multi-turn threads, interactive citations, and credit quota tracking.
-- **Hybrid search**: Three modes — Balanced (hybrid RRF), Conceptual (semantic/vector), and Exact (lexical/BM25). Triggered globally via `Cmd+K`.
+- **Agentic RAG Assistant**: Multi-model fallback (Google Gemini 3.6 Flash ⇄ Groq GPT-OSS-120B), 5 workspace retrieval tools, hybrid RRF search, per-section citations, progressive conversation summarization, and token quota tracking.
+- **Tri-Mode Hybrid Search**: Balanced (hybrid RRF), Conceptual (semantic vector), and Exact (lexical/BM25). Triggered globally via `Cmd+K`.
 
 ### 🌐 Real-Time Collaboration
 
@@ -484,16 +526,16 @@ Starts PostgreSQL 18 and a local Neon HTTP proxy on port `4444`.
 cp apps/server/.env.example apps/server/.env
 ```
 
-| Variable                       | Description                                       |
-| ------------------------------ | ------------------------------------------------- |
-| `DATABASE_URL`                 | Neon-compatible PostgreSQL connection string      |
-| `BETTER_AUTH_URL`              | Auth callback URL (e.g., `http://localhost:8787`) |
-| `BETTER_AUTH_SECRET`           | Random secret for session signing                 |
-| `CORS_ORIGIN`                  | Frontend URL (e.g., `http://localhost:3002`)      |
-| `GITHUB_CLIENT_ID` / `SECRET`  | GitHub OAuth app credentials                      |
-| `GOOGLE_CLIENT_ID` / `SECRET`  | Google OAuth credentials                          |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini API key (embeddings)                       |
-| `GROQ_API_KEY`                 | Groq API key (AI features)                        |
+| Variable                       | Description                                                          |
+| ------------------------------ | -------------------------------------------------------------------- |
+| `DATABASE_URL`                 | Neon-compatible PostgreSQL connection string                         |
+| `BETTER_AUTH_URL`              | Auth callback URL (e.g., `http://localhost:8787`)                    |
+| `BETTER_AUTH_SECRET`           | Random secret for session signing                                    |
+| `CORS_ORIGIN`                  | Frontend URL (e.g., `http://localhost:3002`)                         |
+| `GITHUB_CLIENT_ID` / `SECRET`  | GitHub OAuth app credentials                                         |
+| `GOOGLE_CLIENT_ID` / `SECRET`  | Google OAuth credentials                                             |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini API key (embeddings, Gemini 3.6 Flash, Gemini 3.1 Flash-Lite) |
+| `GROQ_API_KEY`                 | Groq API key (GPT-OSS-120B fallback, Groq Compound summary fallback) |
 
 ### 4. Push Database Schema
 

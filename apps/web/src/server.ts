@@ -17,8 +17,9 @@ export default Sentry.withSentry(
     // @ts-expect-error
     fetch: (request: Request, env: Env) =>
       paraglideMiddleware(request, () => {
+        console.log('Request URL:', request.url)
         const url = new URL(request.url)
-        if (url.pathname.startsWith('/api')) {
+        if (url.pathname.includes('/api')) {
           return env.BACKEND.fetch(request)
         }
 
