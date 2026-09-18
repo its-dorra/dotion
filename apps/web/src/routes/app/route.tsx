@@ -27,6 +27,7 @@ export const Route = createFileRoute('/app')({
   component: AppLayout,
   errorComponent: AppLayoutError,
   notFoundComponent: AppLayoutNotFound,
+  ssr: 'data-only',
 })
 
 function AppLayout() {
