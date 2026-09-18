@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useParams } from '@tanstack/react-router'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { pagesApi } from '../api'
 import {
@@ -14,8 +13,6 @@ import type { MoveToTrashInput } from '../types'
 
 export function useMoveToTrash() {
   const queryClient = useQueryClient()
-  const navigate = useNavigate()
-  const params = useParams({ strict: false }) as { pageId?: string }
 
   return useMutation(
     resultMutationOptions({
@@ -99,15 +96,6 @@ export function useMoveToTrash() {
           )
         }
         toast.error(error?.message ?? m.toast_page_delete_failed())
-      },
-      onSuccess: (_result, variables) => {
-        if (params.pageId === variables.pageId) {
-          navigate({
-            to: '/app/workspaces/$workspaceId',
-            params: { workspaceId: variables.workspaceId },
-          })
-          toast.info(m.toast_page_moved_to_trash())
-        }
       },
     }),
   )

@@ -12,10 +12,10 @@ import { m } from '@/paraglide/messages'
 
 interface TrashedPageTreeItemProps {
   node: TrashedPageTreeNode
-  workspaceId: string
-  activePageId?: string
+  workspaceId: WorkspaceId
+  activePageId?: PageId
   depth: number
-  onDeletePermanently: (pageId: string) => void
+  onDeletePermanently: (pageId: PageId) => void
 }
 
 export const TrashedPageTreeItem = memo(function TrashedPageTreeItem({

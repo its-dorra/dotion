@@ -1,11 +1,11 @@
 import { Users } from 'lucide-react'
 import { WorkspaceIcon } from './workspace-icon'
-import type { Workspace } from '../types'
+import type { Workspace, WorkspaceId } from '../types'
 import { m } from '@/paraglide/messages'
 
 interface WorkspaceCardProps {
   workspace: Workspace
-  onSelect: (workspaceId: string) => void
+  onSelect: (workspaceId: WorkspaceId) => void
 }
 
 export function WorkspaceCard({ workspace, onSelect }: WorkspaceCardProps) {

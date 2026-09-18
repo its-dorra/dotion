@@ -5,11 +5,11 @@ import type { AssistantThreadId } from '@dotion/shared/ids'
 
 export const assistantKeys = {
   all: ['assistant'] as const,
-  workspace: (workspaceId: string) =>
+  workspace: (workspaceId: WorkspaceId) =>
     [...assistantKeys.all, 'workspace', workspaceId] as const,
-  threads: (workspaceId: string) =>
+  threads: (workspaceId: WorkspaceId) =>
     [...assistantKeys.workspace(workspaceId), 'threads'] as const,
-  messages: (workspaceId: string, threadId: string) =>
+  messages: (workspaceId: WorkspaceId, threadId: string) =>
     [
       ...assistantKeys.workspace(workspaceId),
       'thread',

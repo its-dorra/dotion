@@ -6,7 +6,6 @@ import {
   workspacesListQueryOptions,
   workspaceDetailQueryOptions,
 } from '../query-options'
-import type { UpdateWorkspaceInput } from '../types'
 import { m } from '@/paraglide/messages'
 
 export function useUpdateWorkspace() {
@@ -14,8 +13,7 @@ export function useUpdateWorkspace() {
 
   return useMutation(
     resultMutationOptions({
-      mutationFn: (input: UpdateWorkspaceInput) =>
-        workspacesApi.updateWorkspace(input),
+      mutationFn: workspacesApi.updateWorkspace,
       onMutate: async (variables) => {
         await queryClient.cancelQueries({
           queryKey: workspacesListQueryOptions().queryKey,

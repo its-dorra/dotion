@@ -12,9 +12,10 @@ import { Can } from '@/features/authorization/components/can'
 import { buildTrashTree } from '../lib/build-page-tree'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import { m } from '@/paraglide/messages'
+import type { PageId } from '../types'
 
 interface TrashProps {
-  workspaceId: string
+  workspaceId: WorkspaceId
 }
 
 export function Trash({ workspaceId }: TrashProps) {
@@ -22,7 +23,7 @@ export function Trash({ workspaceId }: TrashProps) {
     trashedPagesQueryOptions(workspaceId),
   )
 
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<PageId | null>(null)
   const [isEmptyTrashOpen, setIsEmptyTrashOpen] = useState(false)
 
   const tree = useMemo(() => buildTrashTree(pages), [pages])

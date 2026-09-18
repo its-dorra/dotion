@@ -3,7 +3,6 @@ import { toast } from 'sonner'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { workspacesApi } from '../api'
 import { removeNotificationByInvitationIdFromCache } from '@/features/notifications/utils'
-import type { DeclineInvitationInput } from '../types'
 import { m } from '@/paraglide/messages'
 
 export function useDeclineInvitation() {
@@ -11,8 +10,7 @@ export function useDeclineInvitation() {
 
   return useMutation(
     resultMutationOptions({
-      mutationFn: (input: DeclineInvitationInput) =>
-        workspacesApi.declineInvitation(input),
+      mutationFn: workspacesApi.declineInvitation,
       onSuccess: (_data, variables) => {
         removeNotificationByInvitationIdFromCache({
           queryClient,

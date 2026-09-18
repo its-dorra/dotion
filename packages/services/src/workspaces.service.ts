@@ -705,10 +705,10 @@ export class WorkspacesService {
       return Result.err(callerRes.error);
     }
 
-    const targetMember = targetRes.isOk() ? targetRes.value : null;
+    const targetMember = targetRes.unwrapOr(null);
     if (!targetMember) return Result.ok(null);
 
-    const callerMember = callerRes.isOk() ? callerRes.value : null;
+    const callerMember = callerRes.unwrapOr(null);
 
     return Result.ok({
       workspaceId,

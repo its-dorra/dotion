@@ -15,9 +15,9 @@ import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 interface DeletePermanentlyDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  pageId: string | null
+  pageId: PageId | null
   pageTitle: string
-  workspaceId: string
+  workspaceId: WorkspaceId
 }
 
 export function DeletePermanentlyDialog({

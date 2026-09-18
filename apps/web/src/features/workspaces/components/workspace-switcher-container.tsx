@@ -7,6 +7,7 @@ import { WorkspaceSwitcherLoading } from './workspace-switcher-loading'
 import { WorkspaceSwitcherError } from './workspace-switcher-error'
 import { WorkspaceSwitcherEmpty } from './workspace-switcher-empty'
 import { CreateWorkspaceModal } from './create-workspace-modal'
+import type { WorkspaceId } from '../types'
 
 interface WorkspaceSwitcherContainerProps {
   currentWorkspaceId?: string
@@ -25,7 +26,7 @@ export function WorkspaceSwitcherContainer({
     ? workspaces?.find((w) => w.id === currentWorkspaceId)
     : undefined
 
-  function handleSelectWorkspace(workspaceId: string) {
+  function handleSelectWorkspace(workspaceId: WorkspaceId) {
     navigate({
       to: '/app/workspaces/$workspaceId',
       params: { workspaceId },

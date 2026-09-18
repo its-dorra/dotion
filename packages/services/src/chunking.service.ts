@@ -14,7 +14,7 @@ export type {
 };
 
 const MEDIA_BLOCK_TYPES = new Set(["image", "video", "audio", "file", "embed"]);
-const MAX_SECTION_CHARS = 3000;
+const MAX_SECTION_CHARS = 2800;
 
 export class ChunkingService {
   public extractInlineText(content: BlockNoteBlock["content"]): string {
@@ -285,6 +285,75 @@ export class ChunkingService {
     return blocks;
   }
 
+  private splitAtParagraphBoundaries(
+    lines: Array<{ text: string; blockId?: string }>,
+    maxChars: number,
+  ): Array<{ lines: Array<{ text: string; blockId?: string }>; len: number }> {
+    const chunks: Array<{
+      lines: Array<{ text: string; blockId?: string }>;
+      len: number;
+    }> = [];
+    let currentChunkLines: Array<{ text: string; blockId?: string }> = [];
+    let currentChunkLen = 0;
+
+    let currentGroup: Array<{ text: string; blockId?: string }> = [];
+    let currentGroupLen = 0;
+
+    const flushGroup = () => {
+      if (currentGroup.length === 0) return;
+      if (
+        currentChunkLen + currentGroupLen > maxChars &&
+        currentChunkLines.length > 0
+      ) {
+        chunks.push({ lines: currentChunkLines, len: currentChunkLen });
+        currentChunkLines = [];
+        currentChunkLen = 0;
+      }
+
+      if (currentGroupLen > maxChars) {
+        for (const line of currentGroup) {
+          if (
+            currentChunkLen + line.text.length > maxChars &&
+            currentChunkLines.length > 0
+          ) {
+            chunks.push({ lines: currentChunkLines, len: currentChunkLen });
+            currentChunkLines = [line];
+            currentChunkLen = line.text.length;
+          } else {
+            currentChunkLines.push(line);
+            currentChunkLen +=
+              line.text.length + (currentChunkLines.length > 1 ? 1 : 0);
+          }
+        }
+      } else {
+        currentChunkLines.push(...currentGroup);
+        currentChunkLen +=
+          currentGroupLen +
+          (currentChunkLines.length > currentGroup.length ? 1 : 0);
+      }
+      currentGroup = [];
+      currentGroupLen = 0;
+    };
+
+    for (const line of lines) {
+      if (line.text.trim() === "") {
+        currentGroup.push(line);
+        currentGroupLen += line.text.length + (currentGroup.length > 1 ? 1 : 0);
+        flushGroup();
+      } else {
+        currentGroup.push(line);
+        currentGroupLen += line.text.length + (currentGroup.length > 1 ? 1 : 0);
+      }
+    }
+    flushGroup();
+
+    if (currentChunkLines.length > 0) {
+      chunks.push({ lines: currentChunkLines, len: currentChunkLen });
+    }
+
+    return chunks;
+  }
+
   async parseDocumentSections({
     pageTitle,
     blocks,
@@ -312,14 +381,14 @@ export class ChunkingService {
       sectionTitle: string;
       headingBlockId: string;
       blockIds: string[];
-      lines: string[];
+      lines: Array<{ text: string; blockId?: string }>;
     }> = [];
 
     let currentSection = {
       sectionTitle: safeTitle,
       headingBlockId: "root",
       blockIds: [] as string[],
-      lines: [] as string[],
+      lines: [] as Array<{ text: string; blockId?: string }>,
     };
 
     let blockCounter = 0;
@@ -331,6 +400,18 @@ export class ChunkingService {
         const blockId = block.id ?? `block-${depth}-${blockCounter}`;
 
         if (MEDIA_BLOCK_TYPES.has(blockType)) {
+          const alt = (block.props?.alt as string) || "";
+          const name =
+            (block.props?.name as string) || (block.props?.url as string) || "";
+          const caption = (block.props?.caption as string) || "";
+          const meta = [alt, name, caption].filter(Boolean).join(" — ");
+          if (meta) {
+            currentSection.lines.push({
+              text: `[${blockType}: ${meta}]`,
+              blockId,
+            });
+            currentSection.blockIds.push(blockId);
+          }
           continue;
         }
 
@@ -348,12 +429,12 @@ export class ChunkingService {
             sectionTitle: rawText,
             headingBlockId: blockId,
             blockIds: [blockId],
-            lines: [this.formatBlockToMarkdown(block, 0)],
+            lines: [{ text: this.formatBlockToMarkdown(block, 0), blockId }],
           };
         } else if (rawText.length > 0) {
           const formattedLine = this.formatBlockToMarkdown(block, depth);
           currentSection.blockIds.push(blockId);
-          currentSection.lines.push(formattedLine);
+          currentSection.lines.push({ text: formattedLine, blockId });
         }
 
         if (Array.isArray(block.children) && block.children.length > 0) {
@@ -390,7 +471,10 @@ export class ChunkingService {
     }> = [];
 
     for (const sec of rawSections) {
-      const fullText = sec.lines.join("\n").trim();
+      const fullText = sec.lines
+        .map((l) => l.text)
+        .join("\n")
+        .trim();
       if (fullText.length <= MAX_SECTION_CHARS) {
         normalizedSections.push({
           sectionTitle: sec.sectionTitle,
@@ -399,40 +483,35 @@ export class ChunkingService {
           content: fullText || sec.sectionTitle,
         });
       } else {
-        let currentChunkLines: string[] = [];
-        let currentChunkLen = 0;
+        const chunks = this.splitAtParagraphBoundaries(
+          sec.lines,
+          MAX_SECTION_CHARS,
+        );
         let partIndex = 1;
 
-        for (const line of sec.lines) {
-          if (
-            currentChunkLen + line.length > MAX_SECTION_CHARS &&
-            currentChunkLines.length > 0
-          ) {
-            normalizedSections.push({
-              sectionTitle: `${sec.sectionTitle} (Part ${partIndex})`,
-              headingBlockId: sec.headingBlockId,
-              blockIds: sec.blockIds,
-              content: currentChunkLines.join("\n").trim(),
-            });
-            partIndex++;
-            currentChunkLines = [line];
-            currentChunkLen = line.length;
-          } else {
-            currentChunkLines.push(line);
-            currentChunkLen += line.length + 1;
-          }
-        }
+        for (const chunk of chunks) {
+          const uniqueBlockIds = Array.from(
+            new Set([
+              sec.headingBlockId,
+              ...(chunk.lines
+                .map((l) => l.blockId)
+                .filter(Boolean) as string[]),
+            ]),
+          );
 
-        if (currentChunkLines.length > 0) {
           normalizedSections.push({
             sectionTitle:
-              partIndex === 1
+              chunks.length === 1 && partIndex === 1
                 ? sec.sectionTitle
                 : `${sec.sectionTitle} (Part ${partIndex})`,
             headingBlockId: sec.headingBlockId,
-            blockIds: sec.blockIds,
-            content: currentChunkLines.join("\n").trim(),
+            blockIds: uniqueBlockIds,
+            content: chunk.lines
+              .map((l) => l.text)
+              .join("\n")
+              .trim(),
           });
+          partIndex++;
         }
       }
     }

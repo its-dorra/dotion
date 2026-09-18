@@ -14,9 +14,24 @@ const MAX_EMBED_CHARS = 3200;
 function truncateForEmbedding(text: string): string {
   if (text.length <= MAX_EMBED_CHARS) return text;
   console.warn(
-    `EmbeddingService: truncating text from ${text.length} to ${MAX_EMBED_CHARS} chars for embedding limit.`,
+    `EmbeddingService: truncating text from ${text.length} to ~${MAX_EMBED_CHARS} chars for embedding limit.`,
   );
-  return text.slice(0, MAX_EMBED_CHARS);
+
+  // Try to cut at the last sentence boundary within the limit
+  const candidate = text.slice(0, MAX_EMBED_CHARS);
+  const lastSentenceEnd = Math.max(
+    candidate.lastIndexOf(". "),
+    candidate.lastIndexOf(".\n"),
+    candidate.lastIndexOf("? "),
+    candidate.lastIndexOf("!\n"),
+  );
+
+  // Only use sentence boundary if it's within the last 400 chars (not too far back)
+  if (lastSentenceEnd > MAX_EMBED_CHARS - 400) {
+    return candidate.slice(0, lastSentenceEnd + 1);
+  }
+
+  return candidate;
 }
 
 export class EmbeddingService {
@@ -98,25 +113,38 @@ export class EmbeddingService {
       const model = this.googleClient.embedding("gemini-embedding-001");
 
       const BATCH_CHUNK_SIZE = 30;
-      const allEmbeddings: number[][] = [];
-
+      const slices: string[][] = [];
       for (let i = 0; i < sanitizedTexts.length; i += BATCH_CHUNK_SIZE) {
-        const batchSlice = sanitizedTexts.slice(i, i + BATCH_CHUNK_SIZE);
-        const { embeddings } = await this.withRetry(() =>
-          embedMany({
-            model,
-            values: batchSlice,
-            providerOptions: {
-              google: {
-                outputDimensionality: 1536,
-                taskType,
-              } satisfies GoogleEmbeddingModelOptions,
-            },
-          }),
-        );
-        allEmbeddings.push(...embeddings);
+        slices.push(sanitizedTexts.slice(i, i + BATCH_CHUNK_SIZE));
       }
 
+      const CONCURRENCY = 3;
+      const batchResults: number[][][] = new Array(slices.length);
+
+      for (let i = 0; i < slices.length; i += CONCURRENCY) {
+        const concurrentSlices = slices.slice(i, i + CONCURRENCY);
+        const chunkResults = await Promise.all(
+          concurrentSlices.map((batchSlice) =>
+            this.withRetry(() =>
+              embedMany({
+                model,
+                values: batchSlice,
+                providerOptions: {
+                  google: {
+                    outputDimensionality: 1536,
+                    taskType,
+                  } satisfies GoogleEmbeddingModelOptions,
+                },
+              }),
+            ).then((res) => res.embeddings),
+          ),
+        );
+        chunkResults.forEach((embs, idx) => {
+          batchResults[i + idx] = embs;
+        });
+      }
+
+      const allEmbeddings = batchResults.flat();
       return Result.ok(allEmbeddings);
     } catch (error) {
       console.error("EmbeddingService.embedBatch error:", error);

@@ -68,7 +68,7 @@ export class WorkspacesApi {
   }
 
   async getWorkspace(
-    workspaceId: string,
+    workspaceId: WorkspaceId,
   ): Promise<
     Result<Workspace, AuthenticationError | WorkspaceNotFoundError | AppError>
   > {
@@ -184,7 +184,7 @@ export class WorkspacesApi {
   }
 
   async getMembers(
-    workspaceId: string,
+    workspaceId: WorkspaceId,
     pagination: PaginationQuery = { page: 1, limit: 20 },
   ): Promise<
     Result<
@@ -322,7 +322,7 @@ export class WorkspacesApi {
   }
 
   async getWorkspaceInvitations(
-    workspaceId: string,
+    workspaceId: WorkspaceId,
     pagination: PaginationQuery = { page: 1, limit: 20 },
   ): Promise<
     Result<

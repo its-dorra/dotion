@@ -18,6 +18,7 @@ import type { UserId } from "@dotion/shared/users/types";
 import type { AssistantThreadId } from "@dotion/shared/ids";
 import type { DatabaseError, NotFoundError } from "@dotion/db/errors";
 
+import type { WorkspacesService } from "./workspaces.service";
 import type { StreamChatInput } from "@dotion/shared/assistant/types";
 export type { StreamChatInput };
 
@@ -26,6 +27,7 @@ export class AssistantService {
     private readonly assistantRepository: AssistantRepository,
     private readonly aiService: AIService,
     _dbClient: DBClient,
+    private readonly workspacesService: WorkspacesService,
   ) {}
 
   async listThreads({
@@ -101,16 +103,60 @@ export class AssistantService {
 
       const priorMessagesResult = await this.assistantRepository.listMessages({
         threadId: input.threadId,
-        pagination: { limit: 10 },
+        pagination: { limit: 14 },
       });
       const priorMessages = priorMessagesResult.isOk()
         ? [...priorMessagesResult.value.items].reverse()
         : [];
 
-      const priorModelMessages: ModelMessage[] = priorMessages.map((msg) => ({
-        role: msg.role === "assistant" ? "assistant" : "user",
-        content: msg.content,
-      }));
+      let priorModelMessages: ModelMessage[] = [];
+
+      if (priorMessages.length >= 8) {
+        const older = priorMessages.slice(0, priorMessages.length - 4);
+        const recent = priorMessages.slice(priorMessages.length - 4);
+        const summary = yield* Result.await(
+          this.aiService.summarizeConversation(
+            older.map((m) => ({ role: m.role, content: m.content })),
+          ),
+        );
+
+        if (summary) {
+          priorModelMessages.push({
+            role: "user",
+            content: `[Summary of earlier conversation: ${summary}]`,
+          });
+          priorModelMessages.push({
+            role: "assistant",
+            content:
+              "Understood. I will use this background context while answering.",
+          });
+        } else {
+          priorModelMessages.push(
+            ...older.map((msg) => ({
+              role: (msg.role === "assistant" ? "assistant" : "user") as
+                | "assistant"
+                | "user",
+              content: msg.content,
+            })),
+          );
+        }
+
+        priorModelMessages.push(
+          ...recent.map((msg) => ({
+            role: (msg.role === "assistant" ? "assistant" : "user") as
+              | "assistant"
+              | "user",
+            content: msg.content,
+          })),
+        );
+      } else {
+        priorModelMessages = priorMessages.map((msg) => ({
+          role: (msg.role === "assistant" ? "assistant" : "user") as
+            | "assistant"
+            | "user",
+          content: msg.content,
+        }));
+      }
 
       const incomingModelMessages = await convertToModelMessages(
         input.messages,
@@ -138,9 +184,21 @@ export class AssistantService {
         }),
       );
 
+      let workspaceName = input.workspaceName;
+      if (!workspaceName) {
+        const wsResult = await this.workspacesService.getWorkspaceById({
+          workspaceId: input.workspaceId,
+          userId: input.userId,
+        });
+        if (wsResult.isOk()) {
+          workspaceName = wsResult.value.name;
+        }
+      }
+
       return this.aiService.streamRAG({
         userId: input.userId,
         workspaceId: input.workspaceId,
+        workspaceName,
         messages: allMessages,
         onFinish: (assistantResponse, usage, citations, toolCalls) => {
           const finishWork = (async () => {
@@ -155,13 +213,13 @@ export class AssistantService {
               });
 
               if (!thread.title) {
-                const summaryTitle = await this.aiService.generateSummaryTitle({
+                const titleResult = await this.aiService.generateSummaryTitle({
                   userPrompt,
                 });
-                if (summaryTitle) {
+                if (titleResult.isOk() && titleResult.value) {
                   await this.assistantRepository.updateThreadTitle({
                     threadId: input.threadId,
-                    title: summaryTitle,
+                    title: titleResult.value,
                   });
                 }
               }

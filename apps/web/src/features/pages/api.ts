@@ -73,7 +73,7 @@ export class PagesApi {
    * build the nested tree client-side from each node's parentId.
    */
   async getPageTree(
-    workspaceId: string,
+    workspaceId: WorkspaceId,
   ): Promise<
     Result<
       PageTreeNode[],
@@ -449,7 +449,7 @@ export class PagesApi {
   }
 
   async getTrashedPages(
-    workspaceId: string,
+    workspaceId: WorkspaceId,
   ): Promise<
     Result<
       TrashedPage[],

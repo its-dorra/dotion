@@ -223,7 +223,12 @@ function buildServices(
 
   const ai = new AIService(creditsManager, search, pages, chunking);
 
-  const assistant = new AssistantService(repositories.assistant, ai, db);
+  const assistant = new AssistantService(
+    repositories.assistant,
+    ai,
+    db,
+    workspaces,
+  );
 
   const authorization = new AuthorizationService(
     { workspaces, pages, comments, users },

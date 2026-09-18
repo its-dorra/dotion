@@ -61,6 +61,7 @@ export interface StreamChatInput {
   workspaceId: WorkspaceId;
   threadId: AssistantThreadId;
   userId: UserId;
+  workspaceName?: string;
   messages: UIMessage[];
   onBackgroundWork?: (promise: Promise<unknown>) => void;
 }

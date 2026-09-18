@@ -2,9 +2,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { resultMutationOptions } from '@/integrations/tanstack-query/better-result/mutation-options'
 import { workspacesApi } from '../api'
-import { workspacesListQueryOptions } from '../query-options'
+import {
+  workspacesListQueryOptions,
+  workspaceDetailQueryOptions,
+} from '../query-options'
 import { removeNotificationByInvitationIdFromCache } from '@/features/notifications/utils'
-import type { AcceptInvitationInput } from '../types'
 import { m } from '@/paraglide/messages'
 
 export function useAcceptInvitation() {
@@ -12,8 +14,7 @@ export function useAcceptInvitation() {
 
   return useMutation(
     resultMutationOptions({
-      mutationFn: (input: AcceptInvitationInput) =>
-        workspacesApi.acceptInvitation(input),
+      mutationFn: workspacesApi.acceptInvitation,
       onSuccess: (workspace, variables) => {
         removeNotificationByInvitationIdFromCache({
           queryClient,
@@ -22,6 +23,10 @@ export function useAcceptInvitation() {
         queryClient.setQueryData(
           workspacesListQueryOptions().queryKey,
           (old) => (old ? [...old, workspace] : [workspace]),
+        )
+        queryClient.setQueryData(
+          workspaceDetailQueryOptions(workspace.id).queryKey,
+          workspace,
         )
         toast.success(
           m.toast_workspace_accept_invitation_joined({ name: workspace.name }),

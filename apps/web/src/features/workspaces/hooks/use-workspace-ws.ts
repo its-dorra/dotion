@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
 import { createWorkspaceWebSocket } from '../websocket'
+import type { WorkspaceId } from '../types'
 
-export const useWorkspaceWs = (workspaceId: string) => {
+export const useWorkspaceWs = (workspaceId: WorkspaceId) => {
   const client = useMemo(
     () => createWorkspaceWebSocket(workspaceId),
     [workspaceId],

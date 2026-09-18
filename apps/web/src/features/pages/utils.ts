@@ -12,14 +12,12 @@ import type {
   TrashedPage,
 } from './types'
 import {
-  pagesKeys,
   pageDetailQueryOptions,
   pageTreeQueryOptions,
   trashedPagesQueryOptions,
   pageAccessRequestStatusQueryOptions,
   pagePermissionsInfiniteQueryOptions,
 } from './query-options'
-import { authorizationKeys } from '@/features/authorization/query-options'
 
 export function getDescendantNodeIds({
   nodes,
@@ -374,22 +372,6 @@ export const updatePagePermissionInCache = ({
       }
     },
   )
-
-  void queryClient.invalidateQueries({
-    queryKey: authorizationKeys.all,
-  })
-  void queryClient.invalidateQueries({
-    queryKey: pagesKeys.accessRequestStatus(workspaceId, pageId),
-  })
-  void queryClient.invalidateQueries({
-    queryKey: pagesKeys.detail(pageId),
-  })
-  void queryClient.invalidateQueries({
-    queryKey: pagesKeys.tree(workspaceId),
-  })
-  void queryClient.invalidateQueries({
-    queryKey: pagesKeys.permissions(workspaceId, pageId),
-  })
 }
 
 export const addPageMemberPermissionToCache = ({

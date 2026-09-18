@@ -68,7 +68,7 @@ export class SearchApi {
       }
 
       const result = await response.json()
-      return Result.ok(result as PaginatedData<SearchResultItem>)
+      return Result.ok(result.data)
     } catch (error) {
       console.error('SearchApi.search error:', error)
       return Result.err(

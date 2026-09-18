@@ -3,19 +3,11 @@ import { resultMutationOptions } from '@/integrations/tanstack-query/better-resu
 import { filesApi } from '../api'
 import { toast } from 'sonner'
 import { m } from '@/paraglide/messages'
-import type { WorkspaceId } from '@/features/workspaces/types'
-import type { PageId } from '@/features/pages/types'
-
-export interface UploadFileInput {
-  workspaceId: WorkspaceId
-  pageId: PageId
-  file: File
-}
 
 export function useUploadFile() {
   return useMutation(
     resultMutationOptions({
-      mutationFn: (input: UploadFileInput) => filesApi.uploadFile(input),
+      mutationFn: filesApi.uploadFile,
       onError: (error) => {
         console.error('Error uploading file:', error)
         toast.error(m.toast_file_upload_failed())

@@ -14,7 +14,7 @@ import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 interface EmptyTrashDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  workspaceId: string
+  workspaceId: WorkspaceId
 }
 
 export function EmptyTrashDialog({

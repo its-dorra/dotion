@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { Plus, FileText, Settings, ArrowRight, UserPlus } from 'lucide-react'
+import { Plus, FileText, Settings, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useSession } from '@/features/auth/hooks/use-session'
 import { useCreatePage } from '@/features/pages/hooks/use-create-page'
+import { PageTreeItem } from '@/features/pages/components/page-tree-item'
+import { buildPageTree } from '@/features/pages/lib/build-page-tree'
 import { InviteMemberModal } from './invite-member-modal'
 import { WorkspaceIcon } from './workspace-icon'
 import { Can } from '@/features/authorization/components/can'
@@ -13,9 +15,34 @@ import { workspaceDetailQueryOptions } from '../query-options'
 import { pageTreeQueryOptions } from '@/features/pages/query-options'
 import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
+import type { PageTreeNode } from '@dotion/shared/pages/types'
 
 interface WorkspaceDashboardProps {
   workspaceId: WorkspaceId
+}
+
+interface DashboardPageTreeProps {
+  pages: PageTreeNode[]
+  workspaceId: WorkspaceId
+}
+
+function DashboardPageTree({ pages, workspaceId }: DashboardPageTreeProps) {
+  const tree = useMemo(() => buildPageTree(pages), [pages])
+
+  return (
+    <div className="rounded-lg border bg-card p-2">
+      <div className="space-y-0.5">
+        {tree.map((node) => (
+          <PageTreeItem
+            key={node.id}
+            node={node}
+            workspaceId={workspaceId}
+            depth={0}
+          />
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function getGreeting(name: string): string {
@@ -49,12 +76,10 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-10">
-      {/* Mobile Sidebar Trigger */}
       <div className="mb-6 flex items-center gap-2 md:hidden">
         <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground" />
       </div>
 
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3.5">
           <WorkspaceIcon
@@ -115,7 +140,6 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
         </div>
       </div>
 
-      {/* Pages Section */}
       <div className="mt-10">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -161,26 +185,7 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
             </Can>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {pageTree.map((page) => (
-              <Link
-                key={page.id}
-                to="/app/workspaces/$workspaceId/pages/$pageId"
-                params={{ workspaceId, pageId: page.id }}
-                className="group flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:border-border hover:bg-accent/50"
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-base">
-                  {page.icon ?? '📄'}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground transition-colors group-hover:text-primary">
-                    {page.title || m.page_untitled()}
-                  </p>
-                </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100" />
-              </Link>
-            ))}
-          </div>
+          <DashboardPageTree pages={pageTree} workspaceId={workspaceId} />
         )}
       </div>
 

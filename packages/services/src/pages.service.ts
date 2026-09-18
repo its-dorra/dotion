@@ -500,7 +500,7 @@ export class PagesService {
       const { request, userId: requesterId, role: grantedRole } = dbResult;
 
       const pageResult = await this.pagesRepository.getPageById({ pageId });
-      const pageTitle = pageResult.isOk() ? pageResult.value.title : "a page";
+      const pageTitle = pageResult.unwrapOr({ title: "a page" }).title;
 
       yield* Result.await(
         this.eventDispatcher.dispatch({
@@ -550,7 +550,7 @@ export class PagesService {
 
       const pageResult = await this.pagesRepository.getPageById({ pageId });
 
-      const pageTitle = pageResult.isOk() ? pageResult.value.title : "a page";
+      const pageTitle = pageResult.unwrapOr({ title: "a page" }).title;
 
       yield* Result.await(
         this.eventDispatcher.dispatch({

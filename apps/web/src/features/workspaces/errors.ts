@@ -1,10 +1,11 @@
 import { TaggedError } from 'better-result'
+import type { WorkspaceId } from './types'
 
 export class WorkspaceNotFoundError extends TaggedError(
   'WorkspaceNotFoundError',
 )<{
   message: string
-  workspaceId: string
+  workspaceId: WorkspaceId
 }> {}
 
 export class InvitationNotFoundError extends TaggedError(

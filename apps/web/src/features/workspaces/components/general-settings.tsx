@@ -11,7 +11,7 @@ import { m } from '@/paraglide/messages'
 import type { WorkspaceId } from '../types'
 
 interface GeneralSettingsProps {
-  workspaceId: string
+  workspaceId: WorkspaceId
 }
 
 export function GeneralSettings({ workspaceId }: GeneralSettingsProps) {

@@ -9,15 +9,15 @@ import {
 import { addOrUpdatePageInTree, removePageFromTrash } from '../utils'
 import { toast } from 'sonner'
 import { m } from '@/paraglide/messages'
-import type { RestoreFromTrashInput } from '../types'
+
 
 export function useRestoreFromTrash() {
   const queryClient = useQueryClient()
 
   return useMutation(
     resultMutationOptions({
-      mutationFn: (input: RestoreFromTrashInput) =>
-        pagesApi.restoreFromTrash(input),
+      mutationFn: 
+        pagesApi.restoreFromTrash,
       onMutate: async (variables) => {
         await queryClient.cancelQueries({
           queryKey: pageTreeQueryOptions(variables.workspaceId).queryKey,

@@ -189,22 +189,17 @@ const WORKSPACE_WS_STRATEGIES: {
     })
     toast.info(m.toast_workspace_invitation_cancelled())
   },
-  'workspace.member_joined': (
-    payload,
-    { queryClient, workspaceId, currentUserId },
-  ) => {
+  'workspace.member_joined': (payload, { queryClient, workspaceId }) => {
     handleMemberJoinedWsMessage({
       queryClient,
       workspaceId,
       payload,
     })
-    if (payload.member.userId !== currentUserId) {
-      toast.info(
-        m.toast_workspace_member_joined({
-          name: payload.member.name,
-        }),
-      )
-    }
+    toast.info(
+      m.toast_workspace_member_joined({
+        name: payload.member.name,
+      }),
+    )
   },
   'workspace.member_removed': (
     payload,

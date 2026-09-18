@@ -6,11 +6,12 @@ import { useCreatePage } from '../hooks/use-create-page'
 import type { PageTreeNodeWithChildren } from '../lib/build-page-tree'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import { m } from '@/paraglide/messages'
+import type { PageId } from '../types'
 
 interface PageTreePresenterProps {
   tree: PageTreeNodeWithChildren[]
-  workspaceId: string
-  activePageId?: string
+  workspaceId: WorkspaceId
+  activePageId?: PageId
 }
 
 export function PageTreePresenter({

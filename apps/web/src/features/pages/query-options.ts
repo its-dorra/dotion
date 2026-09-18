@@ -8,14 +8,14 @@ import type { WorkspaceId } from '../workspaces/types'
 
 export const pagesKeys = {
   all: ['pages'] as const,
-  tree: (workspaceId: string) =>
+  tree: (workspaceId: WorkspaceId) =>
     [...pagesKeys.all, 'tree', workspaceId] as const,
-  detail: (pageId: string) => [...pagesKeys.all, 'detail', pageId] as const,
-  trash: (workspaceId: string) =>
+  detail: (pageId: PageId) => [...pagesKeys.all, 'detail', pageId] as const,
+  trash: (workspaceId: WorkspaceId) =>
     [...pagesKeys.all, 'trash', workspaceId] as const,
-  permissions: (workspaceId: string, pageId: string) =>
+  permissions: (workspaceId: WorkspaceId, pageId: PageId) =>
     [...pagesKeys.all, 'permissions', workspaceId, pageId] as const,
-  accessRequestStatus: (workspaceId: string, pageId: string) =>
+  accessRequestStatus: (workspaceId: WorkspaceId, pageId: PageId) =>
     [...pagesKeys.all, 'access-request-status', workspaceId, pageId] as const,
 }
 
@@ -47,7 +47,7 @@ export function pageAccessRequestStatusQueryOptions(
   })
 }
 
-export function trashedPagesQueryOptions(workspaceId: string) {
+export function trashedPagesQueryOptions(workspaceId: WorkspaceId) {
   return resultQueryOptions({
     queryKey: pagesKeys.trash(workspaceId),
     queryFn: () => pagesApi.getTrashedPages(workspaceId),

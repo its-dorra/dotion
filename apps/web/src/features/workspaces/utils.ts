@@ -2,6 +2,7 @@ import type {
   WorkspaceWsMessage,
   WorkspaceInvitation,
   WorkspaceMember,
+  WorkspaceId,
 } from './types'
 import type { QueryClient } from '@tanstack/react-query'
 import {
@@ -15,7 +16,7 @@ export const removeWorkspaceInvitationFromCache = ({
   invitationId,
 }: {
   queryClient: QueryClient
-  workspaceId: string
+  workspaceId: WorkspaceId
   invitationId: string
 }) => {
   queryClient.setQueryData(
@@ -47,7 +48,7 @@ export const addWorkspaceInvitationToCache = ({
   invitation,
 }: {
   queryClient: QueryClient
-  workspaceId: string
+  workspaceId: WorkspaceId
   invitation: WorkspaceInvitation
 }) => {
   queryClient.setQueryData(
@@ -89,7 +90,7 @@ export const addWorkspaceMemberToCache = ({
   member,
 }: {
   queryClient: QueryClient
-  workspaceId: string
+  workspaceId: WorkspaceId
   member: WorkspaceMember
 }) => {
   queryClient.setQueryData(
@@ -104,7 +105,15 @@ export const addWorkspaceMemberToCache = ({
           page.payload.some((m) => m.userId === member.userId),
         )
       ) {
-        return oldData
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => ({
+            ...page,
+            payload: page.payload.map((m) =>
+              m.userId === member.userId ? { ...m, ...member } : m,
+            ),
+          })),
+        }
       }
 
       return {
@@ -131,7 +140,7 @@ export const removeWorkspaceMemberFromCache = ({
   userId,
 }: {
   queryClient: QueryClient
-  workspaceId: string
+  workspaceId: WorkspaceId
   userId: string
 }) => {
   queryClient.setQueryData(
@@ -164,7 +173,7 @@ export const updateWorkspaceMemberRoleInCache = ({
   role,
 }: {
   queryClient: QueryClient
-  workspaceId: string
+  workspaceId: WorkspaceId
   userId: string
   role: 'owner' | 'member'
 }) => {
@@ -242,7 +251,7 @@ export const handleMemberJoinedWsMessage = ({
   payload,
 }: {
   queryClient: QueryClient
-  workspaceId: string
+  workspaceId: WorkspaceId
   payload: Extract<
     WorkspaceWsMessage,
     { type: 'workspace.member_joined' }

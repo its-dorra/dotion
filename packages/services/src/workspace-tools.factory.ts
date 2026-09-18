@@ -22,6 +22,7 @@ export interface CreateWorkspaceToolsOptions {
   workspaceId: WorkspaceId;
   citations?: AssistantCitation[];
   onCitationCollected?: (citation: AssistantCitation) => void;
+  maxSteps?: number;
 }
 
 export function createWorkspaceTools(
@@ -34,11 +35,22 @@ export function createWorkspaceTools(
     workspaceId,
     citations,
     onCitationCollected,
+    maxSteps = 10,
   } = options;
+
+  let stepCount = 0;
+  const getStepBudget = () => {
+    stepCount++;
+    return {
+      step: stepCount,
+      maxSteps,
+      remainingSteps: Math.max(0, maxSteps - stepCount),
+    };
+  };
 
   const searchWorkspace = tool({
     description:
-      "Search the workspace knowledge base across all pages. Specify 'query' and 'mode' ('conceptual' for explanations, summaries, and broad questions in any language; 'exact' for specific code identifiers, table names, error codes, or quoted phrases; 'balanced' for general lookups).",
+      "Search the workspace knowledge base across all pages. Returns a preview of each matching section. Use 'readFullPage' or 'fetchAdjacentSections' to get the full content of a section when the preview is insufficient. Specify 'query' and 'mode' ('conceptual' for explanations, summaries, and broad questions in any language; 'exact' for specific code identifiers, table names, error codes, or quoted phrases; 'balanced' for general lookups).",
     inputSchema: searchWorkspaceInputSchema,
     execute: async ({ query, limit, mode }) => {
       const searchResult = await Result.gen(async function* () {
@@ -67,6 +79,8 @@ export function createWorkspaceTools(
           });
         }
 
+        const PREVIEW_CHARS = 600;
+
         return Result.ok({
           items: items.map((item, index) => ({
             sourceId: citations ? startIndex + index + 1 : index + 1,
@@ -74,8 +88,13 @@ export function createWorkspaceTools(
             pageTitle: item.pageTitle,
             sectionTitle: item.sectionTitle,
             headingBlockId: item.headingBlockId,
-            content: item.content,
+            contentPreview:
+              item.content.length > PREVIEW_CHARS
+                ? `${item.content.slice(0, PREVIEW_CHARS)}...`
+                : item.content,
+            fullContentLength: item.content.length,
           })),
+          stepBudget: getStepBudget(),
         });
       });
 
@@ -109,14 +128,30 @@ export function createWorkspaceTools(
 
         let rawContent = "";
 
+        let isFresh = true;
+        let addedPerSectionCitations = false;
+
         const sectionsRes = await searchService.getSectionsByPage({
           pageId: page.id,
         });
-        if (sectionsRes.isOk() && sectionsRes.value.length > 0) {
+
+        const firstSection = sectionsRes.isOk()
+          ? sectionsRes.value[0]
+          : undefined;
+        const lastIndexedAt = firstSection?.updatedAt;
+        const isStale =
+          !sectionsRes.isOk() ||
+          sectionsRes.value.length === 0 ||
+          (Boolean(lastIndexedAt) &&
+            Boolean(page.updatedAt) &&
+            page.updatedAt.getTime() - lastIndexedAt!.getTime() > 10000);
+
+        if (!isStale && sectionsRes.isOk() && sectionsRes.value.length > 0) {
           rawContent = sectionsRes.value
             .map((s) => `## ${s.sectionTitle}\n${s.content}`)
             .join("\n\n");
         } else {
+          isFresh = false;
           const contentRes = await pagesService.getPageContent({
             pageId: page.id,
           });
@@ -125,9 +160,27 @@ export function createWorkspaceTools(
               pageTitle: page.title,
               contentBinary: contentRes.value,
             });
+            const startIndex = citations?.length ?? 0;
             rawContent = sections
-              .map((s) => `## ${s.sectionTitle}\n${s.content}`)
+              .map((s, idx) => {
+                let sourceStr = "";
+                if (citations) {
+                  const citation: AssistantCitation = {
+                    pageId: page.id,
+                    pageTitle: page.title,
+                    sectionTitle: s.sectionTitle,
+                    headingBlockId: s.headingBlockId,
+                  };
+                  citations.push(citation);
+                  onCitationCollected?.(citation);
+                  sourceStr = ` [Source ID: ${startIndex + idx + 1}]`;
+                }
+                return `## ${s.sectionTitle}${sourceStr}\n${s.content}`;
+              })
               .join("\n\n");
+            if (citations && sections.length > 0) {
+              addedPerSectionCitations = true;
+            }
           }
         }
 
@@ -143,7 +196,7 @@ export function createWorkspaceTools(
 
         let sourceId: number | undefined = undefined;
 
-        if (citations) {
+        if (citations && !addedPerSectionCitations) {
           sourceId = citations.length + 1;
           const citation: AssistantCitation = {
             pageId: page.id,
@@ -162,6 +215,8 @@ export function createWorkspaceTools(
           content: finalContent,
           charCount: finalContent.length,
           truncated,
+          isFresh,
+          stepBudget: getStepBudget(),
         });
       });
 
@@ -198,6 +253,7 @@ export function createWorkspaceTools(
           }),
         );
         return Result.ok({ items });
+        return Result.ok({ items, stepBudget: getStepBudget() });
       });
 
       if (treeResult.isErr()) {
@@ -215,6 +271,11 @@ export function createWorkspaceTools(
     execute: async ({ pageId, sectionIndex, direction, count }) => {
       const pageIdTyped = pageId as PageId;
       const adjacentResult = await Result.gen(async function* () {
+        const pageRes = await pagesService.getPageById({ pageId: pageIdTyped });
+        const actualPageTitle = pageRes.isOk()
+          ? pageRes.value.title
+          : undefined;
+
         const hits = yield* Result.await(
           searchService.getAdjacentSections({
             pageId: pageIdTyped,
@@ -230,7 +291,7 @@ export function createWorkspaceTools(
           hits.forEach((hit) => {
             const citation: AssistantCitation = {
               pageId: hit.pageId,
-              pageTitle: hit.sectionTitle,
+              pageTitle: actualPageTitle ?? hit.sectionTitle,
               sectionTitle: hit.sectionTitle,
               headingBlockId: hit.headingBlockId,
             };
@@ -248,6 +309,7 @@ export function createWorkspaceTools(
             headingBlockId: h.headingBlockId,
             content: h.content,
           })),
+          stepBudget: getStepBudget(),
         });
       });
 
@@ -339,7 +401,9 @@ export function createWorkspaceTools(
           );
         }
 
+        const totalCount = filtered.length;
         const bounded = filtered.slice(0, 30);
+        const truncated = totalCount > 30;
 
         const structuredBlocks = bounded.map(({ block }) => ({
           id: block.id ?? "unknown",
@@ -352,6 +416,9 @@ export function createWorkspaceTools(
         return Result.ok({
           pageId: pageIdTyped,
           blocks: structuredBlocks,
+          totalCount,
+          truncated,
+          stepBudget: getStepBudget(),
         });
       });
 

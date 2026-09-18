@@ -29,6 +29,7 @@ export interface StreamEditorAIInput {
 export interface StreamRAGInput {
   userId: UserId;
   workspaceId: WorkspaceId;
+  workspaceName?: string;
   messages: ModelMessage[];
   maxSteps?: number;
   onCitationCollected?: (citation: AssistantCitation) => void;

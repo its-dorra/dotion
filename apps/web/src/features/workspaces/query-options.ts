@@ -8,13 +8,13 @@ import type { WorkspaceId } from './types'
 export const workspacesKeys = {
   all: ['workspaces'] as const,
   list: () => [...workspacesKeys.all, 'list'] as const,
-  detail: (workspaceId: string) =>
+  detail: (workspaceId: WorkspaceId) =>
     [...workspacesKeys.all, 'detail', workspaceId] as const,
-  members: (workspaceId: string) =>
+  members: (workspaceId: WorkspaceId) =>
     [...workspacesKeys.all, 'members', workspaceId] as const,
-  workspaceInvitations: (workspaceId: string) =>
+  workspaceInvitations: (workspaceId: WorkspaceId) =>
     [...workspacesKeys.all, 'workspace-invitations', workspaceId] as const,
-  candidateUsers: (workspaceId: string, query: string) =>
+  candidateUsers: (workspaceId: WorkspaceId, query: string) =>
     [...workspacesKeys.all, 'candidate-users', workspaceId, query] as const,
 }
 
@@ -25,21 +25,21 @@ export function workspacesListQueryOptions() {
   })
 }
 
-export function workspaceDetailQueryOptions(workspaceId: string) {
+export function workspaceDetailQueryOptions(workspaceId: WorkspaceId) {
   return resultQueryOptions({
     queryKey: workspacesKeys.detail(workspaceId),
     queryFn: () => workspacesApi.getWorkspace(workspaceId),
   })
 }
 
-export function workspaceMembersQueryOptions(workspaceId: string) {
+export function workspaceMembersQueryOptions(workspaceId: WorkspaceId) {
   return resultQueryOptions({
     queryKey: workspacesKeys.members(workspaceId),
     queryFn: () => workspacesApi.getMembers(workspaceId),
   })
 }
 
-export function workspaceMembersInfiniteQueryOptions(workspaceId: string) {
+export function workspaceMembersInfiniteQueryOptions(workspaceId: WorkspaceId) {
   return resultInfiniteQueryOptions({
     queryKey: workspacesKeys.members(workspaceId),
     initialPageParam: 1,
@@ -54,7 +54,7 @@ export function workspaceMembersInfiniteQueryOptions(workspaceId: string) {
   })
 }
 
-export function workspaceInvitationsQueryOptions(workspaceId: string) {
+export function workspaceInvitationsQueryOptions(workspaceId: WorkspaceId) {
   return resultQueryOptions({
     queryKey: workspacesKeys.workspaceInvitations(workspaceId),
     queryFn: () => workspacesApi.getWorkspaceInvitations(workspaceId),
@@ -62,7 +62,9 @@ export function workspaceInvitationsQueryOptions(workspaceId: string) {
   })
 }
 
-export function workspaceInvitationsInfiniteQueryOptions(workspaceId: string) {
+export function workspaceInvitationsInfiniteQueryOptions(
+  workspaceId: WorkspaceId,
+) {
   return resultInfiniteQueryOptions({
     queryKey: workspacesKeys.workspaceInvitations(workspaceId),
     initialPageParam: 1,
@@ -77,7 +79,9 @@ export function workspaceInvitationsInfiniteQueryOptions(workspaceId: string) {
   })
 }
 
-export function pendingInvitationsInfiniteQueryOptions(workspaceId = '') {
+export function pendingInvitationsInfiniteQueryOptions(
+  workspaceId: WorkspaceId,
+) {
   return resultInfiniteQueryOptions({
     queryKey: workspacesKeys.workspaceInvitations(workspaceId),
     initialPageParam: 1,

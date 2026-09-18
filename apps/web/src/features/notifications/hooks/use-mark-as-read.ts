@@ -7,8 +7,7 @@ import { m } from '@/paraglide/messages'
 export function useMarkAsRead() {
   return useMutation(
     resultMutationOptions({
-      mutationFn: (notificationId: string) =>
-        notificationsApi.markAsRead(notificationId),
+      mutationFn: notificationsApi.markAsRead,
       onSuccess: () => {},
       onError: (error) => {
         toast.error(error?.message ?? m.toast_notification_mark_read_failed())

@@ -16,7 +16,7 @@ import type { UserId } from '@dotion/shared/users/types'
 import { m } from '@/paraglide/messages'
 
 interface MemberRowProps {
-  workspaceId: string
+  workspaceId: WorkspaceId
   member: WorkspaceMember
   canManage: boolean
 }

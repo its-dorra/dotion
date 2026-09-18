@@ -26,8 +26,8 @@ import { m } from '@/paraglide/messages'
 
 interface PageTreeItemProps {
   node: PageTreeNodeWithChildren
-  workspaceId: string
-  activePageId?: string
+  workspaceId: WorkspaceId
+  activePageId?: PageId
   depth: number
 }
 

@@ -32,6 +32,7 @@ export function AiAssistantThreadSelector({
       enabled: Boolean(workspaceId),
     }),
   )
+
   const createThreadMutation = useCreateAssistantThread(workspaceId)
   const deleteThreadMutation = useDeleteAssistantThread(workspaceId)
 

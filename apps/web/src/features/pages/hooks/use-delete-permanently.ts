@@ -9,17 +9,16 @@ import {
 import { removePageFromTrash } from '../utils'
 import { toast } from 'sonner'
 import { m } from '@/paraglide/messages'
-import type { DeletePermanentlyInput } from '../types'
+import type { PageId } from '../types'
 
 export function useDeletePermanently() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const params = useParams({ strict: false }) as { pageId?: string }
+  const params = useParams({ strict: false }) as { pageId?: PageId }
 
   return useMutation(
     resultMutationOptions({
-      mutationFn: (input: DeletePermanentlyInput) =>
-        pagesApi.deletePermanently(input),
+      mutationFn: pagesApi.deletePermanently,
       onMutate: async (variables) => {
         await queryClient.cancelQueries({
           queryKey: trashedPagesQueryOptions(variables.workspaceId).queryKey,

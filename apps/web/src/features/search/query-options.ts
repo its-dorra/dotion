@@ -8,10 +8,10 @@ import type { SearchMode } from './types'
 
 export const searchKeys = {
   all: ['search'] as const,
-  workspace: (workspaceId: string) =>
+  workspace: (workspaceId: WorkspaceId) =>
     [...searchKeys.all, 'workspace', workspaceId] as const,
   query: (
-    workspaceId: string,
+    workspaceId: WorkspaceId,
     q: string,
     limit = 15,
     mode: SearchMode = 'balanced',
@@ -25,8 +25,11 @@ export const searchKeys = {
       'mode',
       mode,
     ] as const,
-  infinite: (workspaceId: string, q: string, mode: SearchMode = 'balanced') =>
-    [...searchKeys.workspace(workspaceId), 'infinite', q, mode] as const,
+  infinite: (
+    workspaceId: WorkspaceId,
+    q: string,
+    mode: SearchMode = 'balanced',
+  ) => [...searchKeys.workspace(workspaceId), 'infinite', q, mode] as const,
 }
 
 export function searchInfiniteQueryOptions(

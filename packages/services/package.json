@@ -11,14 +11,15 @@
     "#/*": "./src/*.ts"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.2",
-    "@ai-sdk/groq": "^4.0.41",
+    "@ai-sdk/google": "^4.0.75",
+    "@ai-sdk/groq": "^4.0.45",
     "@blocknote/xl-ai": "^0.54.0",
     "@dotion/auth": "workspace:*",
     "@dotion/db": "workspace:*",
     "@dotion/shared": "workspace:*",
     "@mastra/core": "^1.64.0",
     "ai": "catalog:",
+    "ai-fallback": "3",
     "better-result": "^3.0.1",
     "yjs": "catalog:",
     "zod": "catalog:"

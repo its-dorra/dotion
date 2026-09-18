@@ -5,15 +5,14 @@ import { pagePermissionsInfiniteQueryOptions } from '../query-options'
 import { updatePagePermissionInCache } from '../utils'
 import { toast } from 'sonner'
 import { m } from '@/paraglide/messages'
-import type { UpdatePagePermissionInput } from '../types'
 
 export function useUpdatePagePermission() {
   const queryClient = useQueryClient()
 
   return useMutation(
     resultMutationOptions({
-      mutationFn: (input: UpdatePagePermissionInput) =>
-        pagesApi.updatePagePermission(input),
+      mutationFn: 
+        pagesApi.updatePagePermission,
       onMutate: async (variables) => {
         await queryClient.cancelQueries({
           queryKey: pagePermissionsInfiniteQueryOptions(

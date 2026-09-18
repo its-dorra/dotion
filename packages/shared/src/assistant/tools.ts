@@ -29,11 +29,20 @@ export const searchWorkspaceHitSchema = z.object({
   pageTitle: z.string(),
   sectionTitle: z.string(),
   headingBlockId: z.string(),
-  content: z.string(),
+  contentPreview: z.string(),
+  fullContentLength: z.number(),
 });
+
+export const stepBudgetSchema = z.object({
+  step: z.number(),
+  maxSteps: z.number(),
+  remainingSteps: z.number(),
+});
+export type StepBudget = z.infer<typeof stepBudgetSchema>;
 
 export const searchWorkspaceOutputSchema = z.object({
   items: z.array(searchWorkspaceHitSchema),
+  stepBudget: stepBudgetSchema.optional(),
 });
 
 export const readFullPageInputSchema = z.object({
@@ -46,6 +55,8 @@ export const readFullPageOutputSchema = z.object({
   content: z.string(),
   charCount: z.number(),
   truncated: z.boolean(),
+  isFresh: z.boolean().optional(),
+  stepBudget: stepBudgetSchema.optional(),
 });
 
 export const getPageTreeInputSchema = z.object({
@@ -83,6 +94,7 @@ export const pageTreeItemSchema: z.ZodType<PageTreeItem> = z.lazy(() =>
 
 export const getPageTreeOutputSchema = z.object({
   items: z.array(pageTreeItemSchema),
+  stepBudget: stepBudgetSchema.optional(),
 });
 
 export const fetchAdjacentSectionsInputSchema = z.object({
@@ -119,6 +131,7 @@ export const adjacentSectionHitSchema = z.object({
 export const fetchAdjacentSectionsOutputSchema = z.object({
   pageId: pageId,
   items: z.array(adjacentSectionHitSchema),
+  stepBudget: stepBudgetSchema.optional(),
 });
 
 export const getPageBlocksInputSchema = z.object({
@@ -146,6 +159,9 @@ export const structuredBlockSchema = z.object({
 export const getPageBlocksOutputSchema = z.object({
   pageId: pageId,
   blocks: z.array(structuredBlockSchema),
+  totalCount: z.number(),
+  truncated: z.boolean(),
+  stepBudget: stepBudgetSchema.optional(),
 });
 
 export type SearchWorkspaceInput = z.infer<typeof searchWorkspaceInputSchema>;

@@ -19,13 +19,38 @@ import type {
 } from "@dotion/shared/search/types";
 import type { DatabaseError, NotFoundError } from "@dotion/db/errors";
 
+export const SEARCH_MODE_CONFIGS: Record<
+  SearchMode,
+  {
+    weights: { vector: number; bm25: number };
+    minSimilarity: number;
+    minScore: number;
+  }
+> = {
+  conceptual: {
+    weights: { vector: 0.8, bm25: 0.2 },
+    minSimilarity: 0.48,
+    minScore: 1.0,
+  },
+  balanced: {
+    weights: { vector: 0.65, bm25: 0.35 },
+    minSimilarity: 0.45,
+    minScore: 1.0,
+  },
+  exact: {
+    weights: { vector: 0.2, bm25: 0.8 },
+    minSimilarity: 0.35,
+    minScore: 0.8,
+  },
+} as const;
+
 export const SEARCH_MODE_WEIGHTS: Record<
   SearchMode,
   { vector: number; bm25: number }
 > = {
-  conceptual: { vector: 0.8, bm25: 0.2 },
-  balanced: { vector: 0.65, bm25: 0.35 },
-  exact: { vector: 0.2, bm25: 0.8 },
+  conceptual: SEARCH_MODE_CONFIGS.conceptual.weights,
+  balanced: SEARCH_MODE_CONFIGS.balanced.weights,
+  exact: SEARCH_MODE_CONFIGS.exact.weights,
 } as const;
 
 export class SearchService {
@@ -162,8 +187,18 @@ export class SearchService {
       }> = [];
       const toUpdateMetaSections: UpdatePageSectionInput[] = [];
 
-      sections.forEach((s) => {
-        const sectionText = `${page.title} > ${s.sectionTitle}\n${s.content}`;
+      sections.forEach((s, i) => {
+        let overlapPrefix = "";
+        if (i > 0) {
+          const prevSection = sections[i - 1];
+          if (prevSection) {
+            overlapPrefix = prevSection.content.slice(-200);
+          }
+        }
+
+        const sectionText = overlapPrefix
+          ? `[...] ${overlapPrefix}\n\n---\n\n${page.title} > ${s.sectionTitle}\n${s.content}`
+          : `${page.title} > ${s.sectionTitle}\n${s.content}`;
 
         let existing = existingMapByHeading.get(s.headingBlockId);
         if (!existing && existingMapByHashList.has(s.contentHash)) {
@@ -354,7 +389,8 @@ export class SearchService {
       });
     }
 
-    const effectiveWeights = SEARCH_MODE_WEIGHTS[params.mode ?? "balanced"];
+    const mode = params.mode ?? "balanced";
+    const modeConfig = SEARCH_MODE_CONFIGS[mode];
 
     return Result.gen(async function* (this: SearchService) {
       const [trashedPages, queryEmbedding] = yield* Result.await(
@@ -372,7 +408,7 @@ export class SearchService {
       const excludedPageIds = trashedPages.map((p) => p.id);
       const searchOptions = {
         ...(excludedPageIds.length > 0 ? { excludedPageIds } : {}),
-        minScore: 1.0,
+        minScore: modeConfig.minScore,
       };
 
       const candidateDepth = Math.max(40, page * limit * 2);
@@ -389,14 +425,14 @@ export class SearchService {
             workspaceId: params.workspaceId,
             queryEmbedding,
             limit: candidateDepth,
-            minSimilarity: 0.5,
+            minSimilarity: modeConfig.minSimilarity,
             options: searchOptions,
           }),
         ]),
       );
 
       // Standalone BM25 Gating:
-      // If vector search found 0 hits (no section in the workspace reached semantic similarity >= 0.50),
+      // If vector search found 0 hits (no section in the workspace reached semantic similarity >= modeConfig.minSimilarity),
       // only accept BM25 hits if they represent a high-confidence exact match (score >= 3.0).
       let effectiveBm25Hits = bm25Hits;
       if (vectorHits.length === 0) {
@@ -407,7 +443,7 @@ export class SearchService {
       }
 
       const fused = this.reciprocalRankFusion(effectiveBm25Hits, vectorHits, {
-        weights: effectiveWeights,
+        weights: modeConfig.weights,
       });
 
       if (fused.length === 0) {

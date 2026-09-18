@@ -10,11 +10,12 @@ import {
 import { WorkspaceIcon } from './workspace-icon'
 import type { Workspace } from '@dotion/shared/workspaces/types'
 import { m } from '@/paraglide/messages'
+import type { WorkspaceId } from '../types';
 
 interface WorkspaceSwitcherPresenterProps {
   currentWorkspace?: Workspace
   workspaces: Workspace[]
-  onSelectWorkspace: (workspaceId: string) => void
+  onSelectWorkspace: (workspaceId: WorkspaceId) => void
   onCreateWorkspace: () => void
 }
 

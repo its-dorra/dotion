@@ -1,5 +1,6 @@
 import { Result } from "better-result";
-import { createGroq } from "@ai-sdk/groq";
+import { groq } from "@ai-sdk/groq";
+import { google } from "@ai-sdk/google";
 import {
   streamText,
   generateText,
@@ -22,9 +23,13 @@ import type { UserCreditsManager } from "./realtime.types";
 import type { SearchService } from "./search.service";
 import type { PagesService } from "./pages.service";
 import type { ChunkingService } from "./chunking.service";
+import { createFallback } from "ai-fallback";
 import { AIError, QuotaExceededError } from "@dotion/shared/ai/errors";
 import {
-  DEFAULT_GROQ_MODEL,
+  PRIMARY_RAG_MODEL,
+  SECONDARY_RAG_MODEL,
+  PRIMARY_SUMMARY_MODEL,
+  SECONDARY_SUMMARY_MODEL,
   STRICT_RAG_SYSTEM_PROMPT,
 } from "@dotion/shared/ai/constants";
 import {
@@ -70,7 +75,7 @@ function extractToolPartsFromSteps(
 }
 
 export class AIService {
-  private readonly groqClient: ReturnType<typeof createGroq>;
+  private readonly ragModel: ReturnType<typeof createFallback>;
 
   constructor(
     private readonly creditsManager: UserCreditsManager,
@@ -78,7 +83,13 @@ export class AIService {
     private readonly pagesService: PagesService,
     private readonly chunkingService: ChunkingService,
   ) {
-    this.groqClient = createGroq();
+    this.ragModel = createFallback({
+      models: [google(PRIMARY_RAG_MODEL), groq(SECONDARY_RAG_MODEL)],
+      onError: (error, modelId) => {
+        console.error(`Error with model ${modelId}:`, error);
+      },
+      modelResetInterval: 60000,
+    });
   }
 
   private async checkQuota(
@@ -128,7 +139,7 @@ export class AIService {
       yield* Result.await(this.checkQuota(input.userId));
 
       try {
-        const model = this.groqClient(DEFAULT_GROQ_MODEL);
+        const model = this.ragModel;
         const system = aiDocumentFormats.html.systemPrompt;
         const modelMessages = await convertToModelMessages(
           injectDocumentStateMessages(
@@ -142,6 +153,7 @@ export class AIService {
 
         const result = streamText({
           model,
+          temperature: 0.7,
           instructions: system,
           messages: modelMessages,
           tools,
@@ -204,7 +216,6 @@ export class AIService {
       yield* Result.await(this.checkQuota(input.userId));
 
       try {
-        const model = this.groqClient(DEFAULT_GROQ_MODEL);
         const citations: AssistantCitation[] = [];
 
         const tools = createWorkspaceTools({
@@ -214,11 +225,17 @@ export class AIService {
           workspaceId: input.workspaceId,
           citations,
           onCitationCollected: input.onCitationCollected,
+          maxSteps: input.maxSteps ?? 10,
         }) as ToolSet;
 
+        const instructions = input.workspaceName
+          ? `Current workspace: "${input.workspaceName}".\n\n${STRICT_RAG_SYSTEM_PROMPT}`
+          : STRICT_RAG_SYSTEM_PROMPT;
+
         const result = streamText({
-          model,
-          instructions: STRICT_RAG_SYSTEM_PROMPT,
+          model: this.ragModel,
+          temperature: 0.2,
+          instructions,
           messages: input.messages,
           tools,
           toolChoice: "auto",
@@ -290,19 +307,96 @@ export class AIService {
     userPrompt,
   }: {
     userPrompt: string;
-  }): Promise<string | null> {
-    try {
-      const model = this.groqClient(DEFAULT_GROQ_MODEL);
-      const titleResult = await generateText({
-        model,
-        prompt: `Generate a concise 3-4 word title summarizing this question: "${userPrompt}". Return ONLY the title text, without quotes.`,
-        maxRetries: 3,
+  }): Promise<Result<string | null, AIError>> {
+    return Result.gen(async function* (this: AIService) {
+      const summaryModel = createFallback({
+        models: [google(PRIMARY_SUMMARY_MODEL), groq(SECONDARY_SUMMARY_MODEL)],
+        onError: (error, modelId) => {
+          console.error(`Error with summary model ${modelId}:`, error);
+        },
+        modelResetInterval: 60000,
       });
-      const cleanTitle = titleResult.text.trim().replace(/^["']|["']$/g, "");
-      return cleanTitle || null;
-    } catch (error) {
-      console.warn("AIService.generateSummaryTitle non-fatal error:", error);
-      return null;
-    }
+
+      const titleRes = yield* Result.await(
+        Result.tryPromise({
+          try: () =>
+            generateText({
+              model: summaryModel,
+              prompt: `Generate a concise 3-4 word title summarizing this question: "${userPrompt}". Return ONLY the title text, without quotes.`,
+              maxRetries: 3,
+            }),
+          catch: (error) =>
+            new AIError({
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to generate summary title",
+              cause: error instanceof Error ? error : undefined,
+            }),
+        }),
+      );
+
+      const cleanTitle = titleRes.text.trim().replace(/^["']|["']$/g, "");
+      return Result.ok(cleanTitle || null);
+    }, this).then((res) => {
+      if (res.isErr()) {
+        console.warn(
+          "AIService.generateSummaryTitle non-fatal error:",
+          res.error,
+        );
+        return Result.ok(null);
+      }
+      return res;
+    });
+  }
+
+  async summarizeConversation(
+    messages: Array<{ role: string; content: string }>,
+  ): Promise<Result<string | null, AIError>> {
+    if (messages.length === 0) return Result.ok(null);
+
+    return Result.gen(async function* (this: AIService) {
+      const summaryModel = createFallback({
+        models: [google(PRIMARY_SUMMARY_MODEL), groq(SECONDARY_SUMMARY_MODEL)],
+        onError: (error, modelId) => {
+          console.error(`Error with summary model ${modelId}:`, error);
+        },
+        modelResetInterval: 60000,
+      });
+
+      const formatted = messages
+        .map((m) => `${m.role.toUpperCase()}: ${m.content.slice(0, 300)}`)
+        .join("\n");
+
+      const summaryRes = yield* Result.await(
+        Result.tryPromise({
+          try: () =>
+            generateText({
+              model: summaryModel,
+              prompt: `Summarize the key facts, decisions, and context established in this conversation in 2-3 concise sentences for context memory:\n\n${formatted}\n\nSummary:`,
+              maxRetries: 2,
+            }),
+          catch: (error) =>
+            new AIError({
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to summarize conversation",
+              cause: error instanceof Error ? error : undefined,
+            }),
+        }),
+      );
+
+      return Result.ok(summaryRes.text.trim() || null);
+    }, this).then((res) => {
+      if (res.isErr()) {
+        console.warn(
+          "AIService.summarizeConversation non-fatal error:",
+          res.error,
+        );
+        return Result.ok(null);
+      }
+      return res;
+    });
   }
 }

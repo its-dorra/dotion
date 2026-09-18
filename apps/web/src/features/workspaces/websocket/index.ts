@@ -1,8 +1,9 @@
 import { WebSocketClient } from '@/lib/web-socket-client'
 import { WorkspaceWsMessageSchema } from '@dotion/shared/workspaces/ws.schema'
 import type { WorkspaceWsMessage } from '@dotion/shared/workspaces/types'
+import type { WorkspaceId } from '../types'
 
-export function createWorkspaceWebSocket(workspaceId: string) {
+export function createWorkspaceWebSocket(workspaceId: WorkspaceId) {
   return new WebSocketClient<WorkspaceWsMessage>({
     url: getWorkspaceWebSocketUrl(workspaceId),
 
@@ -32,6 +33,6 @@ export function createWorkspaceWebSocket(workspaceId: string) {
   })
 }
 
-function getWorkspaceWebSocketUrl(workspaceId: string) {
+function getWorkspaceWebSocketUrl(workspaceId: WorkspaceId) {
   return `/api/v1/workspaces/${workspaceId}/ws`
 }

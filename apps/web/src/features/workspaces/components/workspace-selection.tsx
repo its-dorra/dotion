@@ -9,13 +9,14 @@ import { WorkspaceCard } from './workspace-card'
 import { WorkspaceSelectionEmpty } from './workspace-selection-empty'
 import { CreateWorkspaceModal } from './create-workspace-modal'
 import { m } from '@/paraglide/messages'
+import type { WorkspaceId } from '../types';
 
 export function WorkspaceSelection() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const navigate = useNavigate()
   const { data: workspaces } = useSuspenseQuery(workspacesListQueryOptions())
 
-  function navigateToWorkspace(workspaceId: string) {
+  function navigateToWorkspace(workspaceId: WorkspaceId) {
     navigate({
       to: '/app/workspaces/$workspaceId',
       params: { workspaceId },

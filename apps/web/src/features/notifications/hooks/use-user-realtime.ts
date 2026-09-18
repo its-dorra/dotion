@@ -8,11 +8,8 @@ import {
   markNotificationAsReadInCache,
   markAllNotificationsAsReadInCache,
 } from '../utils'
-import {
-  updatePageAccessRequestStatusInCache,
-  updatePagePermissionInCache,
-} from '@/features/pages/utils'
-import type { PagePermissionRole } from '@dotion/shared/pages/types'
+import { updatePageAccessRequestStatusInCache } from '@/features/pages/utils'
+import { authorizationKeys } from '@/features/authorization/query-options'
 import { m } from '@/paraglide/messages'
 
 import type {
@@ -58,7 +55,7 @@ const NOTIFICATION_METADATA_STRATEGIES: {
       }),
     )
   },
-  'page.permission_updated': (notif, meta, { queryClient }) => {
+  'page.permission_updated': (_notif, meta, { queryClient }) => {
     const roleName =
       meta.newRole === 'editor'
         ? m.page_role_editor()
@@ -72,21 +69,17 @@ const NOTIFICATION_METADATA_STRATEGIES: {
         role: roleName,
       }),
     )
+    void queryClient.invalidateQueries({
+      queryKey: authorizationKeys.page(meta.pageId),
+    })
     updatePageAccessRequestStatusInCache({
       queryClient,
       workspaceId: meta.workspaceId,
       pageId: meta.pageId,
       status: { hasPendingRequest: false, request: null },
     })
-    updatePagePermissionInCache({
-      queryClient,
-      workspaceId: meta.workspaceId,
-      pageId: meta.pageId,
-      userId: notif.userId,
-      role: meta.newRole as PagePermissionRole,
-    })
   },
-  'page.access_request_resolved': (notif, meta, { queryClient }) => {
+  'page.access_request_resolved': (_notif, meta, { queryClient }) => {
     if (meta.status === 'approved') {
       toast.success(
         m.notification_access_granted({
@@ -98,12 +91,8 @@ const NOTIFICATION_METADATA_STRATEGIES: {
               : m.page_role_editor(),
         }),
       )
-      updatePagePermissionInCache({
-        queryClient,
-        workspaceId: meta.workspaceId,
-        pageId: meta.pageId,
-        userId: notif.userId,
-        role: meta.role as PagePermissionRole,
+      void queryClient.invalidateQueries({
+        queryKey: authorizationKeys.page(meta.pageId),
       })
     } else {
       toast.info(
@@ -120,7 +109,7 @@ const NOTIFICATION_METADATA_STRATEGIES: {
       status: { hasPendingRequest: false, request: null },
     })
   },
-  'page.invitation_created': (_notif, meta) => {
+  'page.invitation_created': (_notif, meta, { queryClient }) => {
     toast.info(
       m.notification_page_invited({
         name: meta.invitedByName,
@@ -133,6 +122,15 @@ const NOTIFICATION_METADATA_STRATEGIES: {
               : m.workspace_role_viewer(),
       }),
     )
+    void queryClient.invalidateQueries({
+      queryKey: authorizationKeys.page(meta.pageId),
+    })
+    updatePageAccessRequestStatusInCache({
+      queryClient,
+      workspaceId: meta.workspaceId,
+      pageId: meta.pageId,
+      status: { hasPendingRequest: false, request: null },
+    })
   },
 }
 

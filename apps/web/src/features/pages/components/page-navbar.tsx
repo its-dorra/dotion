@@ -14,7 +14,7 @@ import type { WorkspaceId } from '@/features/workspaces/types'
 interface PageNavbarProps {
   page: Page
   workspaceName: string
-  workspaceId: string
+  workspaceId: WorkspaceId
   collaborators?: CollaborativeUser[]
   onOpenComments?: () => void
 }
