@@ -97,11 +97,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
     ],
   }),
   beforeLoad: async ({ context: { queryClient, authClient } }) => {
-    try {
-      await queryClient.ensureQueryData(authQueryOptions(authClient))
-    } catch (e) {
-      console.error({ e })
-    }
+    return await queryClient.query(authQueryOptions(authClient))
   },
   component: RootDocument,
 })

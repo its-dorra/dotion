@@ -18,9 +18,6 @@ export const getAuthClient = createIsomorphicFn()
             input instanceof Request ? input : new Request(input, init)
           return env.BACKEND.fetch(req)
         },
-        onError: (context) => {
-          console.error({ context })
-        },
       },
     })
   })

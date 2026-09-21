@@ -11,7 +11,7 @@ import { WorkspaceNotFound } from '@/features/workspaces/components/workspace-no
 
 export const Route = createFileRoute('/app/workspaces/$workspaceId')({
   loader: async ({ context: { queryClient }, params }) => {
-    void queryClient.prefetchQuery(
+    void queryClient.query(
       pageTreeQueryOptions(params.workspaceId as WorkspaceId),
     )
   },

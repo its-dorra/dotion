@@ -11,9 +11,7 @@ import { AppLayoutNotFound } from '@/features/auth/components/app-layout-not-fou
 
 export const Route = createFileRoute('/app')({
   beforeLoad: async ({ context: { authClient, queryClient } }) => {
-    const session = await queryClient.ensureQueryData(
-      authQueryOptions(authClient),
-    )
+    const session = await queryClient.query(authQueryOptions(authClient))
     if (!session || !session.user) {
       throw redirect({
         to: '/',
@@ -21,8 +19,8 @@ export const Route = createFileRoute('/app')({
     }
   },
   loader: async ({ context: { queryClient } }) => {
-    void queryClient.prefetchQuery(workspacesListQueryOptions())
-    void queryClient.prefetchInfiniteQuery(notificationsInfiniteQueryOptions())
+    void queryClient.query(workspacesListQueryOptions())
+    void queryClient.infiniteQuery(notificationsInfiniteQueryOptions())
   },
   component: AppLayout,
   errorComponent: AppLayoutError,

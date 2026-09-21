@@ -68,7 +68,6 @@ export class AiAssistantApi {
       const data = await response.json()
       return Result.ok(data.data as unknown as PaginatedThreadsResponse)
     } catch (error) {
-      console.error('AiAssistantApi.listThreads error:', error)
       return Result.err(
         new AppError({
           source: 'AiAssistant',
@@ -129,7 +128,6 @@ export class AiAssistantApi {
       const data = await response.json()
       return Result.ok(data.data as unknown as AssistantThread)
     } catch (error) {
-      console.error('AiAssistantApi.createThread error:', error)
       return Result.err(
         new AppError({
           source: 'AiAssistant',
@@ -190,7 +188,6 @@ export class AiAssistantApi {
 
       return Result.ok(undefined)
     } catch (error) {
-      console.error('AiAssistantApi.deleteThread error:', error)
       return Result.err(
         new AppError({
           source: 'AiAssistant',
@@ -267,7 +264,7 @@ export class AiAssistantApi {
       const data = await response.json()
       return Result.ok(data.data as unknown as PaginatedMessagesResponse)
     } catch (error) {
-      console.error('AiAssistantApi.listMessages error:', error)
+    
       return Result.err(
         new AppError({
           source: 'AiAssistant',

@@ -30,8 +30,7 @@ export function useApprovePageAccess() {
         })
         toast.success(m.toast_access_request_approved())
       },
-      onError: (error) => {
-        console.error('Error approving page access:', error)
+      onError: () => {
         toast.error(m.toast_access_request_approve_failed())
       },
     }),

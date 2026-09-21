@@ -16,7 +16,6 @@ export function useCreateAssistantThread(workspaceId: WorkspaceId) {
         addThreadToCache({ queryClient, workspaceId, thread })
       },
       onError: (error) => {
-        console.error('Error creating assistant thread:', error)
         toast.error(error?.message ?? m.error_assistant_threads_failed())
       },
     }),

@@ -30,8 +30,7 @@ export function useRejectPageAccess() {
         })
         toast.success(m.toast_access_request_declined())
       },
-      onError: (error) => {
-        console.error('Error rejecting page access:', error)
+      onError: () => {
         toast.error(m.toast_access_request_decline_failed())
       },
     }),

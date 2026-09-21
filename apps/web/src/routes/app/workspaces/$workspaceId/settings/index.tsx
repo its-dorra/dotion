@@ -12,8 +12,8 @@ import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 export const Route = createFileRoute('/app/workspaces/$workspaceId/settings/')({
   loader: async ({ context: { queryClient }, params }) => {
     try {
-      await queryClient.ensureQueryData(
-        workspaceDetailQueryOptions(params.workspaceId),
+      await queryClient.query(
+        workspaceDetailQueryOptions(params.workspaceId as WorkspaceId),
       )
     } catch (error) {
       if (WorkspaceNotFoundError.is(error) || NotFoundError.is(error)) {

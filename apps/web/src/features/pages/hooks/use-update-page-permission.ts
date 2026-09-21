@@ -11,8 +11,7 @@ export function useUpdatePagePermission() {
 
   return useMutation(
     resultMutationOptions({
-      mutationFn: 
-        pagesApi.updatePagePermission,
+      mutationFn: pagesApi.updatePagePermission,
       onMutate: async (variables) => {
         await queryClient.cancelQueries({
           queryKey: pagePermissionsInfiniteQueryOptions(
@@ -45,7 +44,7 @@ export function useUpdatePagePermission() {
             context.previousPermissions,
           )
         }
-        console.error('Error updating page permission:', error)
+
         toast.error(m.toast_permission_update_failed())
       },
       onSuccess: () => {

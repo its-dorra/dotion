@@ -19,8 +19,7 @@ export const useSignOut = () => {
       queryClient.clear()
       navigate({ to: '/' })
     },
-    onError: (error) => {
-      console.error('Error signing out:', error)
+    onError: () => {
       toast.error(m.toast_auth_sign_out_failed())
     },
   })

@@ -379,10 +379,6 @@ export class WebSocketClient<TMessage> {
           }
         },
       )
-    } catch (error) {
-      if ((error as DOMException)?.name !== 'AbortError') {
-        console.error('WebSocket leader election failed', error)
-      }
     } finally {
       this.leaderAttemptInProgress = false
       this.leaderAbortController = null
@@ -404,10 +400,6 @@ export class WebSocketClient<TMessage> {
       } finally {
         this.setLeader(false)
       }
-    } catch (error) {
-      if ((error as DOMException)?.name !== 'AbortError') {
-        console.error('WebSocket leader run failed', error)
-      }
     } finally {
       this.leaderAttemptInProgress = false
       this.leaderAbortController = null
@@ -428,8 +420,6 @@ export class WebSocketClient<TMessage> {
         if (signal.aborted) {
           break
         }
-
-        console.error('WebSocket connection error', error)
       }
 
       if (signal.aborted || !this.shouldReconnect) {
@@ -610,7 +600,6 @@ export class WebSocketClient<TMessage> {
           return
         }
 
-
         this.channel.postMessage({
           type: 'client.send.ack',
           requestId: message.requestId,
@@ -655,7 +644,6 @@ export class WebSocketClient<TMessage> {
       }
 
       case 'client.message': {
-
         if (this.leader) {
           return
         }
@@ -666,7 +654,6 @@ export class WebSocketClient<TMessage> {
       }
 
       case 'socket.message': {
-
         if (this.leader) {
           return
         }
@@ -700,7 +687,6 @@ export class WebSocketClient<TMessage> {
       }
 
       case 'client.hello': {
-
         if (!this.leader) {
           return
         }
@@ -712,7 +698,6 @@ export class WebSocketClient<TMessage> {
       }
 
       case 'leader.state': {
-
         if (this.leader) {
           return
         }
@@ -726,9 +711,7 @@ export class WebSocketClient<TMessage> {
     for (const listener of [...this.messageListeners]) {
       try {
         listener({ source, payload: data })
-      } catch (error) {
-        console.error('WebSocketClient: message listener threw', error)
-      }
+      } catch {}
     }
   }
 
@@ -746,9 +729,7 @@ export class WebSocketClient<TMessage> {
     for (const listener of [...this.statusListeners]) {
       try {
         listener()
-      } catch (error) {
-        console.error('WebSocketClient: status listener threw', error)
-      }
+      } catch {}
     }
   }
 
@@ -768,9 +749,7 @@ export class WebSocketClient<TMessage> {
     } else {
       this.closeSocket()
 
-
       this.rejectAllPending(new Error('Lost WebSocket leadership'))
-
 
       if (this.shouldReconnect && this.status !== 'disconnected') {
         this.setStatus('reconnecting')

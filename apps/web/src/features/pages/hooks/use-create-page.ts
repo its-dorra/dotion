@@ -18,7 +18,6 @@ export function useCreatePage() {
         })
       },
       onError: (error) => {
-        console.error('Error creating page:', error)
         toast.error(m.toast_page_create_failed())
       },
     }),

@@ -30,8 +30,8 @@ export function useRequestPageAccess() {
         })
         toast.success(m.page_request_access_success())
       },
-      onError: (error) => {
-        console.error('Error requesting page access:', error)
+      onError: () => {
+        
         toast.error(m.page_request_access_failed())
       },
     }),

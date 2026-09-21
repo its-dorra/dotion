@@ -11,7 +11,7 @@ export const Route = createFileRoute('/app/workspaces/')({
   component: WorkspaceSelectionPage,
   loader: async ({ context: { queryClient } }) => {
     try {
-      return await queryClient.ensureQueryData(workspacesListQueryOptions())
+      return await queryClient.query(workspacesListQueryOptions())
     } catch (error) {
       if (NotFoundError.is(error)) {
         throw notFound()
@@ -21,7 +21,6 @@ export const Route = createFileRoute('/app/workspaces/')({
   },
   errorComponent: WorkspaceSelectionError,
   notFoundComponent: WorkspaceSelectionNotFound,
-  ssr: 'data-only',
 })
 
 function WorkspaceSelectionPage() {

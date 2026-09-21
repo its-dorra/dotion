@@ -12,7 +12,7 @@ import { TrashNotFound } from '@/features/pages/components/trash-not-found'
 export const Route = createFileRoute('/app/workspaces/$workspaceId/trash/')({
   loader: async ({ context: { queryClient }, params }) => {
     try {
-      await queryClient.ensureQueryData(
+      await queryClient.query(
         trashedPagesQueryOptions(params.workspaceId as WorkspaceId),
       )
     } catch (error) {
@@ -33,7 +33,7 @@ function TrashPage() {
   return (
     <div className="h-full overflow-y-auto">
       <Suspense fallback={<TrashLoading />}>
-        <Trash workspaceId={workspaceId} />
+        <Trash workspaceId={workspaceId as WorkspaceId} />
       </Suspense>
     </div>
   )

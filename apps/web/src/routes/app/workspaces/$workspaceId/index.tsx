@@ -15,8 +15,8 @@ export const Route = createFileRoute('/app/workspaces/$workspaceId/')({
     const workspaceId = params.workspaceId as WorkspaceId
     try {
       await Promise.all([
-        queryClient.ensureQueryData(workspaceDetailQueryOptions(workspaceId)),
-        queryClient.ensureQueryData(pageTreeQueryOptions(workspaceId)),
+        queryClient.query(workspaceDetailQueryOptions(workspaceId)),
+        queryClient.query(pageTreeQueryOptions(workspaceId)),
       ])
     } catch (error) {
       if (WorkspaceNotFoundError.is(error) || NotFoundError.is(error)) {

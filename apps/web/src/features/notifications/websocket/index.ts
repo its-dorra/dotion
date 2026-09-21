@@ -19,7 +19,6 @@ export function createUserWebSocket() {
         }
         return result.data
       } catch {
-        console.error('Invalid user WebSocket message', message)
         throw new Error('Invalid user WebSocket message')
       }
     },

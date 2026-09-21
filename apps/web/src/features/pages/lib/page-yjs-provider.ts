@@ -151,17 +151,10 @@ export class PageYjsProvider {
 
         if (encoding.length(encoder) > 1) {
           const reply = encoding.toUint8Array(encoder)
-          this.wsClient
-            .send({
-              type: 'yjs',
-              data: reply.buffer as ArrayBuffer,
-            })
-            .catch((error) => {
-              console.warn(
-                'PageYjsProvider: Failed to reply to sync message',
-                error,
-              )
-            })
+          this.wsClient.send({
+            type: 'yjs',
+            data: reply.buffer as ArrayBuffer,
+          })
         }
         break
       }
@@ -178,14 +171,10 @@ export class PageYjsProvider {
     encoding.writeVarUint(encoder, MSG_SYNC)
     syncProtocol.writeSyncStep1(encoder, this.doc)
     const data = encoding.toUint8Array(encoder)
-    this.wsClient
-      .send({
-        type: 'yjs',
-        data: data.buffer,
-      })
-      .catch((error) => {
-        console.warn('PageYjsProvider: Failed to send sync step 1', error)
-      })
+    this.wsClient.send({
+      type: 'yjs',
+      data: data.buffer,
+    })
   }
 
   private _sendAwareness() {
@@ -198,14 +187,10 @@ export class PageYjsProvider {
       ]),
     )
     const data = encoding.toUint8Array(encoder)
-    this.wsClient
-      .send({
-        type: 'yjs',
-        data: data.buffer as ArrayBuffer,
-      })
-      .catch((error) => {
-        console.warn('PageYjsProvider: Failed to send awareness', error)
-      })
+    this.wsClient.send({
+      type: 'yjs',
+      data: data.buffer as ArrayBuffer,
+    })
   }
 
   private _onDocUpdate = (update: Uint8Array, origin: unknown) => {
@@ -215,14 +200,10 @@ export class PageYjsProvider {
     encoding.writeVarUint(encoder, MSG_SYNC)
     syncProtocol.writeUpdate(encoder, update)
     const data = encoding.toUint8Array(encoder)
-    this.wsClient
-      .send({
-        type: 'yjs',
-        data: data.buffer,
-      })
-      .catch((error) => {
-        console.warn('PageYjsProvider: Failed to send doc update', error)
-      })
+    this.wsClient.send({
+      type: 'yjs',
+      data: data.buffer,
+    })
   }
 
   private _onAwarenessUpdate = ({
@@ -244,14 +225,10 @@ export class PageYjsProvider {
       awarenessProtocol.encodeAwarenessUpdate(this.awareness, changedClients),
     )
     const data = encoding.toUint8Array(encoder)
-    this.wsClient
-      .send({
-        type: 'yjs',
-        data: data.buffer,
-      })
-      .catch((error) => {
-        console.warn('PageYjsProvider: Failed to send awareness update', error)
-      })
+    this.wsClient.send({
+      type: 'yjs',
+      data: data.buffer,
+    })
   }
 
   destroy() {

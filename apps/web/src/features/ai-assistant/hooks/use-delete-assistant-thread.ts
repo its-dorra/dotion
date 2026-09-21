@@ -34,7 +34,7 @@ export function useDeleteAssistantThread(workspaceId: WorkspaceId) {
             context.previousThreads,
           )
         }
-        console.error('Error deleting assistant thread:', error)
+
         toast.error(error?.message ?? m.error_assistant_threads_failed())
       },
     }),

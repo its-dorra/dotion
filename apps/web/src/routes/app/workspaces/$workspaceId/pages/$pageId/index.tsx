@@ -16,8 +16,40 @@ export const Route = createFileRoute(
   '/app/workspaces/$workspaceId/pages/$pageId/',
 )({
   loader: async ({ context: { queryClient }, params }) => {
+    void queryClient.query(
+      workspaceDetailQueryOptions(params.workspaceId as WorkspaceId),
+    )
+    void queryClient.infiniteQuery(
+      commentsInfiniteQueryOptions(
+        params.workspaceId as WorkspaceId,
+        params.pageId as PageId,
+      ),
+    )
+    void queryClient.query(
+      canQueryOptions({
+        resource: {
+          type: 'page',
+          id: {
+            pageId: params.pageId as PageId,
+          },
+        },
+        action: 'update',
+      }),
+    )
+    void queryClient.query(
+      canQueryOptions({
+        resource: {
+          type: 'page',
+          id: {
+            pageId: params.pageId as PageId,
+          },
+        },
+        action: 'delete',
+      }),
+    )
+
     try {
-      await queryClient.ensureQueryData(
+      await queryClient.query(
         pageDetailQueryOptions(
           params.workspaceId as WorkspaceId,
           params.pageId as PageId,
@@ -29,38 +61,6 @@ export const Route = createFileRoute(
       }
       throw error
     }
-
-    void queryClient.prefetchQuery(
-      workspaceDetailQueryOptions(params.workspaceId as WorkspaceId),
-    )
-    void queryClient.prefetchInfiniteQuery(
-      commentsInfiniteQueryOptions(
-        params.workspaceId as WorkspaceId,
-        params.pageId as PageId,
-      ),
-    )
-    void queryClient.prefetchQuery(
-      canQueryOptions({
-        resource: {
-          type: 'page',
-          id: {
-            pageId: params.pageId as PageId,
-          },
-        },
-        action: 'update',
-      }),
-    )
-    void queryClient.prefetchQuery(
-      canQueryOptions({
-        resource: {
-          type: 'page',
-          id: {
-            pageId: params.pageId as PageId,
-          },
-        },
-        action: 'delete',
-      }),
-    )
   },
   component: PagePage,
   errorComponent: PageDetailError,

@@ -76,9 +76,6 @@ export function useServiceWorker(): UseServiceWorkerReturn {
           })
         })
       })
-      .catch((error) => {
-        console.error('[PWA] Service Worker registration failed:', error)
-      })
 
     return () => {
       navigator.serviceWorker.removeEventListener(

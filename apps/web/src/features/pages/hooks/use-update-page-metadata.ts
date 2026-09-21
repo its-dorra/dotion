@@ -56,17 +56,13 @@ export function useUpdatePageMetadata({
         )
       }
 
-      wsClient
-        ?.send({
-          type: 'metadata',
-          data: {
-            type: 'page.update_metadata',
-            payload: metadata,
-          },
-        })
-        .catch((error) => {
-          console.error('Failed to send page metadata update:', error)
-        })
+      wsClient?.send({
+        type: 'metadata',
+        data: {
+          type: 'page.update_metadata',
+          payload: metadata,
+        },
+      })
     },
     [queryClient, pageId, workspaceId, wsClient],
   )

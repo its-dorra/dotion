@@ -29,7 +29,6 @@ export function useCreateWorkspace() {
         })
       },
       onError: (error) => {
-        console.log({ error })
         toast.error(error?.message ?? m.toast_workspace_create_failed())
       },
     }),

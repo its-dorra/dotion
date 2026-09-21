@@ -95,7 +95,6 @@ export function useAssistantChat({
       })
     },
     onError: (error) => {
-      console.error('useAssistantChat error:', error)
       toast.error(error.message || 'Failed to stream assistant response')
     },
   })

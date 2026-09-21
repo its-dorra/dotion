@@ -5,7 +5,7 @@ import { AppRedirectNotFound } from '@/features/workspaces/components/app-redire
 
 export const Route = createFileRoute('/app/')({
   beforeLoad: async ({ context: { queryClient } }) => {
-    const workspaces = await queryClient.ensureQueryData(
+    const workspaces = await queryClient.query(
       workspacesListQueryOptions(),
     )
     const firstWorkspace = workspaces?.[0]

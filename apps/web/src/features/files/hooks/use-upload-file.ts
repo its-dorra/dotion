@@ -9,7 +9,6 @@ export function useUploadFile() {
     resultMutationOptions({
       mutationFn: filesApi.uploadFile,
       onError: (error) => {
-        console.error('Error uploading file:', error)
         toast.error(m.toast_file_upload_failed())
       },
     }),

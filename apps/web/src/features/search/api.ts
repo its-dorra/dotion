@@ -70,7 +70,6 @@ export class SearchApi {
       const result = await response.json()
       return Result.ok(result.data)
     } catch (error) {
-      console.error('SearchApi.search error:', error)
       return Result.err(
         new AppError({
           source: 'Search',

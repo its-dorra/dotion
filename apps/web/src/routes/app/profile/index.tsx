@@ -10,7 +10,7 @@ import { AuthenticationError, NotFoundError } from '@/lib/errors'
 export const Route = createFileRoute('/app/profile/')({
   loader: async ({ context: { queryClient, authClient } }) => {
     try {
-      await queryClient.ensureQueryData(authQueryOptions(authClient))
+      await queryClient.query(authQueryOptions(authClient))
     } catch (error) {
       if (AuthenticationError.is(error) || NotFoundError.is(error)) {
         throw notFound()

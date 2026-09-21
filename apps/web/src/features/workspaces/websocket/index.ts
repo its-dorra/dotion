@@ -17,8 +17,6 @@ export function createWorkspaceWebSocket(workspaceId: WorkspaceId) {
       try {
         return WorkspaceWsMessageSchema.parse(JSON.parse(message))
       } catch {
-        console.error('Invalid workspace WebSocket message', message)
-
         throw new Error('Invalid workspace WebSocket message: not a string')
       }
     },
