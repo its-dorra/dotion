@@ -1,23 +1,22 @@
-import { cn } from "@/lib/utils";
-import { CheckSquare, ImageIcon, Plus } from "lucide-react";
-import { useState } from "react";
-import { Avatar, AvatarFallback } from "../ui/avatar";
+import { cn } from '@/lib/utils'
+import { CheckSquare, ImageIcon, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { Avatar, AvatarFallback } from '../ui/avatar'
 
 export default function MockDocument() {
-  const [checked, setChecked] = useState([true, false, true]);
+  const [checked, setChecked] = useState([true, false, true])
 
   const toggle = (i: number) =>
-    setChecked((c) => c.map((v, idx) => (idx === i ? !v : v)));
+    setChecked((c) => c.map((v, idx) => (idx === i ? !v : v)))
 
   return (
     <div className="relative mx-auto w-full max-w-2xl rounded-lg border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),0_8px_30px_rgba(0,0,0,0.3)]">
-      {/* fake window chrome */}
       <div className="flex items-center gap-1.5 border-b border-border px-4 py-2.5">
         <div className="h-2.5 w-2.5 rounded-full bg-muted" />
         <div className="h-2.5 w-2.5 rounded-full bg-muted" />
         <div className="h-2.5 w-2.5 rounded-full bg-muted" />
         <span className="ml-2 text-[12px] text-muted-foreground">
-          Product Launch — Jotion
+          Product Launch — Dotion
         </span>
       </div>
 
@@ -33,25 +32,14 @@ export default function MockDocument() {
           owners, drop in mockups — it all lives here.
         </p>
 
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {["Engineering", "Design", "Q3"].map((tag) => (
-            <span
-              key={tag}
-              className="rounded-lg bg-muted px-2 py-0.5 text-[12px] text-muted-foreground"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-
         <div className="h-px bg-border" />
 
         <div className="space-y-2.5">
           <p className="text-[14px] font-semibold">Launch checklist</p>
           {[
-            "Finalize onboarding flow",
-            "Write release notes",
-            "Schedule announcement email",
+            'Finalize onboarding flow',
+            'Write release notes',
+            'Schedule announcement email',
           ].map((task, i) => (
             <button
               key={task}
@@ -60,10 +48,10 @@ export default function MockDocument() {
             >
               <span
                 className={cn(
-                  "flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-[3px] border transition-colors",
+                  'flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-[3px] border transition-colors',
                   checked[i]
-                    ? "border-foreground bg-foreground"
-                    : "border-muted-foreground/40",
+                    ? 'border-foreground bg-foreground'
+                    : 'border-muted-foreground/40',
                 )}
               >
                 {checked[i] && (
@@ -72,8 +60,8 @@ export default function MockDocument() {
               </span>
               <span
                 className={cn(
-                  "text-[14px]",
-                  checked[i] && "text-muted-foreground line-through",
+                  'text-[14px]',
+                  checked[i] && 'text-muted-foreground line-through',
                 )}
               >
                 {task}
@@ -107,5 +95,5 @@ export default function MockDocument() {
         </Avatar>
       </div>
     </div>
-  );
+  )
 }
