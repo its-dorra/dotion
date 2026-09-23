@@ -9,7 +9,7 @@ import {
   WS_MSG_SYNC_STEP_1,
   WS_MSG_SYNC_STEP_2,
   WS_MSG_SYNC_UPDATE,
-} from "../../yjs-protocol";
+} from "../../yjs/yjs-protocol";
 
 export interface YjsSyncPayload {
   readonly syncType: number;

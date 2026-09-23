@@ -8,7 +8,7 @@ import {
   MSG_AWARENESS,
   WS_MSG_AWARENESS,
   YjsProtocol,
-} from "../../yjs-protocol";
+} from "../../yjs/yjs-protocol";
 
 export interface YjsAwarenessPayload {
   readonly decoder: decoding.Decoder;

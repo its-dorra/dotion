@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.0.2'
+const CACHE_VERSION = 'v1.1.1'
 const STATIC_CACHE = `dotion-static-${CACHE_VERSION}`
 const FONTS_CACHE = `dotion-fonts-${CACHE_VERSION}`
 const IMAGES_CACHE = `dotion-images-${CACHE_VERSION}`
