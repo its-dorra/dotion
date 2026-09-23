@@ -29,7 +29,7 @@ export function createAuth(
       usePlural: true,
     }),
     rateLimit: {
-      storage: "memory",
+      enabled: false,
     },
     secondaryStorage,
 

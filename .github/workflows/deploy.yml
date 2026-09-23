@@ -95,7 +95,7 @@ jobs:
   deploy-web:
     name: Deploy Web
     runs-on: ubuntu-latest
-    needs: migrate
+    needs: deploy-server
 
     steps:
       - name: Checkout repository
