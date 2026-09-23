@@ -385,6 +385,132 @@ export const pageId = z.uuid().brand("PageId");
 // A WorkspaceId can never be accidentally passed where a PageId is expected
 ```
 
+### Advanced TanStack Query & Router Patterns
+
+The frontend integrates TanStack Query v5 with TanStack Router using robust state management and preloading patterns:
+
+#### 1. Monadic Result Adapters (`resultQueryOptions` & `resultMutationOptions`)
+
+To maintain zero raw exception throwing across frontend layers, API calls return `Result<T, E>` monads. Query options wrap these calls so TanStack Query handles success (`T`) while throwing tagged errors (`E`) directly to React Error Boundaries or UI toast notifications:
+
+```typescript
+// query-options.ts — Query key factory + monadic wrapper
+export const pagesKeys = {
+  all: ["pages"] as const,
+  tree: (workspaceId: WorkspaceId) =>
+    [...pagesKeys.all, "tree", workspaceId] as const,
+  detail: (pageId: PageId) => [...pagesKeys.all, "detail", pageId] as const,
+};
+
+export function pageDetailQueryOptions(
+  workspaceId: WorkspaceId,
+  pageId: PageId,
+) {
+  return resultQueryOptions({
+    queryKey: pagesKeys.detail(pageId),
+    queryFn: () => pagesApi.getPage(workspaceId, pageId),
+  });
+}
+```
+
+#### 2. Route Preloading & Parallel Background Fetching
+
+TanStack Router `loader` functions preload data before navigation completes, combining **critical blocking prefetching** with **non-blocking parallel background prefetches**:
+
+```typescript
+export const Route = createFileRoute(
+  "/app/workspaces/$workspaceId/pages/$pageId/",
+)({
+  loader: async ({ context: { queryClient }, params }) => {
+    // 1. Parallel background prefetches (non-blocking)
+    void queryClient.query(workspaceDetailQueryOptions(params.workspaceId));
+    void queryClient.infiniteQuery(
+      commentsInfiniteQueryOptions(params.workspaceId, params.pageId),
+    );
+    void queryClient.query(
+      canQueryOptions({
+        resource: { type: "page", id: { pageId: params.pageId } },
+        action: "update",
+      }),
+    );
+
+    // 2. Critical main query prefetch (blocking route transition until resolved or 404)
+    try {
+      await queryClient.query(
+        pageDetailQueryOptions(params.workspaceId, params.pageId),
+      );
+    } catch (error) {
+      if (PageNotFoundError.is(error)) throw notFound();
+    }
+  },
+  component: PageRouteComponent,
+});
+```
+
+#### 3. Optimistic Updates with Automatic Rollback (`onMutate` / `onError`)
+
+Mutations optimistically update the query cache before the server responds, snapshotting previous state for instant UI response and automatic rollback if the request fails:
+
+```typescript
+export function useMoveToTrash() {
+  const queryClient = useQueryClient();
+  return useMutation(
+    resultMutationOptions({
+      mutationFn: (input: MoveToTrashInput) => pagesApi.moveToTrash(input),
+      onMutate: async (variables) => {
+        // Cancel active refetches to prevent cache race conditions
+        await queryClient.cancelQueries({
+          queryKey: pagesKeys.tree(variables.workspaceId),
+        });
+        await queryClient.cancelQueries({
+          queryKey: pagesKeys.trash(variables.workspaceId),
+        });
+
+        // Snapshot previous state for rollback
+        const previousTree = queryClient.getQueryData(
+          pagesKeys.tree(variables.workspaceId),
+        );
+        const previousTrash = queryClient.getQueryData(
+          pagesKeys.trash(variables.workspaceId),
+        );
+
+        // Optimistically update query cache
+        queryClient.setQueryData(pagesKeys.tree(variables.workspaceId), (old) =>
+          removePageAndDescendantsFromTree({
+            oldTree: old,
+            pageId: variables.pageId,
+          }),
+        );
+        queryClient.setQueryData(
+          pagesKeys.trash(variables.workspaceId),
+          (old) =>
+            addPageToTrash({
+              oldTrash: old,
+              trashed: { id: variables.pageId /* ... */ },
+            }),
+        );
+
+        return { previousTree, previousTrash };
+      },
+      onError: (error, variables, context) => {
+        // Rollback on failure
+        if (context?.previousTree)
+          queryClient.setQueryData(
+            pagesKeys.tree(variables.workspaceId),
+            context.previousTree,
+          );
+        if (context?.previousTrash)
+          queryClient.setQueryData(
+            pagesKeys.trash(variables.workspaceId),
+            context.previousTrash,
+          );
+        toast.error(error?.message ?? "Failed to move page to trash");
+      },
+    }),
+  );
+}
+```
+
 ### ABAC Authorization
 
 A pure **Attribute-Based Access Control** engine with zero I/O in policy evaluation:
@@ -565,14 +691,47 @@ bun run typecheck
 ## Deployment
 
 Deploys via **GitHub Actions** on push to `main` in three sequential stages:
+Production deployments are automated via **GitHub Actions** (`.github/workflows/deploy.yml`) on every push to `main` or via manual trigger (`workflow_dispatch`).
+
+### GitHub Actions CI/CD Architecture
 
 ```
 1. migrate        →  Pushes Drizzle schema to production Neon database
 2. deploy-server  →  Deploys backend Worker via wrangler deploy
 3. deploy-web     →  Builds TanStack Start app & deploys frontend Worker
+push to main
+  │
+  ├── 1. Job: migrate (Drizzle DB Push)
+  │      └─ Applies database schema alterations to production Neon PostgreSQL (bun run db:push)
+  │
+  ├── 2. Job: deploy-server (needs: migrate)
+  │      └─ Deploys Hono OpenAPI Worker via cloudflare/wrangler-action@v4
+  │         Injects 12 Cloudflare secrets (Neon DB, Better Auth, Gemini, Groq, Sentry)
+  │
+  └── 3. Job: deploy-web (needs: migrate)
+         ├─ Compiles TanStack Start React SPA + uploads Sentry sourcemaps
+         └─ Deploys Frontend Worker via cloudflare/wrangler-action@v3
 ```
 
 Both Workers run on Cloudflare's global edge. The frontend uses a **service binding** (`BACKEND`) for zero-latency, in-datacenter backend calls.
+
+#### Key Pipeline Features:
+
+1. **Concurrency Control**:
+   - `concurrency.group: deploy-production` with `cancel-in-progress: false`.
+   - Guarantees sequential deployment execution without aborting in-flight DB migrations or deploying out-of-order build artifacts.
+
+2. **Stage 1 — Database Migrations (`migrate`)**:
+   - Runs in `apps/server` using `bun run db:push` against production `DATABASE_URL`.
+   - Schema updates are applied and verified before server application code updates deploy.
+
+3. **Stage 2 — Backend Deployment (`deploy-server`)**:
+   - Uses `cloudflare/wrangler-action@v4` with `bun-version: latest`.
+   - Securely injects production secrets (`BETTER_AUTH_SECRET`, `DATABASE_URL`, `GOOGLE_GENERATIVE_AI_API_KEY`, `GROQ_API_KEY`, `SENTRY_SERVER_DSN`, etc.).
+
+4. **Stage 3 — Frontend Build & Deploy (`deploy-web`)**:
+   - Builds TanStack Start SPA with production Sentry release tracking and source map uploads (`VITE_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`).
+   - Uses `cloudflare/wrangler-action@v3` to deploy to Cloudflare Workers with direct **service bindings** (`BACKEND`) for zero-latency, worker-to-worker API calls.
 
 ### Rate Limits
 
