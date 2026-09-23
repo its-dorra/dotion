@@ -5,9 +5,6 @@ import {
 import type { UnsplashPhoto } from './types'
 
 export class UnsplashApi {
-  /**
-   * Calls the TanStack Start server function which uses unsplash-js SDK with the server-side access key
-   */
   async searchPhotos(
     query: string,
     page = 1,
@@ -22,9 +19,6 @@ export class UnsplashApi {
     })
   }
 
-  /**
-   * Tracks photo download via TanStack Start server function
-   */
   async trackDownload(downloadLocation?: string): Promise<void> {
     if (!downloadLocation) return
     await trackUnsplashDownloadServerFn({

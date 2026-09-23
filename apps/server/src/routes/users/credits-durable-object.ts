@@ -149,10 +149,6 @@ export class UserCreditsDO extends DurableObject<Env> {
     };
   }
 
-  /**
-   * Settle token usage after stream completion.
-   * Atomically decrements balance and records a ledger transaction in SQLite.
-   */
   async settleTokenUsage(params: {
     tokensUsed: number;
     metadata: string;

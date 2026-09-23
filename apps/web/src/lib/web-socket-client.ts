@@ -20,9 +20,6 @@ export type WebSocketClientOptions<TMessage> = {
 
 export type MessageSource = 'websocket' | 'broadcast' | 'local'
 
-/** @deprecated Use MessageSource instead. */
-export type TabMessageSource = MessageSource
-
 export type MessageListener<TMessage> = (data: {
   source: MessageSource
   payload: TMessage
@@ -119,10 +116,6 @@ export class WebSocketClient<TMessage> {
 
   private leaderAbortController: AbortController | null = null
 
-  /**
-   * Guards against concurrent tryBecomeLeader() calls racing to set
-   * leaderAbortController / this.leader simultaneously.
-   */
   private leaderAttemptInProgress = false
 
   private leader = false
@@ -468,11 +461,6 @@ export class WebSocketClient<TMessage> {
         signal.removeEventListener('abort', onAbort)
       }
 
-      /**
-       * Abort handler: close the socket and resolve immediately so runLeader
-       * can exit via its `if (signal.aborted) break` check.
-       * We resolve (not reject) to keep runLeader's error handling clean.
-       */
       const onAbort = () => {
         socket.close()
         settle(resolve)
@@ -555,7 +543,6 @@ export class WebSocketClient<TMessage> {
     })
   }
 
-  /** Called only on the leader tab for messages received from the server. */
   private handleSocketMessage(raw: WebSocketData): void {
     let data: TMessage
 

@@ -9,8 +9,8 @@ import type { CommentWsMessage } from "@dotion/shared/comments/types";
 import type { PermissionKey } from "@dotion/shared/authorization/types";
 import { PageClientWsMessageSchema } from "@dotion/shared/pages/schema";
 import { DurableObject } from "cloudflare:workers";
-import { PageDocument } from "./page-document";
-import { PagePersistence } from "./page-persistence";
+import { PageDocument } from "./yjs/page-document";
+import { PagePersistence } from "./yjs/page-persistence";
 import {
   MSG_SYNC,
   MSG_AWARENESS,
@@ -22,7 +22,7 @@ import {
   WS_MSG_SYNC_UPDATE,
   WS_MSG_AWARENESS,
   YjsProtocol,
-} from "./yjs-protocol";
+} from "./yjs/yjs-protocol";
 import * as decoding from "lib0/decoding";
 import { createAppContext } from "#/context";
 import { WsRouter } from "#/lib/ws-router";
@@ -34,9 +34,6 @@ import {
 } from "./ws/strategies/yjs-sync.strategy";
 import { YjsAwarenessStrategy } from "./ws/strategies/yjs-awareness.strategy";
 import { PageMetadataUpdateStrategy } from "./ws/strategies/page-metadata.strategy";
-
-export type { PageWsAttachment, PageWsContext };
-export type WsAttachment = PageWsAttachment;
 
 const ROLE_PERMISSIONS_MAP: Record<AllPageRole, Set<PermissionKey>> = {
   editor: new Set(["page:view", "page:update", "comment:create"]),
@@ -148,10 +145,6 @@ export class PagesDO extends DurableObject<Env> {
     const pageId = this.getPageIdFromRequest(request);
     const workspaceId = this.getWorkspaceIdFromRequest(request);
 
-    if (!pageId || !workspaceId) {
-      return new Response("Missing required headers", { status: 400 });
-    }
-
     let document: PageDocument;
 
     try {
@@ -170,12 +163,12 @@ export class PagesDO extends DurableObject<Env> {
     return this.acceptWebSocket(request, document);
   }
 
-  private getPageIdFromRequest(request: Request): PageId | null {
-    return request.headers.get("X-Page-Id") as PageId | null;
+  private getPageIdFromRequest(request: Request): PageId {
+    return request.headers.get("X-Page-Id") as PageId;
   }
 
-  private getWorkspaceIdFromRequest(request: Request): WorkspaceId | null {
-    return request.headers.get("X-Workspace-Id") as WorkspaceId | null;
+  private getWorkspaceIdFromRequest(request: Request): WorkspaceId {
+    return request.headers.get("X-Workspace-Id") as WorkspaceId;
   }
 
   private acceptWebSocket(request: Request, _document: PageDocument): Response {
@@ -183,10 +176,7 @@ export class PagesDO extends DurableObject<Env> {
     const client = pair[0];
     const server = pair[1];
 
-    const userIdHeader = request.headers.get("X-User-Id");
-    if (!userIdHeader) {
-      return new Response("Missing authenticated user", { status: 401 });
-    }
+    const userIdHeader = request.headers.get("X-User-Id") as UserId;
 
     const permissionsHeader = request.headers.get("X-Permissions") ?? "";
     const permissions = new Set<PermissionKey>(
@@ -196,7 +186,7 @@ export class PagesDO extends DurableObject<Env> {
     );
 
     const attachment: PageWsAttachment = {
-      userId: userIdHeader as UserId,
+      userId: userIdHeader,
       userName: request.headers.get("X-User-Name") ?? "Anonymous",
       userColor: request.headers.get("X-User-Color") ?? "#808080",
       permissions,
@@ -235,7 +225,7 @@ export class PagesDO extends DurableObject<Env> {
           ws.send(rollback);
         }
       },
-      onUnauthorized: (_permission) => {
+      onUnauthorized: () => {
         if (this.document) {
           const rollback = YjsProtocol.encodeSyncStep1(this.document.getDoc());
           ws.send(rollback);
@@ -258,11 +248,7 @@ export class PagesDO extends DurableObject<Env> {
       return;
     }
 
-    const attachment = ws.deserializeAttachment() as PageWsAttachment | null;
-    if (!attachment) {
-      console.error("PagesDO: missing WebSocket attachment");
-      return;
-    }
+    const attachment = ws.deserializeAttachment() as PageWsAttachment;
 
     const ctx = this.createContext(ws, attachment);
 
@@ -313,12 +299,7 @@ export class PagesDO extends DurableObject<Env> {
     }
   }
 
-  async webSocketClose(
-    ws: WebSocket,
-    _code: number,
-    _reason: string,
-    _wasClean: boolean,
-  ): Promise<void> {
+  async webSocketClose(ws: WebSocket): Promise<void> {
     if (this.document) {
       this.removeConnectionAwareness(ws, this.document);
     }

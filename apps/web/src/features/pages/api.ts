@@ -68,10 +68,7 @@ function toPublicPage(page: InternalPage): Page {
 let mockPages: Record<string, InternalPage> = {}
 
 export class PagesApi {
-  /**
-   * Returns the flat list of non-trashed pages for a workspace. Callers
-   * build the nested tree client-side from each node's parentId.
-   */
+ 
   async getPageTree(
     workspaceId: WorkspaceId,
   ): Promise<

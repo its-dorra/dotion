@@ -12,9 +12,6 @@ import {
   DocumentCoverChangedStrategy,
 } from "./ws/strategies/workspace.strategies";
 
-export type { WorkspaceWsAttachment, WorkspaceWsContext };
-export type Attachments = WorkspaceWsAttachment;
-
 export class WorkspacesDO extends DurableObject<Env> {
   private readonly router = new WsRouter<WorkspaceWsContext>()
     .register(new DocumentTitleChangedStrategy())
@@ -29,12 +26,14 @@ export class WorkspacesDO extends DurableObject<Env> {
     const webSocketPair = new WebSocketPair();
     const [client, server] = [webSocketPair[0], webSocketPair[1]];
 
-    const userId =
-      (request.headers.get("X-User-Id") as UserId) ?? ("" as UserId);
-    const workspaceId =
-      (request.headers.get("X-Workspace-Id") as WorkspaceId) ??
-      ("" as WorkspaceId);
-    const permissionsHeader = request.headers.get("X-Permissions") ?? "";
+    const userId = request.headers.get("X-User-Id") as UserId;
+    const workspaceId = request.headers.get("X-Workspace-Id") as WorkspaceId;
+    const permissionsHeader = request.headers.get("X-Permissions");
+
+    if (!userId || !workspaceId || !permissionsHeader) {
+      return new Response("Missing required headers", { status: 400 });
+    }
+
     const permissions = new Set<PermissionKey>(
       permissionsHeader
         ? (permissionsHeader.split(",") as PermissionKey[])
@@ -98,10 +97,6 @@ export class WorkspacesDO extends DurableObject<Env> {
     reason: string,
     _wasClean: boolean,
   ) {
-    /*
-     * Only forward valid close codes.
-     * Code 1006 (abnormal closure) is reserved and cannot be used in ws.close().
-     */
     if (code === 1000 || (code >= 3000 && code <= 4999)) {
       ws.close(code, reason);
     } else {
