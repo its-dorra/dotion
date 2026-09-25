@@ -8,10 +8,11 @@ import { PageTreeError } from './page-tree-error'
 import { PageTreeEmpty } from './page-tree-empty'
 import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import { Can } from '@/features/authorization/components/can'
+import type { PageId } from '../types'
 
 interface PageTreeContainerProps {
   workspaceId: WorkspaceId
-  activePageId?: string
+  activePageId?: PageId
 }
 
 export function PageTreeContainer({
@@ -40,7 +41,7 @@ export function PageTreeContainer({
 
   if (query.data.length === 0) {
     return (
-      <Can resource="page" action="create">
+      <Can permission="page:create" container={{ workspaceId }}>
         <PageTreeEmpty workspaceId={workspaceId} />
       </Can>
     )

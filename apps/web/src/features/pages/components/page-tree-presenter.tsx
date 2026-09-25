@@ -36,8 +36,7 @@ export function PageTreePresenter({
           {m.page_tree_title()}
         </span>
         <Can
-          resource="page"
-          action="create"
+          permission="page:create"
           container={{ workspaceId: workspaceId as WorkspaceId }}
         >
           <Button

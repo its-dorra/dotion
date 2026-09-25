@@ -37,8 +37,9 @@ export function PageNavbar({
           <LastEditedIndicator lastEditedAt={page.updatedAt} />
 
           <Can
-            resource={{ type: 'page', id: { pageId: page.id } }}
-            action="update"
+            permission="page:update"
+            target={{ pageId: page.id }}
+            workspaceId={workspaceId as WorkspaceId}
           >
             {(canUpdate) =>
               !canUpdate ? (
@@ -63,8 +64,9 @@ export function PageNavbar({
           )}
 
           <Can
-            resource={{ type: 'page', id: { pageId: page.id } }}
-            action="share"
+            permission="page:share"
+            target={{ pageId: page.id }}
+            workspaceId={workspaceId as WorkspaceId}
           >
             <ShareDropdownContainer page={page} />
           </Can>

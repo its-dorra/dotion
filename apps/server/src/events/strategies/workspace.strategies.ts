@@ -76,8 +76,7 @@ export class WorkspaceMemberJoinedStrategy implements DomainEventStrategy<"works
       await Promise.all([
         this.cacheInvalidator.invalidateUserPermissions({
           userId: event.payload.userId,
-          resourceType: "workspace",
-          id: event.payload.workspaceId,
+          workspaceId: event.payload.workspaceId,
         }),
         this.workspacePublisher.broadcastMemberJoined(
           event.payload.workspaceId,
@@ -119,8 +118,7 @@ export class WorkspaceMemberRemovedStrategy implements DomainEventStrategy<"work
       await Promise.all([
         this.cacheInvalidator.invalidateUserPermissions({
           userId: event.payload.userId,
-          resourceType: "workspace",
-          id: event.payload.workspaceId,
+          workspaceId: event.payload.workspaceId,
         }),
         this.workspacePublisher.broadcastMemberRemoved(
           event.payload.workspaceId,

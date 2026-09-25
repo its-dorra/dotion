@@ -10,13 +10,12 @@ import type {
   CommentWithRepliesAndAuthor,
 } from "@dotion/shared/comments/types";
 import type { Notification } from "@dotion/shared/notifications/types";
-import type { ResourceType } from "@dotion/shared/authorization/types";
 
 export interface PermissionCacheInvalidator {
   invalidateUserPermissions(params: {
-    userId: string;
-    resourceType?: ResourceType;
-    id?: string;
+    userId: UserId;
+    workspaceId?: WorkspaceId;
+    pageId?: PageId;
   }): Promise<void>;
 }
 

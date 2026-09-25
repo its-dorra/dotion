@@ -370,31 +370,26 @@ export const ResourceTypeSchema = z.enum([
   "user",
 ]);
 
-const allActionValues = Array.from(
-  new Set([
-    ...WorkspaceInstanceActionsSchema.options,
-    ...WorkspaceCollectionActionsSchema.options,
-    ...WorkspaceMemberInstanceActionsSchema.options,
-    ...WorkspaceMemberCollectionActionsSchema.options,
-    ...WorkspaceInvitationInstanceActionsSchema.options,
-    ...WorkspaceInvitationCollectionActionsSchema.options,
-    ...PageInstanceActionsSchema.options,
-    ...PageCollectionActionsSchema.options,
-    ...PagePermissionInstanceActionsSchema.options,
-    ...PagePermissionCollectionActionsSchema.options,
-    ...CommentInstanceActionsSchema.options,
-    ...CommentCollectionActionsSchema.options,
-    ...UserInstanceActionsSchema.options,
-    ...UserCollectionActionsSchema.options,
-  ]),
-) as [string, ...string[]];
+export type ResourceType = keyof typeof resourceSchemas;
 
-export const AllActionsSchema = z.enum(allActionValues);
+export const allPermissionValues = (
+  Object.entries(resourceSchemas) as [
+    ResourceType,
+    (typeof resourceSchemas)[ResourceType],
+  ][]
+).flatMap(([resource, schema]) => {
+  const actions = [
+    ...schema.instanceActions.options,
+    ...schema.collectionActions.options,
+  ];
+  return actions.map((action) => `${resource}:${action}` as const);
+}) as [string, ...string[]];
+
+export const AllPermissionsSchema = z.enum(allPermissionValues);
 
 export const CheckPermissionQuerySchema = z
   .object({
-    resource: ResourceTypeSchema,
-    action: AllActionsSchema,
+    permission: AllPermissionsSchema,
     workspaceId: workspaceId.optional(),
     pageId: pageId.optional(),
     commentId: commentId.optional(),
@@ -404,22 +399,38 @@ export const CheckPermissionQuerySchema = z
     userId: userId.optional(),
   })
   .superRefine((data, ctx) => {
-    const schema = resourceSchemas[data.resource];
+    const [resourceStr, actionStr] = data.permission.split(":") as [
+      ResourceType,
+      string,
+    ];
+    const schema = resourceSchemas[resourceStr];
     if (!schema) {
       ctx.addIssue({
         code: "custom",
-        message: `Invalid resource: ${data.resource}`,
-        path: ["resource"],
+        message: `Invalid resource in permission: ${data.permission}`,
+        path: ["permission"],
       });
       return;
     }
-    const actionResult = schema.actions.safeParse(data.action);
-    if (!actionResult.success) {
-      ctx.addIssue({
-        code: "custom",
-        message: `Invalid action "${data.action}" for resource "${data.resource}"`,
-        path: ["action"],
-      });
+    const isCollection = schema.collectionActions.safeParse(actionStr).success;
+    if (isCollection) {
+      const containerResult = schema.container.safeParse(data);
+      if (!containerResult.success) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Missing container identifier for ${data.permission}`,
+          path: ["permission"],
+        });
+      }
+    } else {
+      const targetResult = schema.target.safeParse(data);
+      if (!targetResult.success) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Missing required target identifier for ${data.permission}`,
+          path: ["permission"],
+        });
+      }
     }
   });
 

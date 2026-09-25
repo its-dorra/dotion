@@ -55,8 +55,9 @@ export const CommentRow = memo(function CommentRow({
             </span>
           </div>
           <Can
-            resource={{ type: 'comment', id: { commentId: comment.id } }}
-            action="delete"
+            permission="comment:delete"
+            target={{ commentId: comment.id }}
+            workspaceId={workspaceId}
           >
             <Button
               variant="ghost"

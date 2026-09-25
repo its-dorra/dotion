@@ -44,14 +44,12 @@ export const MemberRow = memo(function MemberRow({
       </div>
       <RoleBadge role={member.role} />
       <Can
-        resource={{
-          type: 'workspaceMember',
-          id: {
-            workspaceId: workspaceId as WorkspaceId,
-            memberUserId: (member.userId ?? member.id) as UserId,
-          },
+        permission="workspaceMember:remove"
+        target={{
+          workspaceId: workspaceId as WorkspaceId,
+          memberUserId: (member.userId ?? member.id) as UserId,
         }}
-        action="remove"
+        workspaceId={workspaceId as WorkspaceId}
       >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

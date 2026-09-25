@@ -1,5 +1,7 @@
 import type { Decision } from "@dotion/shared/authorization/decisions";
-import type { ResourceType } from "@dotion/shared/authorization/types";
+import type { UserId } from "@dotion/shared/users/types";
+import type { WorkspaceId } from "@dotion/shared/workspaces/types";
+import type { PageId } from "@dotion/shared/pages/types";
 import type { PermissionCacheInvalidator } from "../realtime.types";
 
 export interface KVNamespaceLike {
@@ -56,8 +58,20 @@ export class KVAuthorizationCache implements AuthorizationCache {
   async invalidatePrefix(prefix: string): Promise<void> {
     try {
       if (this.kv.list) {
-        const listed = await this.kv.list({ prefix });
-        await Promise.all(listed.keys.map((k) => this.kv!.delete(k.name)));
+        let cursor: string | undefined = undefined;
+        do {
+          const res: {
+            keys: { name: string }[];
+            list_complete?: boolean;
+            cursor?: string;
+          } = await this.kv.list({ prefix, cursor });
+          if (res.keys && res.keys.length > 0) {
+            await Promise.all(
+              res.keys.map((k: { name: string }) => this.kv.delete(k.name)),
+            );
+          }
+          cursor = res.list_complete === false ? res.cursor : undefined;
+        } while (cursor);
       }
     } catch (e) {
       console.error("Failed to invalidate cache prefix:", prefix, e);
@@ -66,36 +80,86 @@ export class KVAuthorizationCache implements AuthorizationCache {
 
   async invalidateUserPermissions({
     userId,
-    resourceType,
-    id,
+    workspaceId,
+    pageId,
   }: {
-    userId: string;
-    resourceType?: ResourceType;
-    id?: string;
+    userId: UserId;
+    workspaceId?: WorkspaceId;
+    pageId?: PageId;
   }): Promise<void> {
-    const prefix = resourceType
-      ? `authz:${userId}:${resourceType}:`
-      : `authz:${userId}:`;
+    const explicitDeletes: Promise<void>[] = [];
+    const prefixes: string[] = [];
 
-    await this.invalidatePrefix(prefix);
-
-    if (resourceType === "page" && id) {
+    if (workspaceId && pageId) {
       const pageActions = [
         "view",
         "update",
         "delete",
         "restore",
+        "deletePermanently",
         "move",
         "managePermissions",
         "share",
       ];
-      await Promise.all(
-        pageActions.map((action) =>
+      const commentActions = ["create", "list"];
+      const pagePermissionActions = ["view", "update", "delete", "list"];
+
+      for (const action of pageActions) {
+        explicitDeletes.push(
           this.delete(
-            `authz:${userId}:page:${action}:${JSON.stringify({ pageId: id })}`,
+            `authz:${userId}:${workspaceId}:${pageId}:page:${action}`,
           ),
+        );
+      }
+      for (const action of commentActions) {
+        explicitDeletes.push(
+          this.delete(
+            `authz:${userId}:${workspaceId}:${pageId}:comment:${action}`,
+          ),
+        );
+      }
+      for (const action of pagePermissionActions) {
+        explicitDeletes.push(
+          this.delete(
+            `authz:${userId}:${workspaceId}:${pageId}:pagePermission:${action}`,
+          ),
+        );
+      }
+
+      prefixes.push(`authz:${userId}:${workspaceId}:${pageId}:`);
+    } else if (workspaceId) {
+      const workspaceActions = [
+        "view",
+        "update",
+        "delete",
+        "inviteMember",
+        "manageSettings",
+      ];
+
+      for (const action of workspaceActions) {
+        explicitDeletes.push(
+          this.delete(`authz:${userId}:${workspaceId}:_:workspace:${action}`),
+        );
+      }
+      explicitDeletes.push(
+        this.delete(`authz:${userId}:${workspaceId}:_:workspaceMember:list`),
+        this.delete(
+          `authz:${userId}:${workspaceId}:_:workspaceInvitation:list`,
         ),
+        this.delete(`authz:${userId}:${workspaceId}:_:page:create`),
+        this.delete(`authz:${userId}:${workspaceId}:_:page:list`),
+        this.delete(`authz:${userId}:${workspaceId}:_:page:listTrash`),
+        this.delete(`authz:${userId}:${workspaceId}:_:page:emptyTrash`),
       );
+
+      prefixes.push(`authz:${userId}:${workspaceId}:`);
+    } else {
+      prefixes.push(`authz:${userId}:`);
     }
+
+    await Promise.all([
+      ...prefixes.map((prefix) => this.invalidatePrefix(prefix)),
+      ...explicitDeletes,
+    ]);
   }
 }

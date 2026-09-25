@@ -102,8 +102,9 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
 
         <div className="flex items-center gap-2">
           <Can
-            resource={{ type: 'workspace', id: { workspaceId } }}
-            action="inviteMember"
+            permission="workspace:inviteMember"
+            target={{ workspaceId }}
+            workspaceId={workspaceId}
           >
             <Button
               variant="outline"
@@ -126,7 +127,7 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
             </Link>
           </Button>
 
-          <Can resource="page" action="create" container={{ workspaceId }}>
+          <Can permission="page:create" container={{ workspaceId }}>
             <Button
               size="sm"
               onClick={handleCreatePage}
@@ -146,7 +147,7 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
             {m.workspace_pages_heading()}
           </h2>
           {pageTree.length > 0 && (
-            <Can resource="page" action="create" container={{ workspaceId }}>
+            <Can permission="page:create" container={{ workspaceId }}>
               <Button
                 variant="ghost"
                 size="sm"
@@ -172,7 +173,7 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
               {m.page_tree_empty_desc()}
             </p>
-            <Can resource="page" action="create" container={{ workspaceId }}>
+            <Can permission="page:create" container={{ workspaceId }}>
               <Button
                 size="sm"
                 onClick={handleCreatePage}

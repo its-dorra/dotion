@@ -34,8 +34,9 @@ export function RequestAccessButton({
 }: RequestAccessButtonProps) {
   const { data: updatePerm } = useQuery({
     ...canQueryOptions({
-      resource: { type: 'page', id: { pageId } },
-      action: 'update',
+      permission: 'page:update',
+      target: { pageId },
+      workspaceId,
     }),
     enabled: currentRole === undefined,
   })
@@ -43,9 +44,9 @@ export function RequestAccessButton({
 
   const { data: commentPerm } = useQuery({
     ...canQueryOptions({
-      resource: 'comment',
-      action: 'create',
+      permission: 'comment:create',
       container: { pageId },
+      workspaceId,
     }),
     enabled: currentRole === undefined,
   })

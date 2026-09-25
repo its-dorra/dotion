@@ -19,8 +19,9 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
 
   const { data: managePerm } = useQuery(
     canQueryOptions({
-      resource: { type: 'workspace', id: { workspaceId } },
-      action: 'manageSettings',
+      permission: 'workspace:manageSettings',
+      target: { workspaceId },
+      workspaceId,
     }),
   )
 

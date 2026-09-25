@@ -18,8 +18,9 @@ export function ShareDropdownContainer({ page }: ShareDropdownContainerProps) {
   )
   const { data: managePerm } = useQuery(
     canQueryOptions({
-      resource: { type: 'page', id: { pageId: page.id } },
-      action: 'managePermissions',
+      permission: 'page:managePermissions',
+      target: { pageId: page.id },
+      workspaceId: page.workspaceId,
     }),
   )
 

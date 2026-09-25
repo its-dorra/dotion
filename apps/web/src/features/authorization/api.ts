@@ -3,14 +3,13 @@ import { getApiClient } from '@/lib/api-client'
 import { AppError, AuthenticationError } from '@/lib/errors'
 import type {
   CheckPermissionResponse,
-  ResourceType,
-  ResourceAction,
+  Permission,
   CanParams,
 } from '@dotion/shared/authorization/types'
 
 export class AuthorizationApi {
-  async checkPermission<R extends ResourceType, A extends ResourceAction<R>>(
-    params: CanParams<R, A>,
+  async checkPermission<P extends Permission>(
+    params: CanParams<P>,
   ): Promise<Result<CheckPermissionResponse, AuthenticationError | AppError>> {
     try {
       const apiClient = getApiClient()
@@ -52,32 +51,24 @@ export class AuthorizationApi {
     }
   }
 
-  private buildQueryParams<R extends ResourceType, A extends ResourceAction<R>>(
-    params: CanParams<R, A>,
+  private buildQueryParams<P extends Permission>(
+    params: CanParams<P>,
   ): Record<string, string> {
-    if (typeof params.resource === 'string') {
-      const query: Record<string, string> = {
-        resource: params.resource,
-        action: String(params.action),
-      }
-      const containerObj = 'container' in params ? params.container : undefined
-      if (containerObj) {
-        for (const [key, value] of Object.entries(containerObj)) {
-          if (value !== undefined) {
-            query[key] = String(value)
-          }
+    const query: Record<string, string> = {
+      permission: params.permission,
+    }
+    if (params.workspaceId) {
+      query.workspaceId = String(params.workspaceId)
+    }
+    if ('container' in params && params.container) {
+      for (const [key, value] of Object.entries(params.container)) {
+        if (value !== undefined) {
+          query[key] = String(value)
         }
       }
-      return query
     }
-
-    const res = params.resource
-    const query: Record<string, string> = {
-      resource: res.type,
-      action: String(params.action),
-    }
-    if ('id' in res && res.id) {
-      for (const [key, value] of Object.entries(res.id)) {
+    if ('target' in params && params.target) {
+      for (const [key, value] of Object.entries(params.target)) {
         if (value !== undefined) {
           query[key] = String(value)
         }

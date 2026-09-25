@@ -45,8 +45,9 @@ export const CommentCard = memo(function CommentCard({
       <div className="flex items-center gap-2 pt-1">
         {!comment.isResolved ? (
           <Can
-            resource={{ type: 'comment', id: { commentId: comment.id } }}
-            action="resolve"
+            permission="comment:resolve"
+            target={{ commentId: comment.id }}
+            workspaceId={workspaceId}
           >
             <Button
               variant="ghost"

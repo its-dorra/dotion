@@ -62,13 +62,11 @@ export function PendingInvitationRow({
       </div>
 
       <Can
-        resource={{
-          type: 'workspaceInvitation',
-          id: {
-            invitationId: invitation.id as WorkspaceInvitationId,
-          },
+        permission="workspaceInvitation:cancel"
+        target={{
+          invitationId: invitation.id as WorkspaceInvitationId,
         }}
-        action="cancel"
+        workspaceId={invitation.workspaceId}
       >
         <Button
           variant="ghost"

@@ -1,12 +1,15 @@
 import type { z } from "zod";
+import type { WorkspaceId } from "../workspaces/types";
 import type {
   resourceSchemas,
+  ResourceType,
   CheckPermissionQuerySchema,
   CheckPermissionResponseSchema,
 } from "./schema";
+export { AllPermissionsSchema } from "./schema";
+export type { ResourceType };
 
 export type ResourceSchemas = typeof resourceSchemas;
-export type ResourceType = keyof ResourceSchemas;
 
 export type ResourceTarget<R extends ResourceType> = z.infer<
   ResourceSchemas[R]["target"]
@@ -37,19 +40,36 @@ export type ResourceAction<R extends ResourceType> = z.infer<
   ResourceSchemas[R]["actions"]
 >;
 
-export type PermissionKey<R extends ResourceType = ResourceType> =
-  R extends ResourceType ? `${R}:${ResourceAction<R>}` : never;
+export type Permission = {
+  [R in ResourceType]: `${R}:${ResourceAction<R>}`;
+}[ResourceType];
+
+export type PermissionKey = Permission;
+
+export type PermissionResource<P extends Permission> =
+  P extends `${infer R extends ResourceType}:${string}` ? R : never;
+
+export type PermissionAction<P extends Permission> =
+  P extends `${ResourceType}:${infer A}` ? A : never;
 
 export type CheckPermissionQuery = z.infer<typeof CheckPermissionQuerySchema>;
 export type CheckPermissionResponse = z.infer<
   typeof CheckPermissionResponseSchema
 >;
 
-export type CanParams<R extends ResourceType, A extends ResourceAction<R>> =
-  A extends CollectionLevelAction<R>
-    ? {
-        resource: R;
-        action: A;
-        container?: ResourceContainer<R>;
-      }
-    : { resource: { type: R; id: ResourceTarget<R> }; action: A };
+export type CanParams<P extends Permission = Permission> =
+  P extends `${infer R extends ResourceType}:${infer A}`
+    ? A extends CollectionLevelAction<R>
+      ? keyof ResourceContainer<R> extends never
+        ? {
+            permission: P;
+            container?: ResourceContainer<R>;
+            workspaceId?: WorkspaceId;
+          }
+        : {
+            permission: P;
+            container: ResourceContainer<R>;
+            workspaceId?: WorkspaceId;
+          }
+      : { permission: P; target: ResourceTarget<R>; workspaceId?: WorkspaceId }
+    : never;

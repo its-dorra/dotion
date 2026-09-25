@@ -345,8 +345,8 @@ export class PageAccessRequestResolvedStrategy implements DomainEventStrategy<"p
         tasks.push(
           this.cacheInvalidator.invalidateUserPermissions({
             userId: event.payload.requesterId,
-            resourceType: "page",
-            id: event.payload.pageId,
+            workspaceId: event.payload.workspaceId,
+            pageId: event.payload.pageId,
           }),
           this.workspacePublisher.broadcastPagePermissionUpdated(
             event.payload.workspaceId,
@@ -399,8 +399,8 @@ export class PagePermissionUpdatedStrategy implements DomainEventStrategy<"page.
       const tasks: Promise<unknown>[] = [
         this.cacheInvalidator.invalidateUserPermissions({
           userId: event.payload.targetUserId,
-          resourceType: "page",
-          id: event.payload.pageId,
+          workspaceId: event.payload.workspaceId,
+          pageId: event.payload.pageId,
         }),
         this.workspacePublisher.broadcastPagePermissionUpdated(
           event.payload.workspaceId,

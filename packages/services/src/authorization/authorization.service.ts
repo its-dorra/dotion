@@ -12,6 +12,7 @@ import type {
 } from "@dotion/shared/authorization/types";
 import { resourceSchemas } from "@dotion/shared/authorization/schema";
 import type { User } from "@dotion/auth";
+import type { WorkspaceId } from "@dotion/shared/workspaces/types";
 import { AttributeLoader, type DomainServices } from "./loader";
 import type { AuthorizationCache } from "./cache";
 import { PolicyEngine } from "./engine";
@@ -28,27 +29,26 @@ import { userPolicy } from "./policies/user.policy";
 export type AuthorizeParams<
   R extends ResourceType,
   A extends ResourceAction<R>,
-> =
-  A extends CollectionLevelAction<R>
-    ? {
-        user: User;
-        resource: R;
-        action: A;
-        container?: ResourceContainer<R>;
-      }
-    : {
-        user: User;
-        resource:
-          | {
-              type: R;
-              target: ResourceTarget<R>;
-            }
-          | {
-              type: R;
-              attributes: ResourceAttributes<R>;
-            };
-        action: A;
-      };
+> = (A extends CollectionLevelAction<R>
+  ? {
+      user: User;
+      resource: R;
+      action: A;
+      container?: ResourceContainer<R>;
+    }
+  : {
+      user: User;
+      resource:
+        | {
+            type: R;
+            target: ResourceTarget<R>;
+          }
+        | {
+            type: R;
+            attributes: ResourceAttributes<R>;
+          };
+      action: A;
+    }) & { workspaceId?: WorkspaceId };
 
 export class AuthorizationService {
   private readonly engine: PolicyEngine;
@@ -159,11 +159,12 @@ export class AuthorizationService {
     user: User;
     query: CheckPermissionQuery;
   }): Promise<Result<Decision, DatabaseError | ValidationError>> {
-    const schema = resourceSchemas[query.resource];
-    const isCollection = this.engine.isCollectionAction(
-      query.resource,
-      query.action,
-    );
+    const [resource, action] = query.permission.split(":") as [
+      ResourceType,
+      ResourceAction<ResourceType>,
+    ];
+    const schema = resourceSchemas[resource];
+    const isCollection = this.engine.isCollectionAction(resource, action);
 
     if (isCollection) {
       const parsedContainer = schema.container.safeParse(query);
@@ -173,9 +174,10 @@ export class AuthorizationService {
 
       return this.authorize({
         user,
-        resource: query.resource,
-        action: query.action,
+        resource,
+        action,
         container,
+        workspaceId: query.workspaceId,
       } as unknown as AuthorizeParams<
         ResourceType,
         ResourceAction<ResourceType>
@@ -194,10 +196,11 @@ export class AuthorizationService {
     return this.authorize({
       user,
       resource: {
-        type: query.resource,
+        type: resource,
         target: parsedTarget.data,
       },
-      action: query.action,
+      action,
+      workspaceId: query.workspaceId,
     } as unknown as AuthorizeParams<
       ResourceType,
       ResourceAction<ResourceType>
@@ -209,17 +212,61 @@ export class AuthorizationService {
   ): string | null {
     const { user, action } = params;
 
+    let resourceName: string;
+    let pageId: string = "_";
+    let workspaceId: string = params.workspaceId ?? "_";
+
     if (typeof params.resource === "string") {
-      const container = "container" in params ? params.container : undefined;
-      const key = container ? JSON.stringify(container) : "root";
-      return `authz:${user.id}:${params.resource}:${String(action)}:${key}`;
+      resourceName = params.resource;
+      const container = (
+        "container" in params ? params.container : undefined
+      ) as Record<string, unknown> | undefined;
+      if (container) {
+        if ("pageId" in container && container.pageId) {
+          pageId = String(container.pageId);
+        }
+        if (
+          "workspaceId" in container &&
+          container.workspaceId &&
+          workspaceId === "_"
+        ) {
+          workspaceId = String(container.workspaceId);
+        }
+      }
+    } else {
+      resourceName = params.resource.type;
+      const target = (
+        "target" in params.resource ? params.resource.target : undefined
+      ) as Record<string, unknown> | undefined;
+      if (target) {
+        if ("pageId" in target && target.pageId) {
+          pageId = String(target.pageId);
+        }
+        if (
+          "workspaceId" in target &&
+          target.workspaceId &&
+          workspaceId === "_"
+        ) {
+          workspaceId = String(target.workspaceId);
+        }
+      }
+      const attributes = (
+        "attributes" in params.resource ? params.resource.attributes : undefined
+      ) as Record<string, unknown> | undefined;
+      if (attributes) {
+        if ("pageId" in attributes && attributes.pageId && pageId === "_") {
+          pageId = String(attributes.pageId);
+        }
+        if (
+          "workspaceId" in attributes &&
+          attributes.workspaceId &&
+          workspaceId === "_"
+        ) {
+          workspaceId = String(attributes.workspaceId);
+        }
+      }
     }
 
-    const res = params.resource;
-    if ("target" in res && res.target) {
-      return `authz:${user.id}:${res.type}:${String(action)}:${JSON.stringify(res.target)}`;
-    }
-
-    return null;
+    return `authz:${user.id}:${workspaceId}:${pageId}:${resourceName}:${String(action)}`;
   }
 }

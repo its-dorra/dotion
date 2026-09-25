@@ -49,8 +49,7 @@ export function Trash({ workspaceId }: TrashProps) {
           </div>
         </div>
         <Can
-          resource="page"
-          action="emptyTrash"
+          permission="page:emptyTrash"
           container={{ workspaceId: workspaceId as WorkspaceId }}
         >
           <Button

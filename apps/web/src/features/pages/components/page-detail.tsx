@@ -51,17 +51,18 @@ export function PageDetail({
 
   const { data: updatePerm } = useQuery(
     canQueryOptions({
-      resource: { type: 'page', id: { pageId } },
-      action: 'update',
+      permission: 'page:update',
+      target: { pageId },
+      workspaceId,
     }),
   )
   const isEditor = updatePerm?.allowed ?? false
 
   const { data: commentPerm } = useQuery(
     canQueryOptions({
-      resource: 'comment',
-      action: 'create',
+      permission: 'comment:create',
       container: { pageId },
+      workspaceId,
     }),
   )
   const canComment = commentPerm?.allowed ?? false

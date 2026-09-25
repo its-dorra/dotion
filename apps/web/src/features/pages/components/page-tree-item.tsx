@@ -142,8 +142,7 @@ export const PageTreeItem = memo(function PageTreeItem({
 
         <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100">
           <Can
-            resource="page"
-            action="create"
+            permission="page:create"
             container={{ workspaceId: workspaceId as WorkspaceId }}
           >
             <Button
@@ -161,8 +160,9 @@ export const PageTreeItem = memo(function PageTreeItem({
             </Button>
           </Can>
           <Can
-            resource={{ type: 'page', id: { pageId: node.id } }}
-            action="delete"
+            permission="page:delete"
+            target={{ pageId: node.id }}
+            workspaceId={workspaceId as WorkspaceId}
           >
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

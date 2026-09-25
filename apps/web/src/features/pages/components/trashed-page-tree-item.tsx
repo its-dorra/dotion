@@ -91,8 +91,9 @@ export const TrashedPageTreeItem = memo(function TrashedPageTreeItem({
 
         <div className="flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <Can
-            resource={{ type: 'page', id: { pageId: node.id as PageId } }}
-            action="restore"
+            permission="page:restore"
+            target={{ pageId: node.id as PageId }}
+            workspaceId={workspaceId as WorkspaceId}
           >
             <Button
               variant="ghost"
@@ -107,8 +108,9 @@ export const TrashedPageTreeItem = memo(function TrashedPageTreeItem({
             </Button>
           </Can>
           <Can
-            resource={{ type: 'page', id: { pageId: node.id as PageId } }}
-            action="deletePermanently"
+            permission="page:deletePermanently"
+            target={{ pageId: node.id as PageId }}
+            workspaceId={workspaceId as WorkspaceId}
           >
             <Button
               variant="ghost"

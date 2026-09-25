@@ -27,24 +27,20 @@ export const Route = createFileRoute(
     )
     void queryClient.query(
       canQueryOptions({
-        resource: {
-          type: 'page',
-          id: {
-            pageId: params.pageId as PageId,
-          },
+        permission: 'page:update',
+        target: {
+          pageId: params.pageId as PageId,
         },
-        action: 'update',
+        workspaceId: params.workspaceId as WorkspaceId,
       }),
     )
     void queryClient.query(
       canQueryOptions({
-        resource: {
-          type: 'page',
-          id: {
-            pageId: params.pageId as PageId,
-          },
+        permission: 'page:delete',
+        target: {
+          pageId: params.pageId as PageId,
         },
-        action: 'delete',
+        workspaceId: params.workspaceId as WorkspaceId,
       }),
     )
 

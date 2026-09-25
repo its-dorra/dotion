@@ -20,11 +20,9 @@ export function GeneralSettings({ workspaceId }: GeneralSettingsProps) {
   )
   const { data: managePerm } = useQuery(
     canQueryOptions({
-      resource: {
-        type: 'workspace',
-        id: { workspaceId: workspaceId as WorkspaceId },
-      },
-      action: 'manageSettings',
+      permission: 'workspace:manageSettings',
+      target: { workspaceId: workspaceId as WorkspaceId },
+      workspaceId: workspaceId as WorkspaceId,
     }),
   )
   const updateWorkspace = useUpdateWorkspace()

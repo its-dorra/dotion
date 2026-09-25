@@ -37,7 +37,11 @@ export function PageTrashBanner({
           <span className="font-medium">{m.trash_banner_title()}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Can resource={{ type: 'page', id: { pageId } }} action="restore">
+          <Can
+            permission="page:restore"
+            target={{ pageId }}
+            workspaceId={workspaceId}
+          >
             <Button
               size="sm"
               variant="outline"
@@ -50,8 +54,9 @@ export function PageTrashBanner({
             </Button>
           </Can>
           <Can
-            resource={{ type: 'page', id: { pageId } }}
-            action="deletePermanently"
+            permission="page:deletePermanently"
+            target={{ pageId }}
+            workspaceId={workspaceId}
           >
             <Button
               size="sm"
