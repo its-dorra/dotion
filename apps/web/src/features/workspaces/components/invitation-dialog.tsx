@@ -44,11 +44,7 @@ export function InvitationDialog({
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <div className="mb-2">
-            <WorkspaceIcon
-              icon={invitation.workspaceIcon ?? undefined}
-              name={invitation.workspaceName}
-              size="lg"
-            />
+            <WorkspaceIcon name={invitation.workspaceName} size="lg" />
           </div>
           <DialogTitle>
             {m.invitation_dialog_join({

@@ -15,7 +15,7 @@ export function WorkspaceCard({ workspace, onSelect }: WorkspaceCardProps) {
       onClick={() => onSelect(workspace.id)}
       className="flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <WorkspaceIcon icon={workspace.icon} name={workspace.name} size="lg" />
+      <WorkspaceIcon name={workspace.name} size="lg" />
       <div className="min-w-0">
         <p className="truncate font-medium">{workspace.name}</p>
         <p className="flex items-center gap-1 text-sm text-muted-foreground">

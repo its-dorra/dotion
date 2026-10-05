@@ -10,7 +10,7 @@ import {
 import { WorkspaceIcon } from './workspace-icon'
 import type { Workspace } from '@dotion/shared/workspaces/types'
 import { m } from '@/paraglide/messages'
-import type { WorkspaceId } from '../types';
+import type { WorkspaceId } from '../types'
 
 interface WorkspaceSwitcherPresenterProps {
   currentWorkspace?: Workspace
@@ -33,10 +33,7 @@ export function WorkspaceSwitcherPresenter({
           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {currentWorkspace ? (
-            <WorkspaceIcon
-              icon={currentWorkspace.icon}
-              name={currentWorkspace.name}
-            />
+            <WorkspaceIcon name={currentWorkspace.name} />
           ) : (
             <div
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"
@@ -67,11 +64,7 @@ export function WorkspaceSwitcherPresenter({
             onSelect={() => onSelectWorkspace(workspace.id)}
             className="gap-2"
           >
-            <WorkspaceIcon
-              icon={workspace.icon}
-              name={workspace.name}
-              size="sm"
-            />
+            <WorkspaceIcon name={workspace.name} size="sm" />
             <span className="flex-1 truncate">{workspace.name}</span>
             {currentWorkspace && workspace.id === currentWorkspace.id ? (
               <Check className="h-4 w-4" />

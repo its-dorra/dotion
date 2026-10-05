@@ -1,7 +1,6 @@
 import { cn } from '@/lib/utils'
 
 interface WorkspaceIconProps {
-  icon?: string | null
   name: string
   size?: 'sm' | 'md' | 'lg'
   className?: string
@@ -14,7 +13,6 @@ const sizeClasses = {
 }
 
 export function WorkspaceIcon({
-  icon,
   name,
   size = 'md',
   className,
@@ -28,7 +26,7 @@ export function WorkspaceIcon({
       )}
       aria-hidden="true"
     >
-      {icon ?? name.charAt(0).toUpperCase()}
+      {name.charAt(0).toUpperCase()}
     </div>
   )
 }

@@ -12,7 +12,6 @@ export { workspaceId, workspaceInvitationId };
 
 export const CreateWorkspaceSchema = createInsertSchema(workspaces).pick({
   name: true,
-  icon: true,
 });
 
 export const WorkspaceSchema = createSelectSchema(workspaces, {
@@ -83,7 +82,6 @@ export const InviteMemberSchema = z.object({
 export const WorkspaceInvitationWithDetailsSchema =
   WorkspaceInvitationSchema.extend({
     workspaceName: z.string(),
-    workspaceIcon: z.string().nullable(),
     invitedByName: z.string(),
     invitedUserEmail: z.string(),
     invitedUserName: z.string(),

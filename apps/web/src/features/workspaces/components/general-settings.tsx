@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type SubmitEvent } from 'react'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,7 +32,7 @@ export function GeneralSettings({ workspaceId }: GeneralSettingsProps) {
 
   const canManage = managePerm?.allowed ?? false
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: SubmitEvent) {
     event.preventDefault()
     if (!hasChanges) return
     await updateWorkspace.mutateAsync({
@@ -44,7 +44,7 @@ export function GeneralSettings({ workspaceId }: GeneralSettingsProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="flex items-center gap-4">
-        <WorkspaceIcon icon={workspace.icon} name={workspace.name} size="lg" />
+        <WorkspaceIcon name={workspace.name} size="lg" />
         <div className="flex-1 space-y-2">
           <Label htmlFor="workspace-name-setting">
             {m.workspace_settings_title()}

@@ -44,11 +44,7 @@ export function InvitationDrawer({
       <DrawerContent>
         <DrawerHeader className="text-left">
           <div className="mb-2">
-            <WorkspaceIcon
-              icon={invitation.workspaceIcon ?? undefined}
-              name={invitation.workspaceName}
-              size="lg"
-            />
+            <WorkspaceIcon name={invitation.workspaceName} size="lg" />
           </div>
           <DrawerTitle>
             {m.invitation_dialog_join({

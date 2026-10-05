@@ -9,10 +9,11 @@ import type { WorkspaceId } from '@dotion/shared/workspaces/types'
 import { m } from '@/paraglide/messages'
 
 import { SearchTrigger } from '@/features/search/components/search-trigger'
+import type { PageId } from '@/features/pages/types'
 
 interface HomePanelProps {
   workspaceId?: WorkspaceId
-  activePageId?: string
+  activePageId?: PageId
   isTrashActive?: boolean
 }
 
@@ -42,7 +43,7 @@ export function HomePanel({
               params={{ workspaceId: ws.id }}
               className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-foreground"
             >
-              <WorkspaceIcon icon={ws.icon} name={ws.name} size="sm" />
+              <WorkspaceIcon name={ws.name} size="sm" />
               <span className="truncate">{ws.name}</span>
             </Link>
           ))}

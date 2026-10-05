@@ -1,14 +1,14 @@
-import { z } from "zod"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { FieldError } from "@/components/ui/field"
-import { useAppForm } from "@/integrations/tanstack-form/form"
-import { useCreateWorkspace } from "../hooks/use-create-workspace"
-import * as m from "@/paraglide/messages"
+import { z } from 'zod'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { FieldError } from '@/components/ui/field'
+import { useAppForm } from '@/integrations/tanstack-form/form'
+import { useCreateWorkspace } from '../hooks/use-create-workspace'
+import * as m from '@/paraglide/messages'
 
 const createWorkspaceSchema = z.object({
-  name: z.string().trim().min(1, "Workspace name is required").max(50),
+  name: z.string().trim().min(1, 'Workspace name is required').max(50),
 })
 
 interface CreateWorkspaceFormProps {
@@ -24,14 +24,14 @@ export function CreateWorkspaceForm({
 
   const form = useAppForm({
     defaultValues: {
-      name: "",
+      name: '',
     },
     validators: {
       onSubmit: createWorkspaceSchema,
     },
     onSubmit: async ({ value, formApi }) => {
       await createWorkspace.mutateAsync(
-        { name: value.name.trim(), icon: null },
+        { name: value.name.trim() },
         {
           onSuccess: () => {
             formApi.reset()
@@ -83,9 +83,7 @@ export function CreateWorkspaceForm({
           </Button>
         )}
         <form.AppForm>
-          <form.SubscribeButton>
-            {m.workspace_create()}
-          </form.SubscribeButton>
+          <form.SubscribeButton>{m.workspace_create()}</form.SubscribeButton>
         </form.AppForm>
       </div>
     </form>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useSuspenseQueries } from '@tanstack/react-query'
 import { Plus, FileText, Settings, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
@@ -54,10 +54,13 @@ function getGreeting(name: string): string {
 
 export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
   const { data: session } = useSession()
-  const { data: workspace } = useSuspenseQuery(
-    workspaceDetailQueryOptions(workspaceId),
-  )
-  const { data: pageTree } = useSuspenseQuery(pageTreeQueryOptions(workspaceId))
+  const [{ data: workspace }, { data: pageTree }] = useSuspenseQueries({
+    queries: [
+      workspaceDetailQueryOptions(workspaceId),
+      pageTreeQueryOptions(workspaceId),
+    ],
+  })
+
   const createPage = useCreatePage()
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
 
@@ -82,11 +85,7 @@ export function WorkspaceDashboard({ workspaceId }: WorkspaceDashboardProps) {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3.5">
-          <WorkspaceIcon
-            icon={workspace.icon}
-            name={workspace.name}
-            size="lg"
-          />
+          <WorkspaceIcon name={workspace.name} size="lg" />
           <div>
             <h1
               className="text-2xl font-bold tracking-tight"

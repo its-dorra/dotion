@@ -20,7 +20,6 @@ export const workspaces = snakeCase.table(
   {
     id: textId<WorkspaceId>(),
     name: text().notNull(),
-    icon: text(),
     membersCount: integer().notNull().default(0),
     createdAt,
     updatedAt,

@@ -1,9 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "nav_product": "Product",
-  "nav_templates": "Templates",
   "nav_pricing": "Pricing",
-  "nav_docs": "Docs",
   "landing_hero_badge": "Now with real-time collaboration",
   "landing_hero_title_1": "Your notes, docs, and",
   "landing_hero_title_2": "tasks. Together.",

@@ -1,9 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "nav_product": "المنتج",
-  "nav_templates": "القوالب",
   "nav_pricing": "الأسعار",
-  "nav_docs": "التوثيق",
   "landing_hero_badge": "الآن مع التعاون في الوقت الفعلي",
   "landing_hero_title_1": "ملاحظاتك، مستنداتك،",
   "landing_hero_title_2": "ومهامك. معاً.",
