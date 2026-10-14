@@ -2,8 +2,8 @@ import type { BaseWsContext } from "#/lib/ws-router";
 import type { PermissionKey } from "@dotion/shared/authorization/types";
 import type { UserId } from "@dotion/shared/users/types";
 import type { UpdatePageMetadataInput } from "@dotion/shared/pages/types";
-import type { PageDocument } from "../page-document";
-import type { PagePersistence } from "../page-persistence";
+import type { PageDocument } from "../yjs/page-document";
+import type { PagePersistence } from "../yjs/page-persistence";
 
 export interface PageWsAttachment {
   userId: UserId;
@@ -17,8 +17,7 @@ export interface PageWsContext extends BaseWsContext {
   readonly userName: string;
   readonly document: PageDocument;
   readonly persistence: PagePersistence | null;
-  broadcastBinary(data: Uint8Array, excludeSender?: boolean): void;
+  broadcastBinary(data: Uint8Array, excludeSender: boolean): void;
   broadcastMetadata(payload: UpdatePageMetadataInput): Promise<void>;
-  sendRollback(): void;
   addAwarenessClientIds(clientIds: number[]): void;
 }

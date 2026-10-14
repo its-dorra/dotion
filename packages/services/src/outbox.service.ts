@@ -1,6 +1,6 @@
 import { Result } from "better-result";
 import type { OutboxRepository } from "@dotion/db/repositories";
-import type { AppDB, DBClient } from "@dotion/db";
+import type { AppDB } from "@dotion/db";
 import type {
   OutboxEntry,
   CreateOutboxEntryInput,
@@ -8,11 +8,16 @@ import type {
 } from "@dotion/shared/outbox/types";
 import type { DatabaseError } from "@dotion/db/errors";
 
+export interface OutboxServiceDependencies {
+  outboxRepository: OutboxRepository;
+}
+
 export class OutboxService {
-  constructor(
-    private readonly outboxRepository: OutboxRepository,
-    _dbClient: DBClient,
-  ) {}
+  private readonly outboxRepository: OutboxRepository;
+
+  constructor({ outboxRepository }: OutboxServiceDependencies) {
+    this.outboxRepository = outboxRepository;
+  }
 
   async emitEventTx({
     tx,

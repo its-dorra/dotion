@@ -50,12 +50,17 @@ export type AuthorizeParams<
       action: A;
     }) & { workspaceId?: WorkspaceId };
 
+export interface AuthorizationServiceDependencies {
+  services: DomainServices;
+  cache: AuthorizationCache;
+}
+
 export class AuthorizationService {
   private readonly engine: PolicyEngine;
   private readonly cache: AuthorizationCache;
   private readonly loader: AttributeLoader;
 
-  constructor(services: DomainServices, cache: AuthorizationCache) {
+  constructor({ services, cache }: AuthorizationServiceDependencies) {
     this.cache = cache;
     this.loader = new AttributeLoader(services);
 

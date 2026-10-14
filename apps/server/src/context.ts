@@ -141,12 +141,16 @@ function buildServices(
   const creditsManager = new DurableObjectUserCreditsManager(env);
   const pageCleanupQueue = new CloudflarePageCleanupQueue(env);
 
-  const outbox = new OutboxService(repositories.outbox, db);
-  const users = new UsersService(repositories.users);
-  const notifications = new NotificationsService(
-    repositories.notifications,
-    userPublisher,
-  );
+  const outbox = new OutboxService({
+    outboxRepository: repositories.outbox,
+  });
+  const users = new UsersService({
+    usersRepository: repositories.users,
+  });
+  const notifications = new NotificationsService({
+    notificationsRepository: repositories.notifications,
+    userEventPublisher: userPublisher,
+  });
 
   const eventRouter = new DomainEventRouter(executionCtx)
     .register(new PageCreatedStrategy(workspacePublisher))
@@ -187,53 +191,60 @@ function buildServices(
     .register(new CommentResolvedStrategy(pagePublisher))
     .register(new CommentDeletedStrategy(pagePublisher));
 
-  const workspaces = new WorkspacesService(
-    repositories.workspaces,
-    users,
-    db,
-    eventRouter,
-    outbox,
-  );
-  const pages = new PagesService(
-    repositories.pages,
-    workspaces,
-    users,
-    db,
-    eventRouter,
-    outbox,
-  );
-  const comments = new CommentsService(
-    repositories.comments,
-    pages,
-    db,
-    eventRouter,
-    outbox,
-  );
-  const storage = new StorageService(env.R2);
+  const workspaces = new WorkspacesService({
+    workspacesRepository: repositories.workspaces,
+    usersService: users,
+    dbClient: db,
+    eventDispatcher: eventRouter,
+    outboxService: outbox,
+  });
+  const pages = new PagesService({
+    pagesRepository: repositories.pages,
+    workspacesService: workspaces,
+    usersService: users,
+    dbClient: db,
+    eventDispatcher: eventRouter,
+    outboxService: outbox,
+  });
+  const comments = new CommentsService({
+    commentsRepository: repositories.comments,
+    pagesService: pages,
+    dbClient: db,
+    eventDispatcher: eventRouter,
+    outboxService: outbox,
+  });
+  const storage = new StorageService({
+    r2: env.R2,
+  });
 
   const embedding = new EmbeddingService();
   const chunking = new ChunkingService();
-  const search = new SearchService(
-    repositories.search,
-    embedding,
-    chunking,
-    pages,
-    db,
-  );
+  const search = new SearchService({
+    searchRepository: repositories.search,
+    embeddingService: embedding,
+    chunkingService: chunking,
+    pagesService: pages,
+    dbClient: db,
+  });
 
-  const ai = new AIService(creditsManager, search, pages, chunking);
+  const ai = new AIService({
+    creditsManager,
+    searchService: search,
+    pagesService: pages,
+    chunkingService: chunking,
+  });
 
-  const assistant = new AssistantService(
-    repositories.assistant,
-    ai,
-    db,
-    workspaces,
-  );
+  const assistant = new AssistantService({
+    assistantRepository: repositories.assistant,
+    aiService: ai,
+    dbClient: db,
+    workspacesService: workspaces,
+  });
 
-  const authorization = new AuthorizationService(
-    { workspaces, pages, comments, users },
-    kvCache,
-  );
+  const authorization = new AuthorizationService({
+    services: { workspaces, pages, comments, users },
+    cache: kvCache,
+  });
 
   return {
     services: {

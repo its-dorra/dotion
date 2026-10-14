@@ -6,8 +6,16 @@ import { StorageError } from "@dotion/shared/files/errors";
 import type { StorageUploadStreamInput } from "@dotion/shared/files/types";
 export type { StorageError, StorageUploadStreamInput };
 
+export interface StorageServiceDependencies {
+  r2: R2Bucket;
+}
+
 export class StorageService {
-  constructor(private readonly r2: R2Bucket) {}
+  private readonly r2: R2Bucket;
+
+  constructor({ r2 }: StorageServiceDependencies) {
+    this.r2 = r2;
+  }
 
   async uploadStream(
     input: StorageUploadStreamInput,

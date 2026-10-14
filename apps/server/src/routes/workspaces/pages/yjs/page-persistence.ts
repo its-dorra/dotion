@@ -1,7 +1,6 @@
 import type { PagesService } from "@dotion/services";
 import type { PageDocument } from "./page-document";
 import type {
-  Page,
   PageId,
   UpdatePageMetadataInput,
 } from "@dotion/shared/pages/types";
@@ -16,30 +15,55 @@ const METADATA_DEBOUNCE_MS = 2_000;
 const CONTENT_IDLE_DEBOUNCE_MS = 10_000;
 const CONTENT_MAX_CHECKPOINT_MS = 30_000;
 
-export interface PersistResult {
-  persistedMetadata: UpdatePageMetadataInput | null;
-  page: Page | null;
+export interface PagePersistenceOptions {
+  storage: DurableObjectStorage;
+  pagesService: PagesService;
+  pageId: PageId;
+  env: Env;
+  workspaceId?: WorkspaceId | null;
 }
 
 export class PagePersistence {
-  private persistPromise: Promise<PersistResult> | null = null;
+  private readonly storage: DurableObjectStorage;
+  private readonly pagesService: PagesService;
+  private readonly pageId: PageId;
+  private readonly env: Env;
+  private workspaceId: WorkspaceId | null = null;
+
+  private persistPromise: Promise<boolean> | null = null;
+  private pendingForceFlush = false;
   private lastContentEditTime = 0;
   private firstUnpersistedContentEditTime = 0;
   private lastMetadataEditTime = 0;
 
-  constructor(
-    private readonly storage: DurableObjectStorage,
-    private readonly pagesService: PagesService,
-    private readonly pageId: PageId,
-    private readonly env?: Env,
-    private readonly workspaceId?: WorkspaceId | null,
-  ) {}
+  private pendingMetadata: UpdatePageMetadataInput | null = null;
+  private metadataVersion = 0;
 
-  async loadInitialState(document?: PageDocument): Promise<Uint8Array | null> {
-    const storedState = await this.storage.get<Uint8Array>(STORAGE_YJS_STATE);
+  constructor({
+    storage,
+    pagesService,
+    pageId,
+    env,
+    workspaceId,
+  }: PagePersistenceOptions) {
+    this.storage = storage;
+    this.pagesService = pagesService;
+    this.pageId = pageId;
+    this.env = env;
+    this.workspaceId = workspaceId ?? null;
+  }
 
-    const isDirty = await this.storage.get<boolean>(STORAGE_CONTENT_DIRTY);
-    if (isDirty && document) {
+  async loadInitialState(document: PageDocument): Promise<Uint8Array | null> {
+    const stored = await this.storage.get<
+      Uint8Array | boolean | UpdatePageMetadataInput
+    >([STORAGE_YJS_STATE, STORAGE_CONTENT_DIRTY, STORAGE_PENDING_METADATA]);
+
+    const storedState = (stored.get(STORAGE_YJS_STATE) as Uint8Array) ?? null;
+    const isDirty = (stored.get(STORAGE_CONTENT_DIRTY) as boolean) ?? false;
+    this.pendingMetadata =
+      (stored.get(STORAGE_PENDING_METADATA) as UpdatePageMetadataInput) ?? null;
+
+    if (isDirty) {
       document.markDirty();
     }
 
@@ -75,8 +99,10 @@ export class PagePersistence {
 
     try {
       const state = document.encodeState();
-      await this.storage.put(STORAGE_YJS_STATE, state);
-      await this.storage.put(STORAGE_CONTENT_DIRTY, true);
+      await this.storage.put({
+        [STORAGE_YJS_STATE]: state,
+        [STORAGE_CONTENT_DIRTY]: true,
+      });
     } catch (error) {
       console.error(
         `PagePersistence: failed to write page ${this.pageId} state to DO storage:`,
@@ -89,12 +115,9 @@ export class PagePersistence {
 
   async queueMetadataUpdate(
     update: UpdatePageMetadataInput,
-    document?: PageDocument | null,
+    document: PageDocument,
   ): Promise<void> {
-    const existing =
-      (await this.storage.get<UpdatePageMetadataInput>(
-        STORAGE_PENDING_METADATA,
-      )) || {};
+    const existing = this.pendingMetadata ?? {};
 
     const merged: UpdatePageMetadataInput = {
       ...existing,
@@ -103,276 +126,266 @@ export class PagePersistence {
       ...(update.cover !== undefined ? { cover: update.cover } : {}),
     };
 
+    this.pendingMetadata = merged;
     this.lastMetadataEditTime = Date.now();
+    this.metadataVersion += 1;
     await this.storage.put(STORAGE_PENDING_METADATA, merged);
-    await this.recalculateAndScheduleAlarm(document ?? null);
+    await this.recalculateAndScheduleAlarm(document);
   }
 
-  async schedulePersist(): Promise<void> {
-    await this.storage.setAlarm(Date.now() + METADATA_DEBOUNCE_MS);
-  }
-
-  async persist(document: PageDocument | null): Promise<PersistResult> {
+  async persist(document: PageDocument): Promise<boolean> {
     return await this.persistInternal(document, false);
   }
 
-  async persistImmediately(
-    document: PageDocument | null,
-  ): Promise<PersistResult> {
+  async persistImmediately(document: PageDocument): Promise<boolean> {
+    this.pendingForceFlush = true;
     await this.storage.deleteAlarm();
     return await this.persistInternal(document, true);
   }
 
   private async persistInternal(
-    document: PageDocument | null,
+    document: PageDocument,
     forceFlushAll: boolean,
-  ): Promise<PersistResult> {
+  ): Promise<boolean> {
+    if (forceFlushAll) {
+      this.pendingForceFlush = true;
+    }
+
     if (this.persistPromise) {
       return await this.persistPromise;
     }
 
-    this.persistPromise = this.persistInternalUnsafe(document, forceFlushAll);
+    this.persistPromise = (async () => {
+      let allOk = true;
+      try {
+        while (true) {
+          const force = this.pendingForceFlush || forceFlushAll;
+          this.pendingForceFlush = false;
+          const success = await this.persistInternalUnsafe(document, force);
+          if (!success) {
+            allOk = false;
+          }
+          if (!this.pendingForceFlush) {
+            break;
+          }
+        }
+        return allOk;
+      } finally {
+        this.persistPromise = null;
+      }
+    })();
+
+    return await this.persistPromise;
+  }
+
+  private async resolveWorkspaceId(): Promise<WorkspaceId | null> {
+    if (this.workspaceId) {
+      return this.workspaceId;
+    }
+
+    const pageLookup = await this.pagesService.getPageById({
+      pageId: this.pageId,
+    });
+    if (pageLookup.isOk()) {
+      this.workspaceId = pageLookup.value.workspaceId;
+      return this.workspaceId;
+    }
+
+    return null;
+  }
+
+  private async enqueueIndexing(
+    workspaceId: WorkspaceId,
+    version?: number,
+  ): Promise<void> {
+    if (!this.env.PAGE_INDEXING_QUEUE) {
+      return;
+    }
 
     try {
-      return await this.persistPromise;
-    } finally {
-      this.persistPromise = null;
+      const message: PageIndexingQueueMessage = {
+        workspaceId,
+        pageId: this.pageId,
+        ...(version !== undefined ? { version } : {}),
+      };
+      await this.env.PAGE_INDEXING_QUEUE.send(message);
+    } catch (err) {
+      console.warn(
+        "PagePersistence: fast-path queue send failed (will be caught by outbox poller):",
+        err,
+      );
     }
   }
 
-  private async persistInternalUnsafe(
-    document: PageDocument | null,
+  private async flushMetadata(
+    targetWorkspaceId: WorkspaceId | null,
     forceFlushAll: boolean,
-  ): Promise<PersistResult> {
-    const result: PersistResult = {
-      persistedMetadata: null,
-      page: null,
-    };
+  ): Promise<{ hasError: boolean }> {
+    const pendingMetadata = this.pendingMetadata;
 
     const now = Date.now();
-    let hasError = false;
-
-    const pendingMetadata = await this.storage.get<UpdatePageMetadataInput>(
-      STORAGE_PENDING_METADATA,
-    );
-
-    const isMetadataReady =
+    const isReady =
       pendingMetadata &&
       Object.keys(pendingMetadata).length > 0 &&
       (forceFlushAll ||
         this.lastMetadataEditTime === 0 ||
         now + 100 >= this.lastMetadataEditTime + METADATA_DEBOUNCE_MS);
 
-    if (isMetadataReady) {
-      try {
-        let metadataResult;
-        let targetWorkspaceId = this.workspaceId;
-
-        if (pendingMetadata.title !== undefined) {
-          if (!targetWorkspaceId) {
-            const pageLookup = await this.pagesService.getPageById({
-              pageId: this.pageId,
-            });
-            if (pageLookup.isOk()) {
-              targetWorkspaceId = pageLookup.value.workspaceId;
-            }
-          }
-
-          if (targetWorkspaceId) {
-            metadataResult =
-              await this.pagesService.updatePageMetadataWithOutbox({
-                pageId: this.pageId,
-                data: pendingMetadata,
-                workspaceId: targetWorkspaceId,
-              });
-          } else {
-            metadataResult = await this.pagesService.updatePageMetadata({
-              pageId: this.pageId,
-              data: pendingMetadata,
-            });
-          }
-        } else {
-          metadataResult = await this.pagesService.updatePageMetadata({
-            pageId: this.pageId,
-            data: pendingMetadata,
-          });
-        }
-
-        if (!metadataResult.isOk()) {
-          console.error(
-            "PagePersistence: failed to persist page metadata to PostgreSQL:",
-            metadataResult.error,
-          );
-          hasError = true;
-        } else {
-          const currentStorage =
-            await this.storage.get<UpdatePageMetadataInput>(
-              STORAGE_PENDING_METADATA,
-            );
-          if (currentStorage) {
-            const remaining: UpdatePageMetadataInput = { ...currentStorage };
-            if (
-              pendingMetadata.title !== undefined &&
-              remaining.title === pendingMetadata.title
-            ) {
-              delete remaining.title;
-            }
-            if (
-              pendingMetadata.icon !== undefined &&
-              remaining.icon === pendingMetadata.icon
-            ) {
-              delete remaining.icon;
-            }
-            if (
-              pendingMetadata.cover !== undefined &&
-              remaining.cover === pendingMetadata.cover
-            ) {
-              delete remaining.cover;
-            }
-
-            if (Object.keys(remaining).length === 0) {
-              await this.storage.delete(STORAGE_PENDING_METADATA);
-              this.lastMetadataEditTime = 0;
-            } else {
-              await this.storage.put(STORAGE_PENDING_METADATA, remaining);
-            }
-          }
-          result.persistedMetadata = pendingMetadata;
-          result.page = metadataResult.value;
-          console.log(
-            `PagePersistence: persisted page ${this.pageId} metadata:`,
-            pendingMetadata,
-          );
-
-          if (
-            pendingMetadata.title !== undefined &&
-            this.env?.PAGE_INDEXING_QUEUE &&
-            targetWorkspaceId
-          ) {
-            try {
-              const message: PageIndexingQueueMessage = {
-                workspaceId: targetWorkspaceId,
-                pageId: this.pageId,
-              };
-              await this.env.PAGE_INDEXING_QUEUE.send(message);
-              console.log(
-                `PagePersistence: enqueued indexing message for page ${this.pageId} (title update).`,
-              );
-            } catch (err) {
-              console.warn(
-                "PagePersistence: fast-path queue send failed on title update (will be caught by outbox poller):",
-                err,
-              );
-            }
-          }
-        }
-      } catch (error) {
-        console.error(
-          `PagePersistence: failed to persist page ${this.pageId} metadata:`,
-          error,
-        );
-        hasError = true;
-      }
+    if (!isReady || !pendingMetadata) {
+      return { hasError: false };
     }
 
-    const isContentDirty = document && document.isDirty();
-    const isContentReady =
-      isContentDirty &&
-      (forceFlushAll ||
-        this.lastContentEditTime === 0 ||
-        now + 100 >= this.lastContentEditTime + CONTENT_IDLE_DEBOUNCE_MS ||
-        now + 100 >=
-          this.firstUnpersistedContentEditTime + CONTENT_MAX_CHECKPOINT_MS);
+    const versionAtStart = this.metadataVersion;
+    const snapshot = { ...pendingMetadata };
 
-    if (isContentReady && document) {
-      const revision = document.getRevision();
-      const state = document.encodeState();
-
-      try {
-        await this.storage.put(STORAGE_YJS_STATE, state);
-
-        let targetWorkspaceId = this.workspaceId;
-        if (!targetWorkspaceId) {
-          const pageLookup = await this.pagesService.getPageById({
-            pageId: this.pageId,
-          });
-          if (pageLookup.isOk()) {
-            targetWorkspaceId = pageLookup.value.workspaceId;
-          }
-        }
-
-        const updateResult = targetWorkspaceId
-          ? await this.pagesService.updatePageContentWithOutbox({
+    try {
+      const metadataResult =
+        targetWorkspaceId && snapshot.title !== undefined
+          ? await this.pagesService.updatePageMetadataWithOutbox({
               pageId: this.pageId,
-              content: state,
+              data: snapshot,
               workspaceId: targetWorkspaceId,
-              version: revision,
             })
-          : await this.pagesService.updatePageContent({
+          : await this.pagesService.updatePageMetadata({
               pageId: this.pageId,
-              content: state,
+              data: snapshot,
             });
 
-        if (!updateResult.isOk()) {
-          console.error(
-            "PagePersistence: failed to persist page content to PostgreSQL:",
-            updateResult.error,
-          );
-          hasError = true;
-        } else {
-          const persistedLatestRevision = document.markPersisted(revision);
-          if (persistedLatestRevision) {
-            this.firstUnpersistedContentEditTime = 0;
-            this.lastContentEditTime = 0;
-            await this.storage.delete(STORAGE_CONTENT_DIRTY);
-          }
-          console.log(
-            `PagePersistence: persisted page ${this.pageId} content at revision ${revision}.`,
-          );
+      if (!metadataResult.isOk()) {
+        console.error(
+          "PagePersistence: failed to persist page metadata to PostgreSQL:",
+          metadataResult.error,
+        );
+        return { hasError: true };
+      }
 
-          if (this.env?.PAGE_INDEXING_QUEUE && targetWorkspaceId) {
-            try {
-              const message: PageIndexingQueueMessage = {
-                workspaceId: targetWorkspaceId,
-                pageId: this.pageId,
-                version: revision,
-              };
-              await this.env.PAGE_INDEXING_QUEUE.send(message);
-              console.log(
-                `PagePersistence: successfully enqueued indexing message for page ${this.pageId} (version ${revision}).`,
-              );
-            } catch (err) {
-              console.warn(
-                "PagePersistence: fast-path queue send failed on content update (will be caught by outbox poller):",
-                err,
-              );
-            }
+      if (this.metadataVersion === versionAtStart) {
+        await this.storage.delete(STORAGE_PENDING_METADATA);
+        this.pendingMetadata = null;
+        this.lastMetadataEditTime = 0;
+      } else {
+        const remaining: UpdatePageMetadataInput = {
+          ...(this.pendingMetadata ?? {}),
+        };
+        for (const key of Object.keys(
+          snapshot,
+        ) as (keyof UpdatePageMetadataInput)[]) {
+          if (remaining[key] === snapshot[key]) {
+            delete remaining[key];
           }
         }
-      } catch (error) {
+        if (Object.keys(remaining).length === 0) {
+          await this.storage.delete(STORAGE_PENDING_METADATA);
+          this.pendingMetadata = null;
+          this.lastMetadataEditTime = 0;
+        } else {
+          this.pendingMetadata = remaining;
+          await this.storage.put(STORAGE_PENDING_METADATA, remaining);
+        }
+      }
+
+      if (snapshot.title !== undefined && targetWorkspaceId) {
+        await this.enqueueIndexing(targetWorkspaceId);
+      }
+
+      return { hasError: false };
+    } catch (error) {
+      console.error(
+        `PagePersistence: failed to persist page ${this.pageId} metadata:`,
+        error,
+      );
+      return { hasError: true };
+    }
+  }
+
+  private async flushContent(
+    document: PageDocument,
+    targetWorkspaceId: WorkspaceId | null,
+    forceFlushAll: boolean,
+  ): Promise<{ hasError: boolean }> {
+    if (!document.isDirty()) {
+      return { hasError: false };
+    }
+
+    const now = Date.now();
+    const isReady =
+      forceFlushAll ||
+      this.lastContentEditTime === 0 ||
+      now + 100 >= this.lastContentEditTime + CONTENT_IDLE_DEBOUNCE_MS ||
+      now + 100 >=
+        this.firstUnpersistedContentEditTime + CONTENT_MAX_CHECKPOINT_MS;
+
+    if (!isReady) {
+      return { hasError: false };
+    }
+
+    const revision = document.getRevision();
+    const state = document.encodeState();
+
+    try {
+      await this.storage.put(STORAGE_YJS_STATE, state);
+
+      const updateResult = targetWorkspaceId
+        ? await this.pagesService.updatePageContentWithOutbox({
+            pageId: this.pageId,
+            content: state,
+            workspaceId: targetWorkspaceId,
+            version: revision,
+          })
+        : await this.pagesService.updatePageContent({
+            pageId: this.pageId,
+            content: state,
+          });
+
+      if (!updateResult.isOk()) {
         console.error(
-          `PagePersistence: failed to persist page ${this.pageId} content:`,
-          error,
+          "PagePersistence: failed to persist page content to PostgreSQL:",
+          updateResult.error,
         );
-        hasError = true;
+        return { hasError: true };
       }
-    }
 
-    if (forceFlushAll) {
-      if (hasError) {
-        await this.storage.setAlarm(Date.now() + 5_000);
-      } else {
-        await this.storage.deleteAlarm();
+      const persistedLatestRevision = document.markPersisted(revision);
+      if (persistedLatestRevision) {
+        this.firstUnpersistedContentEditTime = 0;
+        this.lastContentEditTime = 0;
+        await this.storage.delete(STORAGE_CONTENT_DIRTY);
       }
-    } else {
-      await this.recalculateAndScheduleAlarm(document, hasError);
-    }
 
-    return result;
+      if (targetWorkspaceId) {
+        await this.enqueueIndexing(targetWorkspaceId, revision);
+      }
+
+      return { hasError: false };
+    } catch (error) {
+      console.error(
+        `PagePersistence: failed to persist page ${this.pageId} content:`,
+        error,
+      );
+      return { hasError: true };
+    }
+  }
+
+  private async persistInternalUnsafe(
+    document: PageDocument,
+    forceFlushAll: boolean,
+  ): Promise<boolean> {
+    const targetWorkspaceId = await this.resolveWorkspaceId();
+
+    const [metadataFlush, contentFlush] = await Promise.all([
+      this.flushMetadata(targetWorkspaceId, forceFlushAll),
+      this.flushContent(document, targetWorkspaceId, forceFlushAll),
+    ]);
+
+    const hasError = metadataFlush.hasError || contentFlush.hasError;
+
+    await this.recalculateAndScheduleAlarm(document, hasError);
+
+    return !hasError;
   }
 
   private async recalculateAndScheduleAlarm(
-    document: PageDocument | null,
+    document: PageDocument,
     retryOnError = false,
   ): Promise<void> {
     const deadlines: number[] = [];
@@ -382,16 +395,15 @@ export class PagePersistence {
       deadlines.push(now + 5_000);
     }
 
-    const pendingMetadata = await this.storage.get<UpdatePageMetadataInput>(
-      STORAGE_PENDING_METADATA,
-    );
+    const pendingMetadata = this.pendingMetadata;
+
     if (pendingMetadata && Object.keys(pendingMetadata).length > 0) {
       const metadataDeadline =
         (this.lastMetadataEditTime || now) + METADATA_DEBOUNCE_MS;
       deadlines.push(metadataDeadline);
     }
 
-    if (document && document.isDirty()) {
+    if (document.isDirty()) {
       const idleDeadline =
         (this.lastContentEditTime || now) + CONTENT_IDLE_DEBOUNCE_MS;
       const maxCheckpointDeadline =

@@ -53,14 +53,34 @@ export const SEARCH_MODE_WEIGHTS: Record<
   exact: SEARCH_MODE_CONFIGS.exact.weights,
 } as const;
 
+export interface SearchServiceDependencies {
+  searchRepository: SearchRepository;
+  embeddingService: EmbeddingService;
+  chunkingService: ChunkingService;
+  pagesService: PagesService;
+  dbClient: DBClient;
+}
+
 export class SearchService {
-  constructor(
-    private readonly searchRepository: SearchRepository,
-    private readonly embeddingService: EmbeddingService,
-    private readonly chunkingService: ChunkingService,
-    private readonly pagesService: PagesService,
-    private readonly dbClient: DBClient,
-  ) {}
+  private readonly searchRepository: SearchRepository;
+  private readonly embeddingService: EmbeddingService;
+  private readonly chunkingService: ChunkingService;
+  private readonly pagesService: PagesService;
+  private readonly dbClient: DBClient;
+
+  constructor({
+    searchRepository,
+    embeddingService,
+    chunkingService,
+    pagesService,
+    dbClient,
+  }: SearchServiceDependencies) {
+    this.searchRepository = searchRepository;
+    this.embeddingService = embeddingService;
+    this.chunkingService = chunkingService;
+    this.pagesService = pagesService;
+    this.dbClient = dbClient;
+  }
 
   async getPageSectionsMeta({
     pageId,

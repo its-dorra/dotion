@@ -8,11 +8,22 @@ import type { AppDB } from "@dotion/db";
 import type { NotificationsRepository } from "@dotion/db/repositories";
 import type { UserEventPublisher } from "./realtime.types";
 
+export interface NotificationsServiceDependencies {
+  notificationsRepository: NotificationsRepository;
+  userEventPublisher: UserEventPublisher;
+}
+
 export class NotificationsService {
-  constructor(
-    private readonly notificationsRepository: NotificationsRepository,
-    private readonly userEventPublisher: UserEventPublisher,
-  ) {}
+  private readonly notificationsRepository: NotificationsRepository;
+  private readonly userEventPublisher: UserEventPublisher;
+
+  constructor({
+    notificationsRepository,
+    userEventPublisher,
+  }: NotificationsServiceDependencies) {
+    this.notificationsRepository = notificationsRepository;
+    this.userEventPublisher = userEventPublisher;
+  }
 
   async createNotification({ input }: { input: CreateNotificationInput }) {
     const result = await this.notificationsRepository.createNotification({

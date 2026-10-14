@@ -1,6 +1,8 @@
 import * as Y from "yjs";
 import * as awarenessProtocol from "y-protocols/awareness";
 
+const LOAD_ORIGIN = Symbol("load");
+
 export class PageDocument {
   private readonly doc: Y.Doc;
   private readonly awareness: awarenessProtocol.Awareness;
@@ -8,20 +10,17 @@ export class PageDocument {
   private revision = 0;
   private dirty = false;
 
-  private isLoading = false;
-
   private onUpdateCallback: (() => void) | undefined;
 
   constructor() {
     this.doc = new Y.Doc();
     this.awareness = new awarenessProtocol.Awareness(this.doc);
 
-    this.doc.on("update", () => {
-      if (!this.isLoading) {
-        this.revision += 1;
-        this.dirty = true;
-        this.onUpdateCallback?.();
-      }
+    this.doc.on("update", (_update, origin) => {
+      if (origin === LOAD_ORIGIN) return;
+      this.revision += 1;
+      this.dirty = true;
+      this.onUpdateCallback?.();
     });
   }
 
@@ -38,21 +37,7 @@ export class PageDocument {
   }
 
   load(state: Uint8Array): void {
-    this.isLoading = true;
-
-    try {
-      this.applyUpdate(state);
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  applyUpdate(update: Uint8Array): void {
-    Y.applyUpdate(this.doc, update);
-  }
-
-  applyAwarenessUpdate(update: Uint8Array, origin: unknown): void {
-    awarenessProtocol.applyAwarenessUpdate(this.awareness, update, origin);
+    Y.applyUpdate(this.doc, state, LOAD_ORIGIN);
   }
 
   encodeState(): Uint8Array {
@@ -71,7 +56,7 @@ export class PageDocument {
     this.dirty = true;
   }
 
-  markPersisted(persistedRevision: number) {
+  markPersisted(persistedRevision: number): boolean {
     if (this.revision !== persistedRevision) {
       return false;
     }
@@ -80,27 +65,11 @@ export class PageDocument {
     return true;
   }
 
-  hasChangedSince(revision: number) {
-    return this.revision !== revision;
-  }
-
-  removeAwarenessStates(clientIds: number[]) {
-    if (clientIds.length === 0) {
-      return;
-    }
-
+  removeAwarenessStates(clientIds: number[]): void {
     awarenessProtocol.removeAwarenessStates(
       this.awareness,
       clientIds,
       "disconnect",
     );
-  }
-
-  encodeAwarenessStates(clientIds: number[]): Uint8Array {
-    return awarenessProtocol.encodeAwarenessUpdate(this.awareness, clientIds);
-  }
-
-  getAwarenessStates(): Map<number, unknown> {
-    return this.awareness.getStates();
   }
 }

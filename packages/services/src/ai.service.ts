@@ -74,15 +74,30 @@ function extractToolPartsFromSteps(
   );
 }
 
+export interface AIServiceDependencies {
+  creditsManager: UserCreditsManager;
+  searchService: SearchService;
+  pagesService: PagesService;
+  chunkingService: ChunkingService;
+}
+
 export class AIService {
+  private readonly creditsManager: UserCreditsManager;
+  private readonly searchService: SearchService;
+  private readonly pagesService: PagesService;
+  private readonly chunkingService: ChunkingService;
   private readonly ragModel: ReturnType<typeof createFallback>;
 
-  constructor(
-    private readonly creditsManager: UserCreditsManager,
-    private readonly searchService: SearchService,
-    private readonly pagesService: PagesService,
-    private readonly chunkingService: ChunkingService,
-  ) {
+  constructor({
+    creditsManager,
+    searchService,
+    pagesService,
+    chunkingService,
+  }: AIServiceDependencies) {
+    this.creditsManager = creditsManager;
+    this.searchService = searchService;
+    this.pagesService = pagesService;
+    this.chunkingService = chunkingService;
     this.ragModel = createFallback({
       models: [google(PRIMARY_RAG_MODEL), groq(SECONDARY_RAG_MODEL)],
       onError: (error, modelId) => {

@@ -8,8 +8,16 @@ import type {
   ResourceData,
 } from "@dotion/shared/authorization/types";
 
+export interface UsersServiceDependencies {
+  usersRepository: UsersRepository;
+}
+
 export class UsersService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  private readonly usersRepository: UsersRepository;
+
+  constructor({ usersRepository }: UsersServiceDependencies) {
+    this.usersRepository = usersRepository;
+  }
 
   async searchUsers({
     query,

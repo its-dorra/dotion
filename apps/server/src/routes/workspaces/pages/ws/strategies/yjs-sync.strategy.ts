@@ -17,6 +17,26 @@ export interface YjsSyncPayload {
   readonly rawData: Uint8Array;
 }
 
+function handleSyncReply(ctx: PageWsContext, payload: YjsSyncPayload): void {
+  const responseEncoder = encoding.createEncoder();
+  syncProtocol.readSyncMessage(
+    payload.syncDecoder,
+    responseEncoder,
+    ctx.document.getDoc(),
+    null,
+  );
+
+  if (encoding.length(responseEncoder) > 0) {
+    const outerEncoder = encoding.createEncoder();
+    encoding.writeVarUint(outerEncoder, MSG_SYNC);
+    encoding.writeUint8Array(
+      outerEncoder,
+      encoding.toUint8Array(responseEncoder),
+    );
+    ctx.ws.send(encoding.toUint8Array(outerEncoder));
+  }
+}
+
 export class YjsSyncStep1Strategy implements WsStrategy<
   PageWsContext,
   YjsSyncPayload
@@ -25,23 +45,7 @@ export class YjsSyncStep1Strategy implements WsStrategy<
   readonly requiredPermission: PermissionKey = "page:view";
 
   handle(ctx: PageWsContext, payload: YjsSyncPayload): void {
-    const responseEncoder = encoding.createEncoder();
-    syncProtocol.readSyncMessage(
-      payload.syncDecoder,
-      responseEncoder,
-      ctx.document.getDoc(),
-      null,
-    );
-
-    if (encoding.length(responseEncoder) > 0) {
-      const outerEncoder = encoding.createEncoder();
-      encoding.writeVarUint(outerEncoder, MSG_SYNC);
-      encoding.writeUint8Array(
-        outerEncoder,
-        encoding.toUint8Array(responseEncoder),
-      );
-      ctx.ws.send(encoding.toUint8Array(outerEncoder));
-    }
+    handleSyncReply(ctx, payload);
   }
 }
 
@@ -53,23 +57,7 @@ export class YjsSyncStep2Strategy implements WsStrategy<
   readonly requiredPermission: PermissionKey = "page:view";
 
   handle(ctx: PageWsContext, payload: YjsSyncPayload): void {
-    const responseEncoder = encoding.createEncoder();
-    syncProtocol.readSyncMessage(
-      payload.syncDecoder,
-      responseEncoder,
-      ctx.document.getDoc(),
-      null,
-    );
-
-    if (encoding.length(responseEncoder) > 0) {
-      const outerEncoder = encoding.createEncoder();
-      encoding.writeVarUint(outerEncoder, MSG_SYNC);
-      encoding.writeUint8Array(
-        outerEncoder,
-        encoding.toUint8Array(responseEncoder),
-      );
-      ctx.ws.send(encoding.toUint8Array(outerEncoder));
-    }
+    handleSyncReply(ctx, payload);
   }
 }
 

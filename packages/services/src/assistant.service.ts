@@ -22,13 +22,27 @@ import type { WorkspacesService } from "./workspaces.service";
 import type { StreamChatInput } from "@dotion/shared/assistant/types";
 export type { StreamChatInput };
 
+export interface AssistantServiceDependencies {
+  assistantRepository: AssistantRepository;
+  aiService: AIService;
+  dbClient?: DBClient;
+  workspacesService: WorkspacesService;
+}
+
 export class AssistantService {
-  constructor(
-    private readonly assistantRepository: AssistantRepository,
-    private readonly aiService: AIService,
-    _dbClient: DBClient,
-    private readonly workspacesService: WorkspacesService,
-  ) {}
+  private readonly assistantRepository: AssistantRepository;
+  private readonly aiService: AIService;
+  private readonly workspacesService: WorkspacesService;
+
+  constructor({
+    assistantRepository,
+    aiService,
+    workspacesService,
+  }: AssistantServiceDependencies) {
+    this.assistantRepository = assistantRepository;
+    this.aiService = aiService;
+    this.workspacesService = workspacesService;
+  }
 
   async listThreads({
     workspaceId,

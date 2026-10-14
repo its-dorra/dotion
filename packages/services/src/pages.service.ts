@@ -28,15 +28,38 @@ import type {
   ScopeData,
 } from "@dotion/shared/authorization/types";
 
+export interface PagesServiceDependencies {
+  pagesRepository: PagesRepository;
+  workspacesService: WorkspacesService;
+  usersService: UsersService;
+  dbClient: DBClient;
+  eventDispatcher: DomainEventDispatcher;
+  outboxService: OutboxService;
+}
+
 export class PagesService {
-  constructor(
-    private readonly pagesRepository: PagesRepository,
-    private readonly workspacesService: WorkspacesService,
-    private readonly usersService: UsersService,
-    private readonly dbClient: DBClient,
-    private readonly eventDispatcher: DomainEventDispatcher,
-    private readonly outboxService: OutboxService,
-  ) {}
+  private readonly pagesRepository: PagesRepository;
+  private readonly workspacesService: WorkspacesService;
+  private readonly usersService: UsersService;
+  private readonly dbClient: DBClient;
+  private readonly eventDispatcher: DomainEventDispatcher;
+  private readonly outboxService: OutboxService;
+
+  constructor({
+    pagesRepository,
+    workspacesService,
+    usersService,
+    dbClient,
+    eventDispatcher,
+    outboxService,
+  }: PagesServiceDependencies) {
+    this.pagesRepository = pagesRepository;
+    this.workspacesService = workspacesService;
+    this.usersService = usersService;
+    this.dbClient = dbClient;
+    this.eventDispatcher = eventDispatcher;
+    this.outboxService = outboxService;
+  }
 
   async getPagesTree({
     workspaceId,

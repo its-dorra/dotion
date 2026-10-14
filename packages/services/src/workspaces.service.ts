@@ -29,14 +29,34 @@ import type {
   ScopeData,
 } from "@dotion/shared/authorization/types";
 
+export interface WorkspacesServiceDependencies {
+  workspacesRepository: WorkspacesRepository;
+  usersService: UsersService;
+  dbClient: DBClient;
+  eventDispatcher: DomainEventDispatcher;
+  outboxService: OutboxService;
+}
+
 export class WorkspacesService {
-  constructor(
-    private readonly workspacesRepository: WorkspacesRepository,
-    private readonly usersService: UsersService,
-    private readonly dbClient: DBClient,
-    private readonly eventDispatcher: DomainEventDispatcher,
-    private readonly outboxService: OutboxService,
-  ) {}
+  private readonly workspacesRepository: WorkspacesRepository;
+  private readonly usersService: UsersService;
+  private readonly dbClient: DBClient;
+  private readonly eventDispatcher: DomainEventDispatcher;
+  private readonly outboxService: OutboxService;
+
+  constructor({
+    workspacesRepository,
+    usersService,
+    dbClient,
+    eventDispatcher,
+    outboxService,
+  }: WorkspacesServiceDependencies) {
+    this.workspacesRepository = workspacesRepository;
+    this.usersService = usersService;
+    this.dbClient = dbClient;
+    this.eventDispatcher = eventDispatcher;
+    this.outboxService = outboxService;
+  }
 
   async getAllWorkspaces({ userId }: { userId: UserId }) {
     return this.workspacesRepository.getAllWorkspaces({ userId });
@@ -243,7 +263,6 @@ export class WorkspacesService {
             const invitationWithDetails: WorkspaceInvitationWithDetails = {
               ...invitation,
               workspaceName: workspace.name,
-              workspaceIcon: workspace.icon ?? null,
               invitedByName: inviterName,
               invitedUserEmail: targetUser.email,
               invitedUserName: targetUser.name,
@@ -332,7 +351,6 @@ export class WorkspacesService {
         return {
           ...inv,
           workspaceName: workspace.name,
-          workspaceIcon: workspace.icon ?? null,
           invitedByName: invitedByUser?.name ?? "Unknown",
           invitedUserEmail: invitedUser?.email ?? "",
           invitedUserName: invitedUser?.name ?? "Unknown",

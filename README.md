@@ -336,13 +336,14 @@ function createAppContext(env: Env, ctx: ExecutionContext) {
   const pageEventPublisher = new DurableObjectPageEventPublisher(env, ctx);
   const pageCleanupQueue = new CloudflarePageCleanupQueue(env);
 
-  const pagesService = new PagesService(
-    pagesRepo,
+  const pagesService = new PagesService({
+    pagesRepository: pagesRepo,
     workspacesService,
+    usersService,
     dbClient,
-    pageEventPublisher,
-    pageCleanupQueue,
-  );
+    eventDispatcher: pageEventPublisher,
+    outboxService,
+  });
 
   return { services: { pages: pagesService /* ... */ } };
 }

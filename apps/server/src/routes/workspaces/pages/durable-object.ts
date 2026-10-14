@@ -4,7 +4,10 @@ import type {
   UpdatePageMetadataInput,
   AllPageRole,
 } from "@dotion/shared/pages/types";
-import type { WorkspaceId } from "@dotion/shared/workspaces/types";
+import type {
+  WorkspaceId,
+  WorkspaceWsMessage,
+} from "@dotion/shared/workspaces/types";
 import type { CommentWsMessage } from "@dotion/shared/comments/types";
 import type { PermissionKey } from "@dotion/shared/authorization/types";
 import { PageClientWsMessageSchema } from "@dotion/shared/pages/schema";
@@ -64,16 +67,12 @@ export class PagesDO extends DurableObject<Env> {
     .register(new YjsAwarenessStrategy())
     .register(new PageMetadataUpdateStrategy());
 
-  constructor(state: DurableObjectState, env: Env) {
-    super(state, env);
-  }
-
   private async initialize(
-    pageId: PageId,
-    workspaceId: WorkspaceId,
+    pageId?: PageId,
+    workspaceId?: WorkspaceId,
   ): Promise<PageDocument> {
     if (this.document) {
-      if (!this.workspaceId) {
+      if (workspaceId && !this.workspaceId) {
         this.workspaceId = workspaceId;
         await this.ctx.storage.put(STORAGE_WORKSPACE_ID, workspaceId);
       }
@@ -84,44 +83,78 @@ export class PagesDO extends DurableObject<Env> {
       return this.initialization;
     }
 
-    this.initialization = this.initializeInternal(pageId, workspaceId);
+    this.initialization = (async () => {
+      try {
+        return await this.initializeInternal(pageId, workspaceId);
+      } finally {
+        this.initialization = null;
+      }
+    })();
 
-    try {
-      return await this.initialization;
-    } finally {
-      this.initialization = null;
-    }
+    return await this.initialization;
   }
 
   private async initializeInternal(
-    pageId: PageId,
-    workspaceId: WorkspaceId,
+    pageId?: PageId,
+    workspaceId?: WorkspaceId,
   ): Promise<PageDocument> {
-    const storedPageId = await this.ctx.storage.get<PageId>(STORAGE_PAGE_ID);
+    const stored = await this.ctx.storage.get<string>([
+      STORAGE_PAGE_ID,
+      STORAGE_WORKSPACE_ID,
+    ]);
 
-    if (!storedPageId) {
-      await this.ctx.storage.put(STORAGE_PAGE_ID, pageId);
-    }
-
-    this.pageId = pageId;
-
+    const storedPageId = (stored.get(STORAGE_PAGE_ID) as PageId) ?? null;
     const storedWorkspaceId =
-      await this.ctx.storage.get<WorkspaceId>(STORAGE_WORKSPACE_ID);
-    if (workspaceId) {
-      this.workspaceId = workspaceId;
-      await this.ctx.storage.put(STORAGE_WORKSPACE_ID, workspaceId);
-    } else if (storedWorkspaceId) {
-      this.workspaceId = storedWorkspaceId;
+      (stored.get(STORAGE_WORKSPACE_ID) as WorkspaceId) ?? null;
+
+    const resolvedPageId = pageId ?? storedPageId;
+    let resolvedWorkspaceId = workspaceId ?? storedWorkspaceId;
+
+    if (!resolvedPageId) {
+      throw new Error("PagesDO: missing pageId");
     }
 
     const { services } = createAppContext(this.env);
-    const persistence = new PagePersistence(
-      this.ctx.storage,
-      services.pages,
-      this.pageId,
-      this.env,
-      this.workspaceId,
-    );
+
+    if (!resolvedWorkspaceId) {
+      const pageLookup = await services.pages.getPageById({
+        pageId: resolvedPageId,
+      });
+      if (pageLookup.isOk()) {
+        resolvedWorkspaceId = pageLookup.value.workspaceId;
+      } else {
+        console.error(
+          `PagesDO: unrecoverable workspaceId for page ${resolvedPageId}:`,
+          pageLookup.error,
+        );
+        await this.ctx.storage.deleteAlarm();
+        throw new Error(
+          `PagesDO: unrecoverable workspaceId for page ${resolvedPageId}`,
+        );
+      }
+    }
+
+    this.pageId = resolvedPageId;
+    this.workspaceId = resolvedWorkspaceId;
+
+    const updatesToPersist: Record<string, string> = {};
+    if (!storedPageId) {
+      updatesToPersist[STORAGE_PAGE_ID] = resolvedPageId;
+    }
+    if (!storedWorkspaceId) {
+      updatesToPersist[STORAGE_WORKSPACE_ID] = resolvedWorkspaceId;
+    }
+    if (Object.keys(updatesToPersist).length > 0) {
+      await this.ctx.storage.put(updatesToPersist);
+    }
+
+    const persistence = new PagePersistence({
+      storage: this.ctx.storage,
+      pagesService: services.pages,
+      pageId: this.pageId,
+      env: this.env,
+      workspaceId: this.workspaceId,
+    });
 
     const document = new PageDocument();
 
@@ -145,10 +178,8 @@ export class PagesDO extends DurableObject<Env> {
     const pageId = this.getPageIdFromRequest(request);
     const workspaceId = this.getWorkspaceIdFromRequest(request);
 
-    let document: PageDocument;
-
     try {
-      document = await this.initialize(pageId, workspaceId);
+      await this.initialize(pageId, workspaceId);
     } catch (error: unknown) {
       console.error("PagesDO: failed to initialize document:", error);
 
@@ -160,7 +191,7 @@ export class PagesDO extends DurableObject<Env> {
       return new Response(message, { status: 400 });
     }
 
-    return this.acceptWebSocket(request, document);
+    return this.acceptWebSocket(request);
   }
 
   private getPageIdFromRequest(request: Request): PageId {
@@ -171,7 +202,7 @@ export class PagesDO extends DurableObject<Env> {
     return request.headers.get("X-Workspace-Id") as WorkspaceId;
   }
 
-  private acceptWebSocket(request: Request, _document: PageDocument): Response {
+  private acceptWebSocket(request: Request): Response {
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
@@ -205,31 +236,23 @@ export class PagesDO extends DurableObject<Env> {
   private createContext(
     ws: WebSocket,
     attachment: PageWsAttachment,
+    document: PageDocument,
   ): PageWsContext {
     return {
       ws,
       userId: attachment.userId,
       userName: attachment.userName,
-      document: this.document!,
-      persistence: this.persistence,
+      document,
+      persistence: this.persistence!,
       hasPermission: (permission) => attachment.permissions.has(permission),
-      broadcastBinary: (data, excludeSender = true) => {
-        this.broadcastBinary(excludeSender ? ws : null, data);
+      broadcastBinary: (data, excludeSender) => {
+        this.broadcastBinary(data, excludeSender ? ws : null);
       },
       broadcastMetadata: async (payload) => {
         await this.broadcastMetadataChanges(payload);
       },
-      sendRollback: () => {
-        if (this.document) {
-          const rollback = YjsProtocol.encodeSyncStep1(this.document.getDoc());
-          ws.send(rollback);
-        }
-      },
       onUnauthorized: () => {
-        if (this.document) {
-          const rollback = YjsProtocol.encodeSyncStep1(this.document.getDoc());
-          ws.send(rollback);
-        }
+        ws.send(YjsProtocol.encodeSyncStep1(document.getDoc()));
       },
       addAwarenessClientIds: (clientIds) => {
         this.addAwarenessClientIds(ws, clientIds);
@@ -241,52 +264,63 @@ export class PagesDO extends DurableObject<Env> {
     ws: WebSocket,
     message: ArrayBuffer | string,
   ): Promise<void> {
-    if (!this.document) {
+    let document: PageDocument;
+    try {
+      document = await this.initialize();
+    } catch (error) {
       console.error(
-        "PagesDO: received WebSocket message before document initialization",
+        "PagesDO: failed to initialize document on message:",
+        error,
       );
+      ws.close(1011, "Initialization failed");
       return;
     }
 
     const attachment = ws.deserializeAttachment() as PageWsAttachment;
-
-    const ctx = this.createContext(ws, attachment);
+    const ctx = this.createContext(ws, attachment, document);
 
     if (typeof message === "string") {
-      try {
-        const json = JSON.parse(message);
-        const parsed = PageClientWsMessageSchema.safeParse(json);
-        if (!parsed.success) {
-          console.error(
-            "PagesDO: received invalid string WS message:",
-            parsed.error,
-          );
-          return;
-        }
-        await this.router.dispatch(ctx, parsed.data.type, parsed.data.payload);
-      } catch (error) {
-        console.error("PagesDO: error handling string WS message:", error);
-      }
-      return;
+      await this.handleStringMessage(ctx, message);
+    } else {
+      await this.handleBinaryMessage(ctx, new Uint8Array(message));
     }
+  }
 
-    const data = new Uint8Array(message);
+  private async handleStringMessage(
+    ctx: PageWsContext,
+    message: string,
+  ): Promise<void> {
+    try {
+      const json = JSON.parse(message);
+      const parsed = PageClientWsMessageSchema.safeParse(json);
+      if (!parsed.success) {
+        console.error(
+          "PagesDO: received invalid string WS message:",
+          parsed.error,
+        );
+        return;
+      }
+      await this.router.dispatch(ctx, parsed.data.type, parsed.data.payload);
+    } catch (error) {
+      console.error("PagesDO: error handling string WS message:", error);
+    }
+  }
+
+  private async handleBinaryMessage(
+    ctx: PageWsContext,
+    data: Uint8Array,
+  ): Promise<void> {
     const decoder = decoding.createDecoder(data);
     const messageType = decoding.readVarUint(decoder);
 
     if (messageType === MSG_SYNC) {
-      const typeDecoder = decoding.createDecoder(data);
-      decoding.readVarUint(typeDecoder);
-      const syncType = decoding.readVarUint(typeDecoder);
-
-      const syncDecoder = decoding.createDecoder(data);
-      decoding.readVarUint(syncDecoder);
-
+      const syncType = decoding.peekVarUint(decoder);
       const strategyKey = SYNC_STRATEGY_MAP[syncType];
+
       if (strategyKey) {
         await this.router.dispatch(ctx, strategyKey, {
           syncType,
-          syncDecoder,
+          syncDecoder: decoder,
           rawData: data,
         });
       } else {
@@ -300,13 +334,26 @@ export class PagesDO extends DurableObject<Env> {
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
+    if (!this.document) {
+      try {
+        await this.initialize();
+      } catch (error) {
+        console.error(
+          "PagesDO: failed to initialize document on close:",
+          error,
+        );
+      }
+    }
+
     if (this.document) {
-      this.removeConnectionAwareness(ws, this.document);
+      this.removeConnectionAwareness(ws);
     }
 
     const remaining = this.ctx.getWebSockets();
-    if (remaining.length === 0 && this.persistence) {
-      await this.persistence.persistImmediately(this.document);
+    if (remaining.length === 0 && this.persistence && this.document) {
+      await this.persistence.persistImmediately(this.document).catch((err) => {
+        console.error("PagesDO: failed to persist immediately on close:", err);
+      });
     }
   }
 
@@ -321,24 +368,29 @@ export class PagesDO extends DurableObject<Env> {
     }
 
     const ids = new Set(attachment.awarenessClientIds);
+    let changed = false;
     for (const clientId of clientIds) {
-      ids.add(clientId);
+      if (!ids.has(clientId)) {
+        ids.add(clientId);
+        changed = true;
+      }
     }
 
-    attachment.awarenessClientIds = Array.from(ids);
-    ws.serializeAttachment(attachment);
+    if (changed) {
+      attachment.awarenessClientIds = Array.from(ids);
+      ws.serializeAttachment(attachment);
+    }
   }
 
-  private removeConnectionAwareness(
-    ws: WebSocket,
-    document: PageDocument,
-  ): void {
+  private removeConnectionAwareness(ws: WebSocket): void {
+    if (!this.document) return;
+
     const attachment = ws.deserializeAttachment() as PageWsAttachment | null;
     if (!attachment || attachment.awarenessClientIds.length === 0) {
       return;
     }
 
-    const awareness = document.getAwareness();
+    const awareness = this.document.getAwareness();
     const knownClientIds = attachment.awarenessClientIds.filter((id) =>
       awareness.meta.has(id),
     );
@@ -358,13 +410,16 @@ export class PagesDO extends DurableObject<Env> {
       statesMap,
     );
 
-    document.removeAwarenessStates(knownClientIds);
-    this.broadcastBinary(ws, message);
+    this.document.removeAwarenessStates(knownClientIds);
+    this.broadcastBinary(message, ws);
   }
 
-  private broadcastBinary(sender: WebSocket | null, data: Uint8Array): void {
+  private broadcastBinary(
+    data: Uint8Array,
+    excludeSender?: WebSocket | null,
+  ): void {
     for (const socket of this.ctx.getWebSockets()) {
-      if (socket !== sender) {
+      if (socket !== excludeSender) {
         socket.send(data);
       }
     }
@@ -405,66 +460,46 @@ export class PagesDO extends DurableObject<Env> {
       return;
     }
 
-    const wsDoId = this.env.DOTION_WORKSPACE_DO.idFromName(this.workspaceId);
-    const wsStub = this.env.DOTION_WORKSPACE_DO.get(wsDoId);
-    const promises: Promise<void>[] = [];
+    const { pageId, workspaceId } = this;
+    const messages: WorkspaceWsMessage[] = [];
 
     if (metadata.title !== undefined) {
-      promises.push(
-        wsStub.broadcastJSONToAll({
-          type: "document.title.changed",
-          payload: {
-            id: this.pageId,
-            workspaceId: this.workspaceId,
-            title: metadata.title,
-          },
-        }),
-      );
+      messages.push({
+        type: "document.title.changed",
+        payload: { id: pageId, workspaceId, title: metadata.title },
+      });
     }
-
     if (metadata.icon !== undefined) {
-      promises.push(
-        wsStub.broadcastJSONToAll({
-          type: "document.icon.changed",
-          payload: {
-            id: this.pageId,
-            workspaceId: this.workspaceId,
-            icon: metadata.icon,
-          },
-        }),
-      );
+      messages.push({
+        type: "document.icon.changed",
+        payload: { id: pageId, workspaceId, icon: metadata.icon },
+      });
     }
-
     if (metadata.cover !== undefined) {
-      promises.push(
-        wsStub.broadcastJSONToAll({
-          type: "document.cover.changed",
-          payload: {
-            id: this.pageId,
-            workspaceId: this.workspaceId,
-            cover: metadata.cover,
-          },
-        }),
-      );
+      messages.push({
+        type: "document.cover.changed",
+        payload: { id: pageId, workspaceId, cover: metadata.cover },
+      });
     }
 
-    await Promise.all(promises);
+    if (messages.length === 0) {
+      return;
+    }
+
+    const wsDoId = this.env.DOTION_WORKSPACE_DO.idFromName(workspaceId);
+    const wsStub = this.env.DOTION_WORKSPACE_DO.get(wsDoId);
+
+    await Promise.all(
+      messages.map((message) => wsStub.broadcastJSONToAll(message)),
+    );
   }
 
   async alarm(): Promise<void> {
     if (!this.document || !this.persistence) {
-      const storedPageId = await this.ctx.storage.get<PageId>(STORAGE_PAGE_ID);
-      const storedWorkspaceId =
-        await this.ctx.storage.get<WorkspaceId>(STORAGE_WORKSPACE_ID);
-      if (storedPageId) {
-        await this.initialize(
-          storedPageId,
-          storedWorkspaceId ?? ("" as WorkspaceId),
-        );
-      }
+      await this.initialize();
     }
 
-    if (this.persistence) {
+    if (this.persistence && this.document) {
       await this.persistence.persist(this.document);
     }
   }

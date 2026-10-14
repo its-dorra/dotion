@@ -17,14 +17,28 @@ import type {
   ScopeData,
 } from "@dotion/shared/authorization/types";
 
+export interface CommentsServiceDependencies {
+  commentsRepository: CommentsRepository;
+  pagesService: PagesService;
+  dbClient?: DBClient;
+  eventDispatcher: DomainEventDispatcher;
+  outboxService?: OutboxService;
+}
+
 export class CommentsService {
-  constructor(
-    private readonly commentsRepository: CommentsRepository,
-    private readonly pagesService: PagesService,
-    _dbClient: DBClient,
-    private readonly eventDispatcher: DomainEventDispatcher,
-    _outboxService: OutboxService,
-  ) {}
+  private readonly commentsRepository: CommentsRepository;
+  private readonly pagesService: PagesService;
+  private readonly eventDispatcher: DomainEventDispatcher;
+
+  constructor({
+    commentsRepository,
+    pagesService,
+    eventDispatcher,
+  }: CommentsServiceDependencies) {
+    this.commentsRepository = commentsRepository;
+    this.pagesService = pagesService;
+    this.eventDispatcher = eventDispatcher;
+  }
 
   async getPageComments({
     pageId,
