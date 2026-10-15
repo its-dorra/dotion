@@ -35,7 +35,6 @@ export class WorkspaceInvitationCreatedStrategy implements DomainEventStrategy<"
               workspaceInvitationId: invitation.id,
               workspaceId,
               workspaceName: invitation.workspaceName,
-              workspaceIcon: invitation.workspaceIcon ?? undefined,
               invitedByUserId,
               invitedByName: invitation.invitedByName,
             },

@@ -36,7 +36,6 @@ export function NotificationsListPresenter({
         id: activeNotification.metadata.workspaceInvitationId,
         workspaceId: activeNotification.metadata.workspaceId,
         workspaceName: activeNotification.metadata.workspaceName,
-        workspaceIcon: activeNotification.metadata.workspaceIcon ?? null,
         invitedByUserId: activeNotification.metadata.invitedByUserId,
         invitedByName: activeNotification.metadata.invitedByName,
         invitedUserId: activeNotification.userId,

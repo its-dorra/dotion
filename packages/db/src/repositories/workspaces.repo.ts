@@ -48,7 +48,6 @@ export class WorkspacesRepository {
         .select({
           id: workspaces.id,
           name: workspaces.name,
-          icon: workspaces.icon,
           membersCount: workspaces.membersCount,
           createdAt: workspaces.createdAt,
           updatedAt: workspaces.updatedAt,
@@ -94,7 +93,6 @@ export class WorkspacesRepository {
         .returning({
           id: workspaces.id,
           name: workspaces.name,
-          icon: workspaces.icon,
           membersCount: workspaces.membersCount,
           createdAt: workspaces.createdAt,
           updatedAt: workspaces.updatedAt,
@@ -182,7 +180,6 @@ export class WorkspacesRepository {
         .select({
           id: workspaces.id,
           name: workspaces.name,
-          icon: workspaces.icon,
           membersCount: workspaces.membersCount,
           createdAt: workspaces.createdAt,
           updatedAt: workspaces.updatedAt,
@@ -224,7 +221,6 @@ export class WorkspacesRepository {
         .select({
           id: workspaces.id,
           name: workspaces.name,
-          icon: workspaces.icon,
           membersCount: workspaces.membersCount,
           createdAt: workspaces.createdAt,
           updatedAt: workspaces.updatedAt,

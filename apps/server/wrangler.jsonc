@@ -2,6 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "dotion-backend",
   "main": "./src/index.ts",
+  "minify": false,
   "compatibility_date": "2026-08-08",
   "compatibility_flags": ["nodejs_compat"],
   "durable_objects": {
