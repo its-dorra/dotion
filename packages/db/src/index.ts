@@ -1,10 +1,10 @@
-import { drizzle } from "drizzle-orm/neon-serverless";
+import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
 import { relations } from "./schema/relations";
 
 export function createDb(connectionString: string) {
   return drizzle(connectionString, {
     relations,
-  });
+  }) as NodePgDatabase<typeof relations>;
 }
 
 export type DBClient = ReturnType<typeof createDb>;

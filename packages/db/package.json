@@ -15,12 +15,13 @@
   },
   "dependencies": {
     "@dotion/shared": "workspace:*",
-    "@neondatabase/serverless": "^1.1.0",
     "better-result": "^3.0.1",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241230.0",
-    "@types/node": "^26.2.0"
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.23.1"
   }
 }
