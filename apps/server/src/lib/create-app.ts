@@ -8,6 +8,8 @@ import defaultHook from "stoker/openapi/default-hook";
 import configureOpenAPI from "./configure-open-api";
 import { logger } from "hono/logger";
 import { csrf } from "hono/csrf";
+import { sentry } from "@sentry/hono/cloudflare";
+import { getSentryOptions } from "./utils";
 
 export function createRoute() {
   return new OpenAPIHono<AppBindings>({
@@ -18,6 +20,8 @@ export function createRoute() {
 
 export function createApp() {
   const app = createRoute();
+
+  app.use(sentry(app, getSentryOptions));
 
   app
     .use(

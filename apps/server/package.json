@@ -30,6 +30,7 @@
     "@hono/zod-openapi": "catalog:",
     "@scalar/hono-api-reference": "^0.12.1",
     "@sentry/cloudflare": "^10.73.0",
+    "@sentry/hono": "^11.8.0",
     "ai": "catalog:",
     "better-auth": "^1.7.3",
     "better-result": "^3.0.1",
