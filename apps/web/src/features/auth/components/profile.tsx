@@ -1,11 +1,11 @@
-import { useState, type FormEvent } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useSession } from '../hooks/use-session'
+import { useUpdateUser } from '../hooks/use-update-user'
+import { useAppForm } from '@/integrations/tanstack-form/form'
 import { DocumentBackgroundPicker } from '@/features/pages/components/document-background-picker'
 import { m } from '@/paraglide/messages'
 
@@ -21,17 +21,21 @@ function getInitials(name: string) {
 export function Profile() {
   const { data: session } = useSession()
   const user = session?.user
+  const updateUserMutation = useUpdateUser()
 
-  const [name, setName] = useState(user?.name ?? '')
-  const hasChanges = Boolean(user && name.trim() !== user.name)
+  const form = useAppForm({
+    defaultValues: {
+      name: user?.name ?? '',
+    },
+    onSubmit: async ({ value }) => {
+      await updateUserMutation.mutateAsync({
+        name: value.name.trim(),
+      })
+    },
+  })
 
   if (!user) {
     return null
-  }
-
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault()
-    if (!hasChanges) return
   }
 
   return (
@@ -42,7 +46,14 @@ export function Profile() {
           {m.auth_profile()}
         </h1>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          form.handleSubmit()
+        }}
+        className="space-y-6"
+      >
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16">
             {user.image && <AvatarImage src={user.image} alt={user.name} />}
@@ -58,26 +69,44 @@ export function Profile() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="profile-name">{m.auth_name()}</Label>
-          <Input
-            id="profile-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </div>
+        <form.Field name="name">
+          {(field) => (
+            <div className="space-y-2">
+              <Label htmlFor="profile-name">{m.auth_name()}</Label>
+              <Input
+                id="profile-name"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+              />
+            </div>
+          )}
+        </form.Field>
 
         <div className="space-y-2">
           <Label htmlFor="profile-email">{m.auth_email()}</Label>
           <Input id="profile-email" value={user.email} disabled />
-          <p className="text-xs text-muted-foreground">
-            {m.auth_email_change_notice()}
-          </p>
         </div>
 
-        <Button type="submit" disabled={!hasChanges}>
-          {m.auth_save_changes()}
-        </Button>
+        <form.AppForm>
+          <form.Subscribe
+            selector={(state) => ({
+              name: state.values.name,
+              isSubmitting: state.isSubmitting,
+            })}
+          >
+            {({ name, isSubmitting }) => {
+              const hasChanges = Boolean(
+                user && name?.trim() !== '' && name?.trim() !== user.name
+              )
+              return (
+                <form.SubscribeButton disabled={!hasChanges || isSubmitting}>
+                  {m.auth_save_changes()}
+                </form.SubscribeButton>
+              )
+            }}
+          </form.Subscribe>
+        </form.AppForm>
       </form>
 
       <Separator className="my-10" />

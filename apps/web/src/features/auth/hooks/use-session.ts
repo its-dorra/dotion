@@ -4,5 +4,6 @@ import { authQueryOptions } from '../query-options'
 
 export const useSession = () => {
   const authClient = useBetterAuth()
+
   return useSuspenseQuery(authQueryOptions(authClient))
 }

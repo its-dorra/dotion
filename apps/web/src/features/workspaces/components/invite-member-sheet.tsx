@@ -32,7 +32,7 @@ export function InviteMemberSheet({
           <SheetDescription>{m.invite_dialog_desc()}</SheetDescription>
         </SheetHeader>
 
-        <div className="mt-2">
+        <div className="mt-2 min-w-0">
           <InviteMemberForm
             workspaceId={workspaceId}
             onSuccess={() => onOpenChange(false)}
